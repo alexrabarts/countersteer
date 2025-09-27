@@ -53,12 +53,13 @@ class Environment {
                 const centerX = currentX + (segmentLength/2) * Math.sin(currentHeading);
                 const centerZ = currentZ + (segmentLength/2) * Math.cos(currentHeading);
                 
-                // Create road segment
+                // Create road segment with elevation (mountain shelf)
                 const roadGeometry = new THREE.PlaneGeometry(roadWidth, segmentLength * 1.05); // Slight overlap
                 const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
 
-                // Position segment
-                roadMesh.position.set(centerX, 0.01, centerZ);
+                // Position segment at elevated mountain level
+                const mountainHeight = 50;
+                roadMesh.position.set(centerX, mountainHeight + 0.01, centerZ);
 
                 // Rotate segment - first lay it flat, then rotate to match heading
                 roadMesh.rotation.x = -Math.PI / 2;  // Lay flat
@@ -135,12 +136,21 @@ class Environment {
             metalness: 0.0
         });
         
-        const grassGeometry = new THREE.PlaneGeometry(2000, 2000);
-        const grass = new THREE.Mesh(grassGeometry, grassMaterial);
-        grass.rotation.x = -Math.PI / 2;
-        grass.position.set(0, -0.01, 0);
-        grass.receiveShadow = true;
-        this.scene.add(grass);
+        // Mountain shelf grass (narrow strip)
+        const shelfGrassGeometry = new THREE.PlaneGeometry(40, 3000);
+        const shelfGrass = new THREE.Mesh(shelfGrassGeometry, grassMaterial);
+        shelfGrass.rotation.x = -Math.PI / 2;
+        shelfGrass.position.set(0, 49.99, 0);
+        shelfGrass.receiveShadow = true;
+        this.scene.add(shelfGrass);
+
+        // Valley floor far below
+        const valleyGeometry = new THREE.PlaneGeometry(2000, 2000);
+        const valley = new THREE.Mesh(valleyGeometry, grassMaterial);
+        valley.rotation.x = -Math.PI / 2;
+        valley.position.set(0, -0.01, 0);
+        valley.receiveShadow = true;
+        this.scene.add(valley);
         
         // Add some texture variation with darker patches
         for (let i = 0; i < 20; i++) {
@@ -181,7 +191,7 @@ class Environment {
                 const dash = new THREE.Mesh(dashGeometry, dashMaterial);
                 dash.rotation.x = -Math.PI / 2;
                 dash.rotation.z = point.heading;
-                dash.position.set(point.x, 0.02, point.z);
+                dash.position.set(point.x, 50.02, point.z);
                 dash.receiveShadow = true;
                 this.scene.add(dash);
             }
@@ -199,7 +209,7 @@ class Environment {
             });
             const startLine = new THREE.Mesh(startGeometry, startMaterial);
             startLine.rotation.x = -Math.PI / 2;
-            startLine.position.set(this.roadPath[5].x, 0.03, this.roadPath[5].z);
+            startLine.position.set(this.roadPath[5].x, 50.03, this.roadPath[5].z);
             startLine.receiveShadow = true;
             this.scene.add(startLine);
             
@@ -215,7 +225,7 @@ class Environment {
             const finishLine = new THREE.Mesh(startGeometry, finishMaterial);
             finishLine.rotation.x = -Math.PI / 2;
             finishLine.rotation.z = this.roadPath[lastSegments].heading;
-            finishLine.position.set(this.roadPath[lastSegments].x, 0.03, this.roadPath[lastSegments].z);
+            finishLine.position.set(this.roadPath[lastSegments].x, 50.03, this.roadPath[lastSegments].z);
             finishLine.receiveShadow = true;
             this.scene.add(finishLine);
         }
@@ -271,13 +281,13 @@ class Environment {
             }
         });
 
-        // Mountain cliff wall on left side
-        const cliffGeometry = new THREE.BoxGeometry(4, 15, 25);
+        // Cliff wall rising from mountain shelf on left side
+        const cliffGeometry = new THREE.BoxGeometry(6, 30, 25);
         const cliffMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9, metalness: 0.0 });
         this.roadPath.forEach((point, index) => {
-            if (index % 3 === 0) {
+            if (index % 2 === 0) {
                 const leftCliff = new THREE.Mesh(cliffGeometry, cliffMaterial);
-                leftCliff.position.set(point.x - 15, 7.5, point.z);
+                leftCliff.position.set(point.x - 20, 65, point.z);
                 leftCliff.rotation.y = point.heading;
                 leftCliff.castShadow = true;
                 leftCliff.receiveShadow = true;
@@ -285,17 +295,18 @@ class Environment {
             }
         });
 
-        // Mountain drop-off with distant background
+        // Create mountain shelf drop-off edge
         this.roadPath.forEach((point, index) => {
-            if (index % 5 === 0) {
-                // Distant mountain background on right side
-                const distantMountainGeometry = new THREE.ConeGeometry(20, 40, 6);
-                const distantMountainMaterial = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.8, metalness: 0.0 });
-                const distantMountain = new THREE.Mesh(distantMountainGeometry, distantMountainMaterial);
-                distantMountain.position.set(point.x + 200, 20, point.z + Math.random() * 100 - 50);
-                distantMountain.castShadow = true;
-                distantMountain.receiveShadow = true;
-                this.scene.add(distantMountain);
+            if (index % 3 === 0) {
+                // Cliff face dropping down on right side
+                const dropGeometry = new THREE.BoxGeometry(2, 50, 25);
+                const dropMaterial = new THREE.MeshStandardMaterial({ color: 0x654321, roughness: 0.9, metalness: 0.0 });
+                const dropCliff = new THREE.Mesh(dropGeometry, dropMaterial);
+                dropCliff.position.set(point.x + 12, 25, point.z);
+                dropCliff.rotation.y = point.heading;
+                dropCliff.castShadow = true;
+                dropCliff.receiveShadow = true;
+                this.scene.add(dropCliff);
             }
         });
 
@@ -305,7 +316,7 @@ class Environment {
         this.roadPath.forEach((point, index) => {
             if (index % 2 === 0 && index > 5 && index < this.roadPath.length - 5) {
                 const guardRail = new THREE.Mesh(guardRailGeometry, guardRailMaterial);
-                guardRail.position.set(point.x + 9, 0.4, point.z);
+                guardRail.position.set(point.x + 9, 50.4, point.z);
                 guardRail.rotation.y = point.heading;
                 guardRail.castShadow = true;
                 guardRail.receiveShadow = true;
