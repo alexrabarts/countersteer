@@ -57,22 +57,29 @@ class Environment {
                 const roadGeometry = new THREE.PlaneGeometry(roadWidth, segmentLength * 1.05); // Slight overlap
                 const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
 
-                // Position segment
-                roadMesh.position.set(centerX, 0.01, centerZ);
+                // Calculate elevation for mountain road
+                const baseElevation = 5; // Base mountain shelf height
+                const elevationVariation = Math.sin(index * 0.05) * 2; // Gentle ups and downs
+                const roadElevation = baseElevation + elevationVariation;
+
+                // Position segment at calculated elevation
+                roadMesh.position.set(centerX, roadElevation, centerZ);
 
                 // Rotate segment - first lay it flat, then rotate to match heading
                 roadMesh.rotation.x = -Math.PI / 2;  // Lay flat
                 roadMesh.rotation.z = currentHeading; // Rotate to match road direction
 
                 roadMesh.receiveShadow = true;
+                roadMesh.castShadow = true;
 
                 this.scene.add(roadMesh);
-                
-                // Store path point
+
+                // Store path point with elevation
                 this.roadPath.push({
                     x: centerX,
                     z: centerZ,
-                    heading: currentHeading
+                    heading: currentHeading,
+                    elevation: roadElevation
                 });
                 
                 // Update position for next segment
@@ -135,12 +142,8 @@ class Environment {
             metalness: 0.0
         });
         
-        const grassGeometry = new THREE.PlaneGeometry(2000, 2000);
-        const grass = new THREE.Mesh(grassGeometry, grassMaterial);
-        grass.rotation.x = -Math.PI / 2;
-        grass.position.set(0, -0.01, 0);
-        grass.receiveShadow = true;
-        this.scene.add(grass);
+        // Create mountain terrain that follows road elevation
+        this.createMountainTerrain();
         
         // Add some texture variation with darker patches
         for (let i = 0; i < 20; i++) {
@@ -181,7 +184,7 @@ class Environment {
                 const dash = new THREE.Mesh(dashGeometry, dashMaterial);
                 dash.rotation.x = -Math.PI / 2;
                 dash.rotation.z = point.heading;
-                dash.position.set(point.x, 0.02, point.z);
+                dash.position.set(point.x, point.elevation + 0.02, point.z);
                 dash.receiveShadow = true;
                 this.scene.add(dash);
             }
@@ -199,7 +202,7 @@ class Environment {
             });
             const startLine = new THREE.Mesh(startGeometry, startMaterial);
             startLine.rotation.x = -Math.PI / 2;
-            startLine.position.set(this.roadPath[5].x, 0.03, this.roadPath[5].z);
+            startLine.position.set(this.roadPath[5].x, this.roadPath[5].elevation + 0.03, this.roadPath[5].z);
             startLine.receiveShadow = true;
             this.scene.add(startLine);
             
@@ -215,7 +218,7 @@ class Environment {
             const finishLine = new THREE.Mesh(startGeometry, finishMaterial);
             finishLine.rotation.x = -Math.PI / 2;
             finishLine.rotation.z = this.roadPath[lastSegments].heading;
-            finishLine.position.set(this.roadPath[lastSegments].x, 0.03, this.roadPath[lastSegments].z);
+            finishLine.position.set(this.roadPath[lastSegments].x, this.roadPath[lastSegments].elevation + 0.03, this.roadPath[lastSegments].z);
             finishLine.receiveShadow = true;
             this.scene.add(finishLine);
         }
@@ -388,5 +391,71 @@ class Environment {
                 }
             }
         });
+        }
     }
-}
+
+    createMountainTerrain() {
+        const grassMaterial = new THREE.MeshStandardMaterial({
+            color: 0x3a5f3a,
+            side: THREE.DoubleSide,
+            roughness: 0.95,
+            metalness: 0.0
+        });
+
+        // Create terrain following the road
+        this.roadPath.forEach((point, index) => {
+            if (index % 2 === 0) {
+                const roadElevation = point.elevation;
+
+                // Left side - cliff wall rising from road level
+                const cliffGeometry = new THREE.BoxGeometry(8, 12, 25);
+                const cliffMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x8B4513, 
+                    roughness: 0.9, 
+                    metalness: 0.0 
+                });
+                const cliff = new THREE.Mesh(cliffGeometry, cliffMaterial);
+                cliff.position.set(point.x - 18, roadElevation + 6, point.z);
+                cliff.rotation.y = point.heading;
+                cliff.castShadow = true;
+                cliff.receiveShadow = true;
+                this.scene.add(cliff);
+
+                // Right side - stepped terrain descending from road
+                for (let step = 1; step <= 4; step++) {
+                    const stepGeometry = new THREE.PlaneGeometry(20, 25);
+                    const stepHeight = roadElevation - (step * 3);
+                    const stepColor = step === 1 ? 0x3a5f3a : step === 2 ? 0x2a4f2a : step === 3 ? 0x1a3f1a : 0x0a2f0a;
+                    
+                    const stepMaterial = new THREE.MeshStandardMaterial({
+                        color: stepColor,
+                        roughness: 0.95,
+                        metalness: 0.0
+                    });
+                    
+                    const stepMesh = new THREE.Mesh(stepGeometry, stepMaterial);
+                    stepMesh.rotation.x = -Math.PI / 2;
+                    stepMesh.position.set(point.x + 15 + (step * 12), stepHeight, point.z);
+                    stepMesh.rotation.z = point.heading;
+                    stepMesh.receiveShadow = true;
+                    this.scene.add(stepMesh);
+                }
+
+                // Narrow grass strip alongside road at road level
+                const roadsideGeometry = new THREE.PlaneGeometry(12, 25);
+                const roadside = new THREE.Mesh(roadsideGeometry, grassMaterial);
+                roadside.rotation.x = -Math.PI / 2;
+                roadside.position.set(point.x - 6, roadElevation - 0.01, point.z);
+                roadside.rotation.z = point.heading;
+                roadside.receiveShadow = true;
+                this.scene.add(roadside);
+
+                const roadsideRight = new THREE.Mesh(roadsideGeometry, grassMaterial);
+                roadsideRight.rotation.x = -Math.PI / 2;
+                roadsideRight.position.set(point.x + 6, roadElevation - 0.01, point.z);
+                roadsideRight.rotation.z = point.heading;
+                roadsideRight.receiveShadow = true;
+                this.scene.add(roadsideRight);
+            }
+        });
+    }
