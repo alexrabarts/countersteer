@@ -3,7 +3,7 @@ class Vehicle {
         this.scene = scene;
         
         // Physical properties
-        this.position = new THREE.Vector3(0, 5, 0); // Start at road elevation
+        this.position = new THREE.Vector3(0, 0, 0);
         this.velocity = new THREE.Vector3(0, 0, 0);
         
         // Vehicle parameters
@@ -303,7 +303,7 @@ class Vehicle {
     }
 
     reset() {
-        this.position.set(0, 5, 0); // Reset to road elevation
+        this.position.set(0, 0, 0);
         this.velocity.set(0, 0, 0);
         this.speed = 15; // Reset to starting speed
         this.leanAngle = 0;
