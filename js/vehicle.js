@@ -363,7 +363,10 @@ class Vehicle {
         if (this.crashed) {
             // Fall over animation
             this.group.rotation.z = this.crashAngle > 0 ? Math.PI/2 : -Math.PI/2;
-            this.group.position.y = -0.3;
+            // Only lower the vehicle if it's a normal crash (not falling off cliff)
+            if (!this.fallingOffCliff) {
+                this.group.position.y = this.position.y - 0.3;
+            }
             this.rider.rotation.z = 0; // Rider doesn't lean when crashed
         } else {
             // Normal lean
