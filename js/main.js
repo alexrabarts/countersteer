@@ -22,6 +22,10 @@ class Game {
         this.fps = 0;
         this.frameCount = 0;
         this.lastTime = performance.now();
+        
+        // High score tracking
+        this.highScore = parseFloat(localStorage.getItem('motorcycleHighScore') || '0');
+        this.updateHighScoreDisplay();
 
         console.log('Starting animation loop...');
         this.animate();
@@ -159,6 +163,21 @@ class Game {
         
         document.getElementById('leanVel').textContent = `Lean Rate: ${(this.vehicle.leanVelocity * 180 / Math.PI).toFixed(1)}°/s`;
         document.getElementById('steering').textContent = `Steering: ${this.vehicle.getSteeringAngleDegrees().toFixed(1)}°`;
+        
+        // Update distance display
+        const distance = this.vehicle.getDistanceTraveled();
+        document.getElementById('distance').textContent = `Distance: ${distance.toFixed(0)} m`;
+        
+        // Check and update high score
+        if (this.vehicle.crashed && distance > this.highScore) {
+            this.highScore = distance;
+            localStorage.setItem('motorcycleHighScore', this.highScore.toString());
+            this.updateHighScoreDisplay();
+        }
+    }
+    
+    updateHighScoreDisplay() {
+        document.getElementById('highScore').textContent = `Best: ${this.highScore.toFixed(0)} m`;
     }
 
     animate() {
@@ -181,6 +200,15 @@ class Game {
         
         // Check for reset
         if (this.input.checkReset()) {
+            // Save high score before reset if crashed
+            if (this.vehicle.crashed) {
+                const distance = this.vehicle.getDistanceTraveled();
+                if (distance > this.highScore) {
+                    this.highScore = distance;
+                    localStorage.setItem('motorcycleHighScore', this.highScore.toString());
+                    this.updateHighScoreDisplay();
+                }
+            }
             this.vehicle.reset();
             this.cones.reset();
         }

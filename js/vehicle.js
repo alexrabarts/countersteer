@@ -21,9 +21,17 @@ class Vehicle {
         this.leanVelocity = 0;
         this.steeringAngle = 0;
         this.yawAngle = 0;
-         this.crashed = false;
-         this.crashAngle = 0;
-         this.previousSpeed = 0;
+        this.crashed = false;
+        this.crashAngle = 0;
+        this.previousSpeed = 0;
+        this.fallingOffCliff = false;
+        this.hitGround = false;
+        this.fallStartY = 0;
+        this.groundHitLogged = false;
+        
+        // Distance tracking
+        this.distanceTraveled = 0;
+        this.lastPosition = new THREE.Vector3(0, 0, 0);
 
          // Physics tuning
         this.steeringForce = 8; // How much force steering creates
@@ -133,11 +141,45 @@ class Vehicle {
     }
 
     update(deltaTime, steeringInput, throttleInput, brakeInput) {
+        // Track distance traveled (only when not crashed)
+        if (!this.crashed && this.lastPosition) {
+            const distanceDelta = this.position.distanceTo(this.lastPosition);
+            this.distanceTraveled += distanceDelta;
+        }
+        this.lastPosition = this.position.clone();
+        
         if (this.crashed) {
-            // Continue sliding forward but no control
-            this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
-            this.velocity.multiplyScalar(0.98); // Friction slows it down
-            this.speed = this.velocity.length();
+            // If falling off cliff, apply gravity and check ground collision
+            if (this.fallingOffCliff) {
+                // Apply gravity
+                this.velocity.y -= 9.81 * deltaTime;
+                
+                // Update position
+                this.position.x += this.velocity.x * deltaTime;
+                this.position.y += this.velocity.y * deltaTime;
+                this.position.z += this.velocity.z * deltaTime;
+                
+                // Check if hit ground (grass plane is at y = 0)
+                const groundLevel = 0;
+                if (this.position.y <= groundLevel) {
+                    this.position.y = groundLevel;
+                    this.velocity.set(0, 0, 0); // Stop all movement
+                    this.speed = 0;
+                    this.hitGround = true;
+                    
+                    if (!this.groundHitLogged) {
+                        console.log('CRASHED! Hit the ground after falling', 
+                            Math.abs(this.fallStartY - groundLevel).toFixed(1) + ' meters');
+                        this.groundHitLogged = true;
+                    }
+                }
+            } else {
+                // Normal crash - sliding on road
+                this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
+                this.velocity.multiplyScalar(0.98); // Friction slows it down
+            }
+            
+            this.speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z);
             this.updateMesh();
             return;
         }
@@ -355,6 +397,12 @@ class Vehicle {
         this.yawAngle = 0;
         this.crashed = false;
         this.crashAngle = 0;
+        this.fallingOffCliff = false;
+        this.hitGround = false;
+        this.fallStartY = 0;
+        this.groundHitLogged = false;
+        this.distanceTraveled = 0;
+        this.lastPosition = new THREE.Vector3(0, 0, 0);
         this.frame.material.color.setHex(0x0066cc);
     }
 
@@ -368,6 +416,14 @@ class Vehicle {
 
     getSteeringAngleDegrees() {
         return this.steeringAngle * 180 / Math.PI;
+    }
+    
+    getDistanceTraveled() {
+        return this.distanceTraveled; // in meters
+    }
+    
+    getDistanceTraveledKm() {
+        return this.distanceTraveled / 1000; // in kilometers
     }
     
     updateElevation() {
@@ -459,15 +515,26 @@ class Vehicle {
                     this.crashed = true;
                     this.crashAngle = -Math.PI/4; // Fall to the left after hitting right wall
                     this.frame.material.color.setHex(0xff00ff); // Magenta for wall crash
-                    console.log('CRASHED! Hit the wall at', (this.speed * 2.237).toFixed(1) + ' mph');
+                    console.log('CRASHED! Hit the right wall at', (this.speed * 2.237).toFixed(1) + ' mph');
                     
                     // Bounce back slightly
                     this.velocity.x *= -0.5;
                     this.velocity.z *= -0.5;
                 }
                 
-                // Could also check left wall if desired
-                // if (perpDistance < -wallBuffer) { ... }
+                // Check if we've gone off the left edge (negative perpDistance)
+                if (perpDistance < -wallBuffer) {
+                    this.crashed = true;
+                    this.fallingOffCliff = true;
+                    this.fallStartY = this.position.y;
+                    this.groundHitLogged = false;
+                    this.crashAngle = Math.PI/4; // Fall to the right after going off left edge
+                    this.frame.material.color.setHex(0x8B0000); // Dark red for falling off cliff
+                    console.log('CRASHED! Fell off the left edge at', (this.speed * 2.237).toFixed(1) + ' mph');
+                    
+                    // Continue forward momentum but start falling
+                    this.velocity.y = -5; // Start falling downward
+                }
             }
         }
     }
