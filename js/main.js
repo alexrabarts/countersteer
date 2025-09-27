@@ -18,7 +18,10 @@ class Game {
         this.input = new InputHandler();
         
         this.clock = new THREE.Clock();
-        
+        this.fps = 0;
+        this.frameCount = 0;
+        this.lastTime = performance.now();
+
         console.log('Starting animation loop...');
         this.animate();
     }
@@ -138,7 +141,17 @@ class Game {
 
     animate() {
         requestAnimationFrame(() => this.animate());
-        
+
+        // FPS calculation
+        this.frameCount++;
+        const now = performance.now();
+        if (now - this.lastTime >= 1000) {
+            this.fps = this.frameCount;
+            this.frameCount = 0;
+            this.lastTime = now;
+            document.getElementById('fps').textContent = `FPS: ${this.fps}`;
+        }
+
         const deltaTime = this.clock.getDelta();
         const steeringInput = this.input.getSteeringInput();
         const throttleInput = this.input.getThrottleInput();
