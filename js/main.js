@@ -13,6 +13,9 @@ class Game {
         console.log('Creating cones course...');
         this.cones = new Cones(this.scene, this.environment);
         
+        console.log('Creating traffic...');
+        this.traffic = new Traffic(this.scene, this.environment);
+        
         console.log('Creating vehicle...');
         this.vehicle = new Vehicle(this.scene);
         this.vehicle.environment = this.environment; // Pass environment reference for elevation
@@ -224,6 +227,43 @@ class Game {
         }
         
         this.vehicle.update(deltaTime, steeringInput, throttleInput, brakeInput);
+        
+        // Update traffic
+        if (this.traffic) {
+            const collision = this.traffic.update(deltaTime, this.vehicle.position);
+            if (collision && collision.hit && !this.vehicle.crashed) {
+                this.vehicle.crashed = true;
+                this.vehicle.crashAngle = this.vehicle.leanAngle || 0.5;
+                this.vehicle.frame.material.color.setHex(0xff00ff); // Magenta for traffic collision
+                
+                // Calculate impact direction based on car position
+                const car = collision.car;
+                if (car && car.carGroup) {
+                    const impactDir = new THREE.Vector3(
+                        this.vehicle.position.x - car.carGroup.position.x,
+                        0,
+                        this.vehicle.position.z - car.carGroup.position.z
+                    ).normalize();
+                    
+                    // Combine vehicle and car speeds for impact force
+                    const relativeSpeed = this.vehicle.speed + car.currentSpeed * 0.5;
+                    const impactForce = Math.min(relativeSpeed * 0.8, 30);
+                    
+                    this.vehicle.velocity = impactDir.multiplyScalar(impactForce);
+                    this.vehicle.velocity.y = 4; // Upward force from impact
+                } else {
+                    // Fallback if car data not available
+                    const impactForce = this.vehicle.speed * 0.7;
+                    this.vehicle.velocity = new THREE.Vector3(
+                        Math.random() - 0.5,
+                        3,
+                        Math.random() - 0.5
+                    ).normalize().multiplyScalar(impactForce);
+                }
+                
+                console.log('CRASHED! Hit a car at', (this.vehicle.speed * 2.237).toFixed(1) + ' mph');
+            }
+        }
         
         // Check cone collisions
         if (!this.vehicle.crashed) {

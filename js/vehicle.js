@@ -195,6 +195,76 @@ class Vehicle {
             console.log('CRASHED! Speed too low:', (this.speed * 2.237).toFixed(1) + ' mph');
         }
         
+        // Check for boulder collisions
+        if (this.environment && this.environment.boulders) {
+            for (const boulder of this.environment.boulders) {
+                const dx = this.position.x - boulder.position.x;
+                const dy = this.position.y - boulder.position.y;
+                const dz = this.position.z - boulder.position.z;
+                const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                
+                // Check if we hit the boulder (account for bike size)
+                if (distance < boulder.radius + 1.0) {
+                    this.crashed = true;
+                    this.crashAngle = this.leanAngle || 0.5;
+                    this.frame.material.color.setHex(0xff0000); // Red for collision
+                    
+                    // Set crash velocity based on impact
+                    const impactForce = this.speed * 0.5;
+                    const impactDir = new THREE.Vector3(dx, 0, dz).normalize();
+                    this.velocity = impactDir.multiplyScalar(impactForce);
+                    this.velocity.y = 2; // Small upward force
+                    
+                    console.log('CRASHED! Hit a boulder at', (this.speed * 2.237).toFixed(1) + ' mph');
+                    break;
+                }
+            }
+        }
+        
+        // Check for wall collision (simplified check based on distance from road center)
+        if (this.environment && this.environment.roadPath) {
+            // Find nearest road segment
+            let nearestSegment = null;
+            let minDist = Infinity;
+            for (const segment of this.environment.roadPath) {
+                const dist = Math.sqrt(
+                    Math.pow(this.position.x - segment.x, 2) + 
+                    Math.pow(this.position.z - segment.z, 2)
+                );
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearestSegment = segment;
+                }
+            }
+            
+            if (nearestSegment) {
+                // Calculate perpendicular distance from road center
+                const perpX = Math.cos(nearestSegment.heading);
+                const perpZ = -Math.sin(nearestSegment.heading);
+                const toVehicle = new THREE.Vector3(
+                    this.position.x - nearestSegment.x,
+                    0,
+                    this.position.z - nearestSegment.z
+                );
+                const lateralDist = toVehicle.x * perpX + toVehicle.z * perpZ;
+                
+                // Check if too close to walls (road is 16 units wide, walls at ~8 units)
+                if (Math.abs(lateralDist) > 7.5) {
+                    this.crashed = true;
+                    this.crashAngle = this.leanAngle || 0.5;
+                    this.frame.material.color.setHex(0x8b4513); // Brown for wall hit
+                    
+                    // Bounce off wall
+                    const bounceDir = new THREE.Vector3(perpX, 0, perpZ);
+                    if (lateralDist < 0) bounceDir.multiplyScalar(-1);
+                    this.velocity = bounceDir.multiplyScalar(this.speed * 0.3);
+                    this.velocity.y = 1;
+                    
+                    console.log('CRASHED! Hit the cliff wall at', (this.speed * 2.237).toFixed(1) + ' mph');
+                }
+            }
+        }
+        
         // Update physics
         this.updatePhysics(deltaTime, steeringInput);
         

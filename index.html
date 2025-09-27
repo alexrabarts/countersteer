@@ -32,6 +32,35 @@
             z-index: 100;
             text-align: right;
         }
+        
+        @media (max-width: 768px) {
+            .controls {
+                font-size: 11px;
+                max-width: 40%;
+            }
+            .controls h3 {
+                font-size: 14px;
+                margin: 5px 0;
+            }
+            .controls p {
+                margin: 3px 0;
+                line-height: 1.2;
+            }
+            .info {
+                font-size: 11px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .controls {
+                display: none;
+            }
+            .info {
+                top: 10px;
+                right: 10px;
+                font-size: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -59,10 +88,12 @@
     </div>
 
     <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+    <script src="js/joystick.js"></script>
     <script src="js/input.js"></script>
     <script src="js/vehicle.js"></script>
     <script src="js/environment.js"></script>
     <script src="js/cones.js"></script>
+    <script src="js/traffic.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
