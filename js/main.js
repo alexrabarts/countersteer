@@ -45,7 +45,7 @@ class Game {
         // Ambient light - increased for better visibility
         const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
         this.scene.add(ambientLight);
-        
+
         // Directional light (sun)
         this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         this.directionalLight.position.set(50, 50, 0);
@@ -59,6 +59,19 @@ class Game {
         this.directionalLight.shadow.camera.top = 100;
         this.directionalLight.shadow.camera.bottom = -100;
         this.scene.add(this.directionalLight);
+
+        // Vehicle headlights
+        this.leftHeadlight = new THREE.SpotLight(0xffffff, 1, 100, Math.PI/6, 0.1, 2);
+        this.leftHeadlight.castShadow = true;
+        this.leftHeadlight.shadow.mapSize.width = 1024;
+        this.leftHeadlight.shadow.mapSize.height = 1024;
+        this.scene.add(this.leftHeadlight);
+
+        this.rightHeadlight = new THREE.SpotLight(0xffffff, 1, 100, Math.PI/6, 0.1, 2);
+        this.rightHeadlight.castShadow = true;
+        this.rightHeadlight.shadow.mapSize.width = 1024;
+        this.rightHeadlight.shadow.mapSize.height = 1024;
+        this.scene.add(this.rightHeadlight);
     }
 
     setupCamera() {
@@ -130,6 +143,22 @@ class Game {
         this.directionalLight.position.z = this.vehicle.position.z;
         this.directionalLight.target.position.copy(this.vehicle.position);
         this.directionalLight.target.updateMatrixWorld();
+
+        // Update headlights
+        const headlightOffset = new THREE.Vector3(0, 0.5, 0.7);
+        headlightOffset.applyEuler(new THREE.Euler(0, this.vehicle.yawAngle, 0));
+
+        this.leftHeadlight.position.copy(this.vehicle.position).add(new THREE.Vector3(-0.3, 0, 0).applyEuler(new THREE.Euler(0, this.vehicle.yawAngle, 0))).add(headlightOffset);
+        this.rightHeadlight.position.copy(this.vehicle.position).add(new THREE.Vector3(0.3, 0, 0).applyEuler(new THREE.Euler(0, this.vehicle.yawAngle, 0))).add(headlightOffset);
+
+        const targetOffset = new THREE.Vector3(0, 0, 50);
+        targetOffset.applyEuler(new THREE.Euler(0, this.vehicle.yawAngle, 0));
+
+        this.leftHeadlight.target.position.copy(this.vehicle.position).add(targetOffset);
+        this.rightHeadlight.target.position.copy(this.vehicle.position).add(targetOffset);
+
+        this.leftHeadlight.target.updateMatrixWorld();
+        this.rightHeadlight.target.updateMatrixWorld();
         
         this.renderer.render(this.scene, this.camera);
     }

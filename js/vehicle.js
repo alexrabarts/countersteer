@@ -37,7 +37,7 @@ class Vehicle {
         
         // Rear wheel
         const rearWheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.15, 16);
-        const wheelMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+        const wheelMaterial = new THREE.MeshPhongMaterial({ color: 0x333333, shininess: 30, specular: 0x111111 });
         this.rearWheel = new THREE.Mesh(rearWheelGeometry, wheelMaterial);
         this.rearWheel.rotation.z = Math.PI / 2;
         this.rearWheel.position.set(0, 0.3, -0.7);
@@ -49,13 +49,13 @@ class Vehicle {
         
         // Frame
         const frameGeometry = new THREE.BoxGeometry(0.1, 0.8, 1.2);
-        const frameMaterial = new THREE.MeshLambertMaterial({ color: 0x0066cc });
+        const frameMaterial = new THREE.MeshPhongMaterial({ color: 0x0066cc, shininess: 50, specular: 0x002244 });
         this.frame = new THREE.Mesh(frameGeometry, frameMaterial);
         this.frame.position.set(0, 0.6, 0);
         
         // Handlebars
         const handlebarGeometry = new THREE.BoxGeometry(0.6, 0.05, 0.05);
-        const handlebarMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 });
+        const handlebarMaterial = new THREE.MeshPhongMaterial({ color: 0x666666, shininess: 40, specular: 0x222222 });
         this.handlebar = new THREE.Mesh(handlebarGeometry, handlebarMaterial);
         this.handlebar.position.set(0, 1.0, 0.6);
         
@@ -161,9 +161,12 @@ class Vehicle {
         
         // 4. GYROSCOPIC RESISTANCE: Higher speed = more stability
         const gyroResistance = this.leanVelocity * this.speed * 0.02;
-        
+
+        // 5. SELF-RIGHTING TORQUE: Bike naturally tries to return upright
+        const selfRightingTorque = -this.leanAngle * 2.5;
+
         // Total torque is sum of all forces
-        const totalTorque = steeringTorque + gravityTorque + centripetalTorque - gyroResistance;
+        const totalTorque = steeringTorque + gravityTorque + centripetalTorque - gyroResistance + selfRightingTorque;
         
         // Update lean velocity with small damping to prevent oscillation
         this.leanVelocity += totalTorque * deltaTime;
