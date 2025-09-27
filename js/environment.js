@@ -271,45 +271,45 @@ class Environment {
             }
         });
 
-        // Mountain cliff wall on left side
-        const cliffGeometry = new THREE.BoxGeometry(4, 15, 25);
-        const cliffMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9, metalness: 0.0 });
+        // Bushes along the trackside for detail
+        const bushGeometry = new THREE.SphereGeometry(1, 6, 4);
+        const bushMaterial = new THREE.MeshStandardMaterial({ color: 0x2d5016, roughness: 0.9, metalness: 0.0 });
         this.roadPath.forEach((point, index) => {
-            if (index % 3 === 0) {
-                const leftCliff = new THREE.Mesh(cliffGeometry, cliffMaterial);
-                leftCliff.position.set(point.x - 15, 7.5, point.z);
-                leftCliff.rotation.y = point.heading;
-                leftCliff.castShadow = true;
-                leftCliff.receiveShadow = true;
-                this.scene.add(leftCliff);
+            if (index % 4 === 0) { // Every 4th segment
+                // Left bush
+                const leftBush = new THREE.Mesh(bushGeometry, bushMaterial);
+                leftBush.position.set(point.x - 35 + Math.random() * 10, 0.5, point.z + Math.random() * 20 - 10);
+                leftBush.castShadow = true;
+                leftBush.receiveShadow = true;
+                this.scene.add(leftBush);
+
+                // Right bush
+                const rightBush = new THREE.Mesh(bushGeometry, bushMaterial);
+                rightBush.position.set(point.x + 35 + Math.random() * 10, 0.5, point.z + Math.random() * 20 - 10);
+                rightBush.castShadow = true;
+                rightBush.receiveShadow = true;
+                this.scene.add(rightBush);
             }
         });
 
-        // Mountain drop-off with distant background
+        // Track barriers for detail
+        const barrierGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8);
+        const barrierMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.8, metalness: 0.0 });
         this.roadPath.forEach((point, index) => {
-            if (index % 5 === 0) {
-                // Distant mountain background on right side
-                const distantMountainGeometry = new THREE.ConeGeometry(20, 40, 6);
-                const distantMountainMaterial = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.8, metalness: 0.0 });
-                const distantMountain = new THREE.Mesh(distantMountainGeometry, distantMountainMaterial);
-                distantMountain.position.set(point.x + 200, 20, point.z + Math.random() * 100 - 50);
-                distantMountain.castShadow = true;
-                distantMountain.receiveShadow = true;
-                this.scene.add(distantMountain);
-            }
-        });
+            if (index % 2 === 0 && index > 5 && index < this.roadPath.length - 5) { // Skip start/end
+                // Left barrier
+                const leftBarrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
+                leftBarrier.position.set(point.x - 8, 0.25, point.z);
+                leftBarrier.castShadow = true;
+                leftBarrier.receiveShadow = true;
+                this.scene.add(leftBarrier);
 
-        // Guard rail on drop-off side (right)
-        const guardRailGeometry = new THREE.BoxGeometry(1, 0.8, 25);
-        const guardRailMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.7, metalness: 0.3 });
-        this.roadPath.forEach((point, index) => {
-            if (index % 2 === 0 && index > 5 && index < this.roadPath.length - 5) {
-                const guardRail = new THREE.Mesh(guardRailGeometry, guardRailMaterial);
-                guardRail.position.set(point.x + 9, 0.4, point.z);
-                guardRail.rotation.y = point.heading;
-                guardRail.castShadow = true;
-                guardRail.receiveShadow = true;
-                this.scene.add(guardRail);
+                // Right barrier
+                const rightBarrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
+                rightBarrier.position.set(point.x + 8, 0.25, point.z);
+                rightBarrier.castShadow = true;
+                rightBarrier.receiveShadow = true;
+                this.scene.add(rightBarrier);
             }
         });
 
