@@ -73,6 +73,11 @@ class Game {
         this.fillLight.position.set(-50, 30, 0);
         this.scene.add(this.fillLight);
 
+        // Rim light for vehicle highlighting
+        this.rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        this.rimLight.position.set(0, 10, -50);
+        this.scene.add(this.rimLight);
+
         // Vehicle headlights
         this.leftHeadlight = new THREE.SpotLight(0xffffff, 1, 100, Math.PI/6, 0.1, 2);
         this.leftHeadlight.castShadow = true;
@@ -198,7 +203,10 @@ class Game {
 
         this.leftHeadlight.target.updateMatrixWorld();
         this.rightHeadlight.target.updateMatrixWorld();
-        
+
+        // Update rim light to follow behind vehicle
+        this.rimLight.position.set(this.vehicle.position.x, 10, this.vehicle.position.z - 50);
+
         this.renderer.render(this.scene, this.camera);
     }
 
