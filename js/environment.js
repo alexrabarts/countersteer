@@ -401,11 +401,11 @@ class Environment {
         const createDetailedCliff = (side, height, isDropOff) => {
             const group = new THREE.Group();
             
-            // Rock material with vertex colors for variation
+            // Rock material with mountain stone colors
             const cliffMaterial = new THREE.MeshStandardMaterial({ 
-                color: 0x7a6b5d,
+                color: isDropOff ? 0x5a4a3a : 0x6a5a4a,  // Darker for drop-off, lighter for rise
                 vertexColors: true,
-                roughness: 0.95, 
+                roughness: 0.98, 
                 metalness: 0.0,
                 side: THREE.DoubleSide
             });
@@ -418,7 +418,7 @@ class Environment {
             const uvs = [];
             
             // Higher resolution for more detail
-            const verticalSegments = 6;
+            const verticalSegments = height > 0 ? 10 : 8;  // More segments for mountain wall
             
             // Create vertices with displacement for rocky appearance
             for (let i = 0; i < this.roadPath.length; i++) {
@@ -434,12 +434,13 @@ class Environment {
                     const verticalProgress = j / verticalSegments;
                     const currentHeight = height * verticalProgress;
                     
-                    // Add subtle displacement for rocky texture (reduced for continuity)
-                    const displacement = Math.sin(i * 0.2 + j * 0.4) * 0.3 + 
-                                       Math.cos(i * 0.5 - j * 0.2) * 0.2;
+                    // Add more dramatic displacement for mountain rock face
+                    const displacement = Math.sin(i * 0.2 + j * 0.4) * 0.8 + 
+                                       Math.cos(i * 0.5 - j * 0.2) * 0.6 +
+                                       Math.sin(i * 0.3 + j * 0.7) * 0.4;
                     
-                    // Vary the wall distance slightly for more natural look
-                    const wallOffset = displacement * 0.5;
+                    // Vary the wall distance for jagged mountain appearance
+                    const wallOffset = displacement * (height > 0 ? 1.5 : 0.8);
                     
                     vertices.push(
                         point.x + perpX + wallOffset * Math.cos(point.heading),
@@ -500,9 +501,9 @@ class Environment {
             for (let i = 0; i < this.roadPath.length; i += 2) { // Much more frequent
                 const point = this.roadPath[i];
                 
-                // Large protruding rocks
-                if (Math.random() > 0.3) { // 70% chance
-                    const rockSize = 1.2 + Math.random() * 2.5;
+                // Large protruding rocks - bigger for mountain scale
+                if (Math.random() > 0.2) { // 80% chance
+                    const rockSize = height > 0 ? 3 + Math.random() * 5 : 1.5 + Math.random() * 3;
                     const rockGeometry = new THREE.DodecahedronGeometry(rockSize, 0);
                     const rock = new THREE.Mesh(
                         rockGeometry, 
@@ -611,33 +612,69 @@ class Environment {
                 }
             }
             
-            // Add sparse vegetation on upper cliff (if going up)
-            if (height > 0) {
-                const bushGeometry = new THREE.SphereGeometry(0.8, 5, 4);
-                const bushMaterial = new THREE.MeshStandardMaterial({ 
-                    color: 0x2d4a2b,
+            // Add snow patches and rocky outcrops on upper mountain (if going up)
+            if (height > 20) {
+                // Snow patches on upper elevations
+                const snowMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0xf0f0f0,
+                    roughness: 0.7,
+                    metalness: 0.0
+                });
+                
+                for (let i = 0; i < this.roadPath.length; i += 8) {
+                    if (Math.random() > 0.4 && height > 30) {
+                        const point = this.roadPath[i];
+                        const snowGeometry = new THREE.PlaneGeometry(
+                            3 + Math.random() * 4, 
+                            2 + Math.random() * 3
+                        );
+                        const snow = new THREE.Mesh(snowGeometry, snowMaterial);
+                        
+                        const perpX = Math.cos(point.heading) * (8 + Math.random() * 2) * side;
+                        const perpZ = -Math.sin(point.heading) * (8 + Math.random() * 2) * side;
+                        
+                        snow.position.set(
+                            point.x + perpX,
+                            (point.y || 0) + height * (0.7 + Math.random() * 0.3),
+                            point.z + perpZ
+                        );
+                        
+                        // Rotate to face outward and add some randomness
+                        snow.rotation.y = point.heading + (side > 0 ? Math.PI/2 : -Math.PI/2);
+                        snow.rotation.x = (Math.random() - 0.5) * 0.3;
+                        snow.rotation.z = (Math.random() - 0.5) * 0.3;
+                        
+                        snow.receiveShadow = true;
+                        group.add(snow);
+                    }
+                }
+                
+                // Sparse alpine vegetation
+                const alpineBushGeometry = new THREE.SphereGeometry(0.6, 4, 3);
+                const alpineBushMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x1a3a1a,
                     roughness: 0.9,
                     metalness: 0.0
                 });
                 
-                for (let i = 0; i < this.roadPath.length; i += 10) { // Less frequent
-                    if (Math.random() > 0.5) {
+                for (let i = 0; i < this.roadPath.length; i += 15) {
+                    if (Math.random() > 0.6) {
                         const point = this.roadPath[i];
-                        const bush = new THREE.Mesh(bushGeometry, bushMaterial);
+                        const bush = new THREE.Mesh(alpineBushGeometry, alpineBushMaterial);
                         
-                        const perpX = Math.cos(point.heading) * 8.5 * side;
-                        const perpZ = -Math.sin(point.heading) * 8.5 * side;
+                        const perpX = Math.cos(point.heading) * 9 * side;
+                        const perpZ = -Math.sin(point.heading) * 9 * side;
                         
                         bush.position.set(
                             point.x + perpX,
-                            (point.y || 0) + height - 0.5,
+                            (point.y || 0) + height * 0.3,
                             point.z + perpZ
                         );
                         
                         bush.scale.set(
-                            1 + Math.random() * 0.5,
-                            0.8 + Math.random() * 0.4,
-                            1 + Math.random() * 0.5
+                            1 + Math.random() * 0.3,
+                            0.6 + Math.random() * 0.3,
+                            1 + Math.random() * 0.3
                         );
                         
                         bush.castShadow = true;
@@ -650,8 +687,8 @@ class Environment {
             return group;
         };
         
-        // Left cliff wall (elevated terrain)
-        const leftCliff = createDetailedCliff(-1, 15, false);
+        // Left cliff wall (mountain face rising above)
+        const leftCliff = createDetailedCliff(-1, 40, false);  // Taller mountain wall
         this.scene.add(leftCliff);
         
         // Right cliff wall (drop-off) - massive mountainside cliff
@@ -891,7 +928,7 @@ class Environment {
             patch.rotation.x = -Math.PI / 2;
             patch.position.set(
                 (Math.random() - 0.5) * 1500,
-                -0.005,
+                -80.005,  // Match the lowered ground plane
                 (Math.random() - 0.5) * 1500
             );
             patch.receiveShadow = true;
@@ -982,13 +1019,13 @@ class Environment {
                     const leftZ = point.z - treeDistance * Math.cos(point.heading + Math.PI/2);
                     
                     const leftTrunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-                    leftTrunk.position.set(leftX, 2, leftZ);
+                    leftTrunk.position.set(leftX, point.y + 2, leftZ);  // Relative to road height
                     leftTrunk.castShadow = true;
                     leftTrunk.receiveShadow = true;
                     this.scene.add(leftTrunk);
 
                     const leftFoliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
-                    leftFoliage.position.set(leftX, 5.5, leftZ);
+                    leftFoliage.position.set(leftX, point.y + 5.5, leftZ);  // Relative to road height
                     leftFoliage.castShadow = true;
                     leftFoliage.receiveShadow = true;
                     this.scene.add(leftFoliage);
@@ -998,13 +1035,13 @@ class Environment {
                     const rightZ = point.z + treeDistance * Math.cos(point.heading + Math.PI/2);
                     
                     const rightTrunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-                    rightTrunk.position.set(rightX, 2, rightZ);
+                    rightTrunk.position.set(rightX, point.y - 30, rightZ);  // Trees down on cliff side
                     rightTrunk.castShadow = true;
                     rightTrunk.receiveShadow = true;
                     this.scene.add(rightTrunk);
 
                     const rightFoliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
-                    rightFoliage.position.set(rightX, 5.5, rightZ);
+                    rightFoliage.position.set(rightX, point.y - 26.5, rightZ);  // Trees down on cliff side
                     rightFoliage.castShadow = true;
                     rightFoliage.receiveShadow = true;
                     this.scene.add(rightFoliage);
@@ -1019,17 +1056,13 @@ class Environment {
             if (index % 4 === 0) { // Every 4th segment
                 // Left bush
                 const leftBush = new THREE.Mesh(bushGeometry, bushMaterial);
-                leftBush.position.set(point.x - 35 + Math.random() * 10, 0.5, point.z + Math.random() * 20 - 10);
+                leftBush.position.set(point.x - 35 + Math.random() * 10, point.y + 0.5, point.z + Math.random() * 20 - 10);
                 leftBush.castShadow = true;
                 leftBush.receiveShadow = true;
                 this.scene.add(leftBush);
 
-                // Right bush
-                const rightBush = new THREE.Mesh(bushGeometry, bushMaterial);
-                rightBush.position.set(point.x + 35 + Math.random() * 10, 0.5, point.z + Math.random() * 20 - 10);
-                rightBush.castShadow = true;
-                rightBush.receiveShadow = true;
-                this.scene.add(rightBush);
+                // Right bush - remove bushes on cliff side as they would be floating
+
             }
         });
 
