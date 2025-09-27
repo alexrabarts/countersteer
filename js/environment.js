@@ -46,7 +46,7 @@ class Environment {
             { segments: 12, turnRate: 0 },        // Final straight back to start area
         ];
         
-        // Build the road segments based on the layout
+        // First, build the road path
         let segmentIndex = 0;
         courseLayout.forEach(section => {
             for (let i = 0; i < section.segments; i++) {
@@ -54,24 +54,8 @@ class Environment {
                 const centerX = currentX + (segmentLength/2) * Math.sin(currentHeading);
                 const centerZ = currentZ + (segmentLength/2) * Math.cos(currentHeading);
                 
-                // Calculate elevation for this segment - more dramatic hills
-                const elevation = Math.sin(segmentIndex * 0.04) * 8 + Math.cos(segmentIndex * 0.02) * 5;
-                
-                // Create road segment
-                const roadGeometry = new THREE.PlaneGeometry(roadWidth, segmentLength * 1.05); // Slight overlap
-                const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
-                
-                // Position segment with elevation
-                roadMesh.position.set(centerX, elevation + 0.01, centerZ);
-                
-                // Rotate segment - first lay it flat, then rotate to match heading
-                roadMesh.rotation.x = -Math.PI / 2;  // Lay flat
-                roadMesh.rotation.z = currentHeading; // Rotate to match road direction
-                
-                roadMesh.receiveShadow = true;
-                roadMesh.castShadow = true;
-
-                this.scene.add(roadMesh);
+                // Calculate elevation with smooth continuous function - very dramatic
+                const elevation = Math.sin(segmentIndex * 0.05) * 12 + Math.cos(segmentIndex * 0.03) * 8;
                 
                 // Store path point with elevation
                 this.roadPath.push({
@@ -91,10 +75,66 @@ class Environment {
             }
         });
         
+        // Create continuous road surface
+        this.createContinuousRoad(roadMaterial);
+        
         console.log('Course created with', this.roadPath.length, 'segments');
         console.log('Start position:', this.roadPath[0]);
-        console.log('End position:', { x: currentX, z: currentZ });
-        console.log('Total rotation:', (currentHeading * 180 / Math.PI).toFixed(1), 'degrees');
+    }
+    
+    createContinuousRoad(roadMaterial) {
+        const roadWidth = 16;
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [];
+        const indices = [];
+        const uvs = [];
+        
+        // Create vertices for continuous road surface
+        for (let i = 0; i < this.roadPath.length; i++) {
+            const point = this.roadPath[i];
+            const nextPoint = i < this.roadPath.length - 1 ? this.roadPath[i + 1] : point;
+            
+            // Smoothly interpolate elevation between points
+            const y = point.y;
+            const nextY = nextPoint.y;
+            
+            // Calculate perpendicular to road direction
+            const perpX = Math.cos(point.heading) * roadWidth / 2;
+            const perpZ = -Math.sin(point.heading) * roadWidth / 2;
+            
+            // Add vertices for left and right edge of road
+            vertices.push(
+                point.x - perpX, y, point.z - perpZ,  // Left edge
+                point.x + perpX, y, point.z + perpZ   // Right edge
+            );
+            
+            // Add UV coordinates
+            uvs.push(0, i * 0.1, 1, i * 0.1);
+        }
+        
+        // Create triangles connecting the vertices
+        for (let i = 0; i < this.roadPath.length - 1; i++) {
+            const baseIndex = i * 2;
+            // Two triangles per road segment
+            indices.push(
+                baseIndex, baseIndex + 2, baseIndex + 1,
+                baseIndex + 1, baseIndex + 2, baseIndex + 3
+            );
+        }
+        
+        // Set geometry attributes
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+        
+        // Create the road mesh
+        const roadMesh = new THREE.Mesh(geometry, roadMaterial);
+        roadMesh.receiveShadow = true;
+        roadMesh.castShadow = true;
+        this.scene.add(roadMesh);
+        
+        console.log('Created continuous road with', vertices.length / 3, 'vertices');
     }
     
     createRoadTexture() {
