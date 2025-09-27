@@ -64,6 +64,13 @@ class Cones {
             this.scene.add(cone);
             this.cones.push(cone);
 
+            // Add sparse point lights for ambient illumination
+            if (index % 10 === 0) {
+                const ambientLight = new THREE.PointLight(0xffaa00, 0.3, 30);
+                ambientLight.position.set(pos.x, 2, pos.z);
+                this.scene.add(ambientLight);
+            }
+
             // Add base
             const baseGeometry = new THREE.CylinderGeometry(0.35, 0.35, 0.05, 6);
             const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9, metalness: 0.0 });
