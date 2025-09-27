@@ -41,6 +41,9 @@ class Game {
     init() {
         this.scene = new THREE.Scene();
         
+        // Add fog for mountainside atmosphere
+        this.scene.fog = new THREE.Fog(0x8090a0, 100, 800);
+        
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
@@ -51,9 +54,9 @@ class Game {
     }
 
     setupScene() {
-        // Sky blue background with distance fog
-        this.scene.background = new THREE.Color(0x87CEEB);
-        this.scene.fog = new THREE.Fog(0x87CEEB, 200, 800);
+        // Misty mountain atmosphere
+        this.scene.background = new THREE.Color(0x8090a0);
+        this.scene.fog = new THREE.Fog(0x8090a0, 150, 600);
     }
 
     setupLighting() {

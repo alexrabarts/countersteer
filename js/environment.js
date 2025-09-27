@@ -54,8 +54,8 @@ class Environment {
                 const centerX = currentX + (segmentLength/2) * Math.sin(currentHeading);
                 const centerZ = currentZ + (segmentLength/2) * Math.cos(currentHeading);
                 
-                // Calculate elevation with smooth continuous function - ensure it stays above ground
-                const elevation = Math.sin(segmentIndex * 0.05) * 8 + Math.cos(segmentIndex * 0.03) * 6 + 10;
+                // Calculate elevation with smooth continuous function - dramatic mountain road
+                const elevation = Math.sin(segmentIndex * 0.05) * 15 + Math.cos(segmentIndex * 0.03) * 12 + 25;
                 
                 // Store path point with elevation
                 this.roadPath.push({
@@ -654,8 +654,8 @@ class Environment {
         const leftCliff = createDetailedCliff(-1, 15, false);
         this.scene.add(leftCliff);
         
-        // Right cliff wall (drop-off)
-        const rightCliff = createDetailedCliff(1, -30, true);
+        // Right cliff wall (drop-off) - massive mountainside cliff
+        const rightCliff = createDetailedCliff(1, -100, true);
         this.scene.add(rightCliff);
     }
     
@@ -792,10 +792,10 @@ class Environment {
             metalness: 0.0
         });
         
-        const grassGeometry = new THREE.PlaneGeometry(2000, 2000);
+        const grassGeometry = new THREE.PlaneGeometry(3000, 3000);
         const grass = new THREE.Mesh(grassGeometry, grassMaterial);
         grass.rotation.x = -Math.PI / 2;
-        grass.position.set(0, -0.01, 0);
+        grass.position.set(0, -80, 0);  // Much lower to emphasize mountain height
         grass.receiveShadow = true;
         this.scene.add(grass);
 
@@ -825,10 +825,10 @@ class Environment {
                     nextPoint.x + nextPerpX, nextRoadY + dropAmount, nextPoint.z + nextPerpZ
                 );
                 
-                // Outer edge (further from road)
+                // Outer edge (further from road) - extend much further for mountainside
                 vertices.push(
-                    point.x + perpX * 3, roadY + dropAmount * 1.5, point.z + perpZ * 3,
-                    nextPoint.x + nextPerpX * 3, nextRoadY + dropAmount * 1.5, nextPoint.z + nextPerpZ * 3
+                    point.x + perpX * 8, roadY + dropAmount * 2, point.z + perpZ * 8,
+                    nextPoint.x + nextPerpX * 8, nextRoadY + dropAmount * 2, nextPoint.z + nextPerpZ * 8
                 );
             }
             
@@ -863,12 +863,12 @@ class Environment {
         const leftTerrain = createTerrainStrip(-1, 12, 2, 0x3a5f3a);
         this.scene.add(leftTerrain);
         
-        // Create right side drop-off terrain
-        const rightTerrain = createTerrainStrip(1, 12, -10, 0x2a4f2a);
+        // Create right side drop-off terrain - massive mountainside drop
+        const rightTerrain = createTerrainStrip(1, 12, -50, 0x2a4f2a);
         this.scene.add(rightTerrain);
         
-        // Create far right deep drop-off
-        const deepDropTerrain = createTerrainStrip(1, 36, -20, 0x1a3f1a);
+        // Create far right deep drop-off - extreme cliff face
+        const deepDropTerrain = createTerrainStrip(1, 36, -150, 0x1a3f1a);
         this.scene.add(deepDropTerrain);
         
         // Add vertical walls connecting road to terrain
