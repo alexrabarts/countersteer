@@ -58,7 +58,7 @@ class Environment {
                 const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
 
                 // Position segment
-                roadMesh.position.set(centerX, 0.01, centerZ);
+                roadMesh.position.set(centerX, 5.01, centerZ);
 
                 // Rotate segment - first lay it flat, then rotate to match heading
                 roadMesh.rotation.x = -Math.PI / 2;  // Lay flat
@@ -138,7 +138,7 @@ class Environment {
         const grassGeometry = new THREE.PlaneGeometry(2000, 2000);
         const grass = new THREE.Mesh(grassGeometry, grassMaterial);
         grass.rotation.x = -Math.PI / 2;
-        grass.position.set(0, -0.01, 0);
+        grass.position.set(0, 4.99, 0);
         grass.receiveShadow = true;
         this.scene.add(grass);
         
@@ -156,7 +156,7 @@ class Environment {
             patch.rotation.x = -Math.PI / 2;
             patch.position.set(
                 (Math.random() - 0.5) * 1500,
-                -0.005,
+                4.995,
                 (Math.random() - 0.5) * 1500
             );
             patch.receiveShadow = true;
@@ -181,7 +181,7 @@ class Environment {
                 const dash = new THREE.Mesh(dashGeometry, dashMaterial);
                 dash.rotation.x = -Math.PI / 2;
                 dash.rotation.z = point.heading;
-                dash.position.set(point.x, 0.02, point.z);
+                dash.position.set(point.x, 5.02, point.z);
                 dash.receiveShadow = true;
                 this.scene.add(dash);
             }
@@ -199,7 +199,7 @@ class Environment {
             });
             const startLine = new THREE.Mesh(startGeometry, startMaterial);
             startLine.rotation.x = -Math.PI / 2;
-            startLine.position.set(this.roadPath[5].x, 0.03, this.roadPath[5].z);
+            startLine.position.set(this.roadPath[5].x, 5.03, this.roadPath[5].z);
             startLine.receiveShadow = true;
             this.scene.add(startLine);
             
@@ -241,13 +241,13 @@ class Environment {
                     const leftZ = point.z - treeDistance * Math.cos(point.heading + Math.PI/2);
                     
                     const leftTrunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-                    leftTrunk.position.set(leftX, 2, leftZ);
+                    leftTrunk.position.set(leftX, 7, leftZ);
                     leftTrunk.castShadow = true;
                     leftTrunk.receiveShadow = true;
                     this.scene.add(leftTrunk);
 
                     const leftFoliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
-                    leftFoliage.position.set(leftX, 5.5, leftZ);
+                    leftFoliage.position.set(leftX, 10.5, leftZ);
                     leftFoliage.castShadow = true;
                     leftFoliage.receiveShadow = true;
                     this.scene.add(leftFoliage);
@@ -313,11 +313,36 @@ class Environment {
             }
         });
 
+        // Cliff walls for mountain course
+        const cliffGeometry = new THREE.BoxGeometry(1, 10, segmentLength);
+        const cliffMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9, metalness: 0.0 });
+        this.roadPath.forEach((point, index) => {
+            if (index % 2 === 0) {
+                // Left cliff wall
+                const leftCliff = new THREE.Mesh(cliffGeometry, cliffMaterial);
+                leftCliff.position.set(point.x - 12, 10, point.z);
+                leftCliff.rotation.y = point.heading;
+                leftCliff.castShadow = true;
+                leftCliff.receiveShadow = true;
+                this.scene.add(leftCliff);
+
+                // Right drop verge (low wall)
+                const vergeGeometry = new THREE.BoxGeometry(1, 2, segmentLength);
+                const vergeMaterial = new THREE.MeshStandardMaterial({ color: 0x654321, roughness: 0.9, metalness: 0.0 });
+                const rightVerge = new THREE.Mesh(vergeGeometry, vergeMaterial);
+                rightVerge.position.set(point.x + 12, 6, point.z);
+                rightVerge.rotation.y = point.heading;
+                rightVerge.castShadow = true;
+                rightVerge.receiveShadow = true;
+                this.scene.add(rightVerge);
+            }
+        });
+
         // Start sign
         const signPostGeometry = new THREE.CylinderGeometry(0.05, 0.05, 2, 8);
         const signPostMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9, metalness: 0.0 });
         const signPost = new THREE.Mesh(signPostGeometry, signPostMaterial);
-        signPost.position.set(-5, 1, 10);
+        signPost.position.set(-5, 6, 10);
         signPost.castShadow = true;
         signPost.receiveShadow = true;
         this.scene.add(signPost);
@@ -325,7 +350,7 @@ class Environment {
         const signGeometry = new THREE.PlaneGeometry(2, 1);
         const signMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.0 });
         const sign = new THREE.Mesh(signGeometry, signMaterial);
-        sign.position.set(-5, 2, 10);
+        sign.position.set(-5, 7, 10);
         sign.castShadow = true;
         sign.receiveShadow = true;
         this.scene.add(sign);
