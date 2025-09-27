@@ -258,7 +258,7 @@ class Environment {
         
         // Posts along the road - especially on curves
         const postGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1.5);
-        const postMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.0 });
+        const postMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.0, emissive: 0x222222, emissiveIntensity: 0.05 });
         const reflectorGeometry = new THREE.BoxGeometry(0.2, 0.3, 0.05);
         const reflectorMaterial = new THREE.MeshStandardMaterial({
             color: 0xff0000,

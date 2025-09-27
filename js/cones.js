@@ -54,7 +54,7 @@ class Cones {
         
         // Create the cone meshes
         const coneGeometry = new THREE.ConeGeometry(0.25, 0.8, 6);
-        const coneMaterial = new THREE.MeshStandardMaterial({ color: 0xff6600, roughness: 0.8, metalness: 0.0 });
+        const coneMaterial = new THREE.MeshStandardMaterial({ color: 0xff6600, roughness: 0.8, metalness: 0.0, emissive: 0x331100, emissiveIntensity: 0.1 });
         
         conePositions.forEach((pos, index) => {
             const cone = new THREE.Mesh(coneGeometry, coneMaterial);
