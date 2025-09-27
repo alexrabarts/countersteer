@@ -3,7 +3,7 @@ class Environment {
         this.scene = scene;
         this.roadPath = []; // Store the path for other uses
         this.createRoad();
-        this.createGrass();
+        this.createTerrain();
         this.createRoadMarkings();
         this.addEnvironmentalDetails();
     }
@@ -126,42 +126,30 @@ class Environment {
         return texture;
     }
     
-    createGrass() {
-        // Larger grass area for the loop course
-        const grassMaterial = new THREE.MeshStandardMaterial({
+    createTerrain() {
+        // Phase 1: Replace flat grass with subdivided terrain (currently flat)
+        const terrainSize = 1000;
+        const terrainSegments = 64; // 64x64 = 4096 vertices for detail
+        
+        const terrainGeometry = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
+        const terrainMaterial = new THREE.MeshStandardMaterial({
             color: 0x3a5f3a,
-            side: THREE.DoubleSide,
             roughness: 0.95,
             metalness: 0.0
         });
         
-        const grassGeometry = new THREE.PlaneGeometry(2000, 2000);
-        const grass = new THREE.Mesh(grassGeometry, grassMaterial);
-        grass.rotation.x = -Math.PI / 2;
-        grass.position.set(0, -0.01, 0);
-        grass.receiveShadow = true;
-        this.scene.add(grass);
+        // Keep terrain flat for now - just replacing the geometry structure
+        const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+        terrain.rotation.x = -Math.PI / 2;
+        terrain.position.set(0, -0.01, 0);
+        terrain.receiveShadow = true;
+        this.scene.add(terrain);
         
-        // Add some texture variation with darker patches
-        for (let i = 0; i < 20; i++) {
-            const patchSize = 50 + Math.random() * 100;
-            const patchGeometry = new THREE.PlaneGeometry(patchSize, patchSize);
-            const patchMaterial = new THREE.MeshStandardMaterial({
-                color: 0x2a4f2a,
-                side: THREE.DoubleSide,
-                roughness: 0.95,
-                metalness: 0.0
-            });
-            const patch = new THREE.Mesh(patchGeometry, patchMaterial);
-            patch.rotation.x = -Math.PI / 2;
-            patch.position.set(
-                (Math.random() - 0.5) * 1500,
-                -0.005,
-                (Math.random() - 0.5) * 1500
-            );
-            patch.receiveShadow = true;
-            this.scene.add(patch);
-        }
+        // Store reference for future phases
+        this.terrain = terrain;
+        this.terrainGeometry = terrainGeometry;
+        
+        console.log('Phase 1: Created subdivided terrain with', (terrainSegments + 1) * (terrainSegments + 1), 'vertices');
     }
     
     createRoadMarkings() {
