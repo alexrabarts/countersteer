@@ -2,7 +2,6 @@ class Environment {
     constructor(scene) {
         this.scene = scene;
         this.roadPath = []; // Store the path for other uses
-        this.createSky();
         this.createRoad();
         this.createGrass();
         this.createRoadMarkings();
@@ -215,42 +214,6 @@ class Environment {
         }
     }
     
-    createSky() {
-        // Create a large sphere for sky gradient
-        const skyGeometry = new THREE.SphereGeometry(3000, 32, 32);
-        const skyMaterial = new THREE.ShaderMaterial({
-            vertexShader: `
-                varying vec3 vWorldPosition;
-                void main() {
-                    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                    vWorldPosition = worldPosition.xyz;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            `,
-            fragmentShader: `
-                uniform vec3 topColor;
-                uniform vec3 bottomColor;
-                uniform float offset;
-                uniform float exponent;
-                varying vec3 vWorldPosition;
-                void main() {
-                    float h = normalize(vWorldPosition + offset).y;
-                    gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
-                }
-            `,
-            uniforms: {
-                topColor: { value: new THREE.Color(0x0077ff) },
-                bottomColor: { value: new THREE.Color(0xffffff) },
-                offset: { value: 33 },
-                exponent: { value: 0.6 }
-            },
-            side: THREE.BackSide
-        });
-        const sky = new THREE.Mesh(skyGeometry, skyMaterial);
-        this.scene.add(sky);
-        this.skyMaterial = skyMaterial;
-    }
-
     addEnvironmentalDetails() {
         // Trees along the roadside - more sparse for visibility
         const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.6, 4);

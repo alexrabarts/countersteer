@@ -31,8 +31,6 @@ class Game {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.2;
         document.body.appendChild(this.renderer.domElement);
         
         window.addEventListener('resize', () => this.onWindowResize());
@@ -139,12 +137,6 @@ class Game {
         const skySat = 0.5 + warmth * 0.2;
         const skyLight = 0.7 + lightIntensity * 0.3;
         this.scene.background.setHSL(skyHue, skySat, skyLight);
-
-        // Update sky sphere
-        if (this.environment.skyMaterial) {
-            this.environment.skyMaterial.uniforms.topColor.value.setHSL(skyHue, skySat, skyLight);
-            this.environment.skyMaterial.uniforms.bottomColor.value.setHSL(skyHue, skySat * 0.5, skyLight * 0.8);
-        }
 
         // Update fog
         this.scene.fog.color.setHSL(skyHue, skySat, skyLight * 0.8);
