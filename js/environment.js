@@ -126,33 +126,8 @@ class Environment {
         return texture;
     }
     
-    // Helper function to find distance from point to road path
-    getDistanceToRoadPath(x, z) {
-        let minDistance = Infinity;
-        let isRightSide = false;
-        
-        for (let i = 0; i < this.roadPath.length; i++) {
-            const roadPoint = this.roadPath[i];
-            const distance = Math.sqrt(
-                Math.pow(x - roadPoint.x, 2) + Math.pow(z - roadPoint.z, 2)
-            );
-            
-            if (distance < minDistance) {
-                minDistance = distance;
-                
-                // Determine which side of road this point is on
-                const roadHeading = roadPoint.heading;
-                const toPoint = Math.atan2(z - roadPoint.z, x - roadPoint.x);
-                const relativeBearing = toPoint - roadHeading;
-                isRightSide = Math.sin(relativeBearing) > 0;
-            }
-        }
-        
-        return { distance: minDistance, isRightSide };
-    }
-
     createTerrain() {
-        // Phase 3: Add road path integration for proper left/right detection
+        // Phase 2: Implement simple linear drop-off on right side
         const terrainSize = 1000;
         const terrainSegments = 64;
         
@@ -163,31 +138,28 @@ class Environment {
             metalness: 0.0
         });
         
-        // Phase 3: Use road path for proper terrain generation
+        // Phase 2: Modify vertices to create drop-off
         const vertices = terrainGeometry.attributes.position.array;
         for (let i = 0; i < vertices.length; i += 3) {
             const x = vertices[i];
             const z = vertices[i + 2];
             
-            const roadInfo = this.getDistanceToRoadPath(x, z);
-            const distanceFromRoad = roadInfo.distance;
-            const isRightSide = roadInfo.isRightSide;
-            
-            if (distanceFromRoad < 8) {
+            // Simple linear drop-off: right side (positive x) drops down
+            if (x > 20) {
+                // Progressive drop-off starting 20 units from center
+                const dropDistance = x - 20;
+                const maxDrop = 20;
+                const dropFactor = Math.min(dropDistance / 100, 1); // Drop over 100 units
+                vertices[i + 1] = -dropFactor * maxDrop; // Y coordinate
+            } else if (x < -20) {
+                // Left side slight rise for contrast
+                const riseDistance = Math.abs(x) - 20;
+                const maxRise = 3;
+                const riseFactor = Math.min(riseDistance / 50, 1);
+                vertices[i + 1] = riseFactor * maxRise;
+            } else {
                 // Road area stays flat
                 vertices[i + 1] = 0;
-            } else if (isRightSide) {
-                // Right side drops off progressively
-                const dropDistance = distanceFromRoad - 8;
-                const maxDrop = 25;
-                const dropFactor = Math.min(dropDistance / 80, 1);
-                vertices[i + 1] = -Math.pow(dropFactor, 1.5) * maxDrop;
-            } else {
-                // Left side rises slightly (cliff base)
-                const riseDistance = distanceFromRoad - 8;
-                const maxRise = 4;
-                const riseFactor = Math.min(riseDistance / 30, 1);
-                vertices[i + 1] = riseFactor * maxRise;
             }
         }
         
@@ -203,7 +175,7 @@ class Environment {
         this.terrain = terrain;
         this.terrainGeometry = terrainGeometry;
         
-        console.log('Phase 3: Created terrain with road path integration');
+        console.log('Phase 2: Created terrain with linear drop-off on right side');
     }
     
     createRoadMarkings() {
