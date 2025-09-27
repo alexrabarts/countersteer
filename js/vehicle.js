@@ -206,8 +206,10 @@ class Vehicle {
             
             const angularVel = this.speed / actualRadius;
             // Require steering into the corner after countersteering
-            const turnMultiplier = Math.max(0, steeringInput * Math.sign(this.leanAngle));
-            this.yawAngle -= angularVel * Math.sign(this.leanAngle) * turnMultiplier * deltaTime;
+            const steerIntoCorner = steeringInput * Math.sign(this.leanAngle) > 0.1; // Small threshold
+            if (steerIntoCorner) {
+                this.yawAngle -= angularVel * Math.sign(this.leanAngle) * deltaTime;
+            }
         }
         
         // Debug output
