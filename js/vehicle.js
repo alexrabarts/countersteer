@@ -170,6 +170,9 @@ class Vehicle {
         this.velocity.copy(forward.multiplyScalar(this.speed));
         this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
         
+        // Update elevation to follow road
+        this.updateElevation();
+        
         // Update 3D model
         this.updateMesh();
     }
@@ -325,5 +328,30 @@ class Vehicle {
 
     getSteeringAngleDegrees() {
         return this.steeringAngle * 180 / Math.PI;
+    }
+    
+    updateElevation() {
+        // Find nearest road segment and match its elevation
+        if (this.environment && this.environment.roadPath) {
+            let minDistance = Infinity;
+            let closestSegment = null;
+            
+            this.environment.roadPath.forEach(segment => {
+                const distance = Math.sqrt(
+                    Math.pow(this.position.x - segment.x, 2) + 
+                    Math.pow(this.position.z - segment.z, 2)
+                );
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestSegment = segment;
+                }
+            });
+            
+            if (closestSegment && closestSegment.y !== undefined) {
+                // Smoothly transition to road elevation
+                const targetY = closestSegment.y;
+                this.position.y = this.position.y * 0.9 + targetY * 0.1;
+            }
+        }
     }
 }

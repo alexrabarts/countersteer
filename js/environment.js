@@ -47,31 +47,37 @@ class Environment {
         ];
         
         // Build the road segments based on the layout
+        let segmentIndex = 0;
         courseLayout.forEach(section => {
             for (let i = 0; i < section.segments; i++) {
                 // Calculate center position for this segment
                 const centerX = currentX + (segmentLength/2) * Math.sin(currentHeading);
                 const centerZ = currentZ + (segmentLength/2) * Math.cos(currentHeading);
                 
+                // Calculate elevation for this segment - gentle hills
+                const elevation = Math.sin(segmentIndex * 0.03) * 3 + Math.cos(segmentIndex * 0.02) * 2;
+                
                 // Create road segment
                 const roadGeometry = new THREE.PlaneGeometry(roadWidth, segmentLength * 1.05); // Slight overlap
                 const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
-
-                // Position segment
-                roadMesh.position.set(centerX, 0.01, centerZ);
-
+                
+                // Position segment with elevation
+                roadMesh.position.set(centerX, elevation + 0.01, centerZ);
+                
                 // Rotate segment - first lay it flat, then rotate to match heading
                 roadMesh.rotation.x = -Math.PI / 2;  // Lay flat
                 roadMesh.rotation.z = currentHeading; // Rotate to match road direction
-
+                
                 roadMesh.receiveShadow = true;
+                roadMesh.castShadow = true;
 
                 this.scene.add(roadMesh);
                 
-                // Store path point
+                // Store path point with elevation
                 this.roadPath.push({
                     x: centerX,
                     z: centerZ,
+                    y: elevation,
                     heading: currentHeading
                 });
                 
@@ -81,6 +87,7 @@ class Environment {
                 
                 // Update heading for next segment
                 currentHeading += section.turnRate;
+                segmentIndex++;
             }
         });
         
@@ -142,18 +149,40 @@ class Environment {
         grass.receiveShadow = true;
         this.scene.add(grass);
 
-        // Simple drop-off terrain on right side
-        const dropGeometry = new THREE.PlaneGeometry(800, 2000);
-        const dropMaterial = new THREE.MeshStandardMaterial({
-            color: 0x2a4f2a,
-            roughness: 0.95,
-            metalness: 0.0
+        // Create cliff walls and drop-off terrain following road elevation
+        this.roadPath.forEach((point, index) => {
+            if (index % 4 === 0) {
+                const roadY = point.y !== undefined ? point.y : 0;
+                
+                // Left side cliff wall
+                const cliffGeometry = new THREE.BoxGeometry(6, 10, 30);
+                const cliffMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x8B4513, 
+                    roughness: 0.9, 
+                    metalness: 0.0 
+                });
+                const cliff = new THREE.Mesh(cliffGeometry, cliffMaterial);
+                cliff.position.set(point.x - 18, roadY + 5, point.z);
+                cliff.rotation.y = point.heading;
+                cliff.castShadow = true;
+                cliff.receiveShadow = true;
+                this.scene.add(cliff);
+                
+                // Right side drop-off terrain
+                const dropGeometry = new THREE.PlaneGeometry(40, 30);
+                const dropMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x2a4f2a,
+                    roughness: 0.95,
+                    metalness: 0.0
+                });
+                const dropTerrain = new THREE.Mesh(dropGeometry, dropMaterial);
+                dropTerrain.rotation.x = -Math.PI / 2;
+                dropTerrain.position.set(point.x + 25, roadY - 8, point.z);
+                dropTerrain.rotation.z = point.heading;
+                dropTerrain.receiveShadow = true;
+                this.scene.add(dropTerrain);
+            }
         });
-        const dropTerrain = new THREE.Mesh(dropGeometry, dropMaterial);
-        dropTerrain.rotation.x = -Math.PI / 2;
-        dropTerrain.position.set(600, -5, 0); // Right side, 5 units lower
-        dropTerrain.receiveShadow = true;
-        this.scene.add(dropTerrain);
         
         // Add some texture variation with darker patches
         for (let i = 0; i < 20; i++) {
@@ -194,7 +223,8 @@ class Environment {
                 const dash = new THREE.Mesh(dashGeometry, dashMaterial);
                 dash.rotation.x = -Math.PI / 2;
                 dash.rotation.z = point.heading;
-                dash.position.set(point.x, 0.02, point.z);
+                const dashY = point.y !== undefined ? point.y + 0.02 : 0.02;
+                dash.position.set(point.x, dashY, point.z);
                 dash.receiveShadow = true;
                 this.scene.add(dash);
             }
@@ -212,7 +242,8 @@ class Environment {
             });
             const startLine = new THREE.Mesh(startGeometry, startMaterial);
             startLine.rotation.x = -Math.PI / 2;
-            startLine.position.set(this.roadPath[5].x, 0.03, this.roadPath[5].z);
+            const startY = this.roadPath[5].y !== undefined ? this.roadPath[5].y + 0.03 : 0.03;
+            startLine.position.set(this.roadPath[5].x, startY, this.roadPath[5].z);
             startLine.receiveShadow = true;
             this.scene.add(startLine);
             
@@ -228,7 +259,8 @@ class Environment {
             const finishLine = new THREE.Mesh(startGeometry, finishMaterial);
             finishLine.rotation.x = -Math.PI / 2;
             finishLine.rotation.z = this.roadPath[lastSegments].heading;
-            finishLine.position.set(this.roadPath[lastSegments].x, 0.03, this.roadPath[lastSegments].z);
+            const finishY = this.roadPath[lastSegments].y !== undefined ? this.roadPath[lastSegments].y + 0.03 : 0.03;
+            finishLine.position.set(this.roadPath[lastSegments].x, finishY, this.roadPath[lastSegments].z);
             finishLine.receiveShadow = true;
             this.scene.add(finishLine);
         }

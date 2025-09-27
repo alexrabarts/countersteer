@@ -15,6 +15,7 @@ class Game {
         
         console.log('Creating vehicle...');
         this.vehicle = new Vehicle(this.scene);
+        this.vehicle.environment = this.environment; // Pass environment reference for elevation
         this.input = new InputHandler();
         
         this.clock = new THREE.Clock();
