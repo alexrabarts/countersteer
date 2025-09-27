@@ -127,9 +127,9 @@ class Environment {
     }
     
     createTerrain() {
-        // Phase 1: Replace flat grass with subdivided terrain (currently flat)
+        // Phase 2: Implement simple linear drop-off on right side
         const terrainSize = 1000;
-        const terrainSegments = 64; // 64x64 = 4096 vertices for detail
+        const terrainSegments = 64;
         
         const terrainGeometry = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
         const terrainMaterial = new THREE.MeshStandardMaterial({
@@ -138,18 +138,44 @@ class Environment {
             metalness: 0.0
         });
         
-        // Keep terrain flat for now - just replacing the geometry structure
+        // Phase 2: Modify vertices to create drop-off
+        const vertices = terrainGeometry.attributes.position.array;
+        for (let i = 0; i < vertices.length; i += 3) {
+            const x = vertices[i];
+            const z = vertices[i + 2];
+            
+            // Simple linear drop-off: right side (positive x) drops down
+            if (x > 20) {
+                // Progressive drop-off starting 20 units from center
+                const dropDistance = x - 20;
+                const maxDrop = 20;
+                const dropFactor = Math.min(dropDistance / 100, 1); // Drop over 100 units
+                vertices[i + 1] = -dropFactor * maxDrop; // Y coordinate
+            } else if (x < -20) {
+                // Left side slight rise for contrast
+                const riseDistance = Math.abs(x) - 20;
+                const maxRise = 3;
+                const riseFactor = Math.min(riseDistance / 50, 1);
+                vertices[i + 1] = riseFactor * maxRise;
+            } else {
+                // Road area stays flat
+                vertices[i + 1] = 0;
+            }
+        }
+        
+        terrainGeometry.attributes.position.needsUpdate = true;
+        terrainGeometry.computeVertexNormals();
+        
         const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
         terrain.rotation.x = -Math.PI / 2;
         terrain.position.set(0, -0.01, 0);
         terrain.receiveShadow = true;
         this.scene.add(terrain);
         
-        // Store reference for future phases
         this.terrain = terrain;
         this.terrainGeometry = terrainGeometry;
         
-        console.log('Phase 1: Created subdivided terrain with', (terrainSegments + 1) * (terrainSegments + 1), 'vertices');
+        console.log('Phase 2: Created terrain with linear drop-off on right side');
     }
     
     createRoadMarkings() {
