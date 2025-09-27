@@ -258,7 +258,7 @@ class Environment {
         
         // Posts along the road - especially on curves
         const postGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1.5);
-        const postMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.0, emissive: 0x222222, emissiveIntensity: 0.05 });
+        const postMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.0 });
         const reflectorGeometry = new THREE.BoxGeometry(0.2, 0.3, 0.05);
         const reflectorMaterial = new THREE.MeshStandardMaterial({
             color: 0xff0000,
@@ -282,23 +282,13 @@ class Environment {
                     const leftPost = new THREE.Mesh(postGeometry, postMaterial);
                     leftPost.position.set(leftX, 0.75, leftZ);
                     this.scene.add(leftPost);
-
-                    // Left post light
-                    const leftLight = new THREE.PointLight(0xffffff, 0.3, 15);
-                    leftLight.position.set(leftX, 1.5, leftZ);
-                    this.scene.add(leftLight);
-
+                    
                     // Right post
                     const rightX = point.x + 9 * Math.sin(point.heading + Math.PI/2);
                     const rightZ = point.z + 9 * Math.cos(point.heading + Math.PI/2);
                     const rightPost = new THREE.Mesh(postGeometry, postMaterial);
                     rightPost.position.set(rightX, 0.75, rightZ);
                     this.scene.add(rightPost);
-
-                    // Right post light
-                    const rightLight = new THREE.PointLight(0xffffff, 0.3, 15);
-                    rightLight.position.set(rightX, 1.5, rightZ);
-                    this.scene.add(rightLight);
                 } else {
                     // Curve - post on outside only
                     const side = headingChange > 0 ? -1 : 1; // Outside of curve
@@ -307,12 +297,7 @@ class Environment {
                     const post = new THREE.Mesh(postGeometry, postMaterial);
                     post.position.set(postX, 0.75, postZ);
                     this.scene.add(post);
-
-                    // Post light
-                    const postLight = new THREE.PointLight(0xffffff, 0.3, 15);
-                    postLight.position.set(postX, 1.5, postZ);
-                    this.scene.add(postLight);
-
+                    
                     // Add reflector
                     const reflector = new THREE.Mesh(reflectorGeometry, reflectorMaterial);
                     reflector.position.set(postX, 1.2, postZ);

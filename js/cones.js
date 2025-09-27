@@ -54,19 +54,14 @@ class Cones {
         
         // Create the cone meshes
         const coneGeometry = new THREE.ConeGeometry(0.25, 0.8, 6);
-        const coneMaterial = new THREE.MeshStandardMaterial({ color: 0xff6600, roughness: 0.8, metalness: 0.0, emissive: 0x331100, emissiveIntensity: 0.1 });
+        const coneMaterial = new THREE.MeshStandardMaterial({ color: 0xff6600, roughness: 0.8, metalness: 0.0 });
         
         conePositions.forEach((pos, index) => {
             const cone = new THREE.Mesh(coneGeometry, coneMaterial);
             cone.position.set(pos.x, 0.4, pos.z);
             this.scene.add(cone);
             this.cones.push(cone);
-
-            // Add point light to cone
-            const coneLight = new THREE.PointLight(0xff6600, 0.5, 20);
-            coneLight.position.set(pos.x, 0.8, pos.z);
-            this.scene.add(coneLight);
-
+            
             // Add base
             const baseGeometry = new THREE.CylinderGeometry(0.35, 0.35, 0.05, 6);
             const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9, metalness: 0.0 });
