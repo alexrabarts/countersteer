@@ -18,7 +18,8 @@ class Game {
         this.input = new InputHandler();
         
         this.clock = new THREE.Clock();
-        
+        this.time = 0; // For time-of-day cycle
+
         console.log('Starting animation loop...');
         this.animate();
     }
@@ -89,17 +90,80 @@ class Game {
         // Follow camera - keep camera behind vehicle
         const vehiclePos = this.vehicle.position.clone();
         const vehicleRotation = new THREE.Euler(0, this.vehicle.yawAngle, 0);
-        
+
         // Calculate camera position relative to vehicle
         const offset = this.cameraOffset.clone();
         offset.applyEuler(vehicleRotation);
         const cameraPos = vehiclePos.clone().add(offset);
         this.camera.position.copy(cameraPos);
-        
+
         // Look at vehicle
         const lookTarget = this.vehicle.position.clone();
         lookTarget.y += 1;
         this.camera.lookAt(lookTarget);
+    }
+
+    updateLighting() {
+        // Time-of-day cycle
+        const dayLength = Math.PI * 2; // Full cycle
+        const sunAngle = (this.time % dayLength) / dayLength * Math.PI * 2;
+
+        // Sun elevation (0 to PI)
+        const elevation = Math.sin(sunAngle) * Math.PI / 2 + Math.PI / 4; // From -pi/4 to 3pi/4
+
+        // Light intensity based on elevation
+        const lightIntensity = Math.max(0.1, Math.sin(elevation));
+
+        // Light color: warmer at dawn/dusk
+        const warmth = Math.max(0, Math.sin(elevation * 2) * 0.5 + 0.5);
+        const lightColor = new THREE.Color().setHSL(0.1 - warmth * 0.05, 0.5, 0.5 + warmth * 0.3);
+
+        // Update directional light
+        this.directionalLight.intensity = lightIntensity * 0.8;
+        this.directionalLight.color.copy(lightColor);
+        this.directionalLight.position.set(
+            this.vehicle.position.x + 50 * Math.cos(elevation),
+            50 * Math.sin(elevation),
+            this.vehicle.position.z
+        );
+        this.directionalLight.target.position.copy(this.vehicle.position);
+        this.directionalLight.target.updateMatrixWorld();
+
+        // Update ambient light
+        this.scene.children.find(obj => obj.type === 'AmbientLight').intensity = 0.3 + lightIntensity * 0.3;
+
+        // Update sky color
+        const skyHue = 0.6 - warmth * 0.1; // Blue to orange
+        const skySat = 0.5 + warmth * 0.2;
+        const skyLight = 0.7 + lightIntensity * 0.3;
+        this.scene.background.setHSL(skyHue, skySat, skyLight);
+
+        // Update fog
+        this.scene.fog.color.setHSL(skyHue, skySat, skyLight * 0.8);
+
+        // Update directional light to follow vehicle (adjusted for sun position)
+        // Already done above
+
+        // Update headlights (only at night)
+        const nightFactor = Math.max(0, 1 - lightIntensity * 2);
+        this.leftHeadlight.intensity = 1 * nightFactor;
+        this.rightHeadlight.intensity = 1 * nightFactor;
+
+        // Update headlights positions
+        const headlightOffset = new THREE.Vector3(0, 0.5, 0.7);
+        headlightOffset.applyEuler(new THREE.Euler(0, this.vehicle.yawAngle, 0));
+
+        this.leftHeadlight.position.copy(this.vehicle.position).add(new THREE.Vector3(-0.3, 0, 0).applyEuler(new THREE.Euler(0, this.vehicle.yawAngle, 0))).add(headlightOffset);
+        this.rightHeadlight.position.copy(this.vehicle.position).add(new THREE.Vector3(0.3, 0, 0).applyEuler(new THREE.Euler(0, this.vehicle.yawAngle, 0))).add(headlightOffset);
+
+        const targetOffset = new THREE.Vector3(0, 0, 50);
+        targetOffset.applyEuler(new THREE.Euler(0, this.vehicle.yawAngle, 0));
+
+        this.leftHeadlight.target.position.copy(this.vehicle.position).add(targetOffset);
+        this.rightHeadlight.target.position.copy(this.vehicle.position).add(targetOffset);
+
+        this.leftHeadlight.target.updateMatrixWorld();
+        this.rightHeadlight.target.updateMatrixWorld();
     }
 
     updateUI() {
@@ -118,6 +182,8 @@ class Game {
         requestAnimationFrame(() => this.animate());
         
         const deltaTime = this.clock.getDelta();
+        this.time += deltaTime * 0.1; // Slow time progression
+
         const steeringInput = this.input.getSteeringInput();
         const throttleInput = this.input.getThrottleInput();
         const brakeInput = this.input.getBrakeInput();
@@ -137,12 +203,8 @@ class Game {
         
         this.updateCamera();
         this.updateUI();
-        
-        // Update directional light to follow vehicle
-        this.directionalLight.position.x = this.vehicle.position.x + 50;
-        this.directionalLight.position.z = this.vehicle.position.z;
-        this.directionalLight.target.position.copy(this.vehicle.position);
-        this.directionalLight.target.updateMatrixWorld();
+
+        this.updateLighting();
 
         // Update headlights
         const headlightOffset = new THREE.Vector3(0, 0.5, 0.7);
