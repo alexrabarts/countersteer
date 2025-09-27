@@ -166,6 +166,10 @@ class Game {
         this.directionalLight.target.position.copy(this.vehicle.position);
         this.directionalLight.target.updateMatrixWorld();
 
+        // Subtle intensity variation for natural lighting
+        const time = performance.now() * 0.001;
+        this.directionalLight.intensity = 0.8 + Math.sin(time * 0.1) * 0.05;
+
         // Update headlights
         const headlightOffset = new THREE.Vector3(0, 0.5, 0.7);
         headlightOffset.applyEuler(new THREE.Euler(0, this.vehicle.yawAngle, 0));
