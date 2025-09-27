@@ -7,11 +7,11 @@ class Vehicle {
         this.velocity = new THREE.Vector3(0, 0, 0);
         
         // Vehicle parameters
-        this.speed = 15; // m/s (starts at ~54 km/h)
+        this.speed = 20; // m/s (starts at ~72 km/h)
         this.minSpeed = 5; // m/s (~18 km/h) - below this, bike falls
-        this.maxSpeed = 30; // m/s (~108 km/h)
-        this.acceleration = 8; // m/s²
-        this.brakeForce = 12; // m/s²
+        this.maxSpeed = 50; // m/s (~180 km/h)
+        this.acceleration = 12; // m/s²
+        this.brakeForce = 15; // m/s²
         this.wheelbase = 1.4; // metres
         this.cgHeight = 0.6; // centre of gravity height
         this.mass = 200; // kg
@@ -345,7 +345,7 @@ class Vehicle {
     reset() {
         this.position.set(0, 0, 0);
         this.velocity.set(0, 0, 0);
-        this.speed = 15; // Reset to starting speed
+        this.speed = 20; // Reset to starting speed
         this.leanAngle = 0;
         this.leanVelocity = 0;
         this.steeringAngle = 0;
