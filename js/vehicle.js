@@ -76,6 +76,18 @@ class Vehicle {
         this.handlebar.castShadow = true;
         this.handlebar.receiveShadow = true;
 
+        // Mirrors
+        const mirrorGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.05);
+        const mirrorMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.1, metalness: 0.9 });
+        this.leftMirror = new THREE.Mesh(mirrorGeometry, mirrorMaterial);
+        this.leftMirror.position.set(-0.4, 1.1, 0.5);
+        this.leftMirror.castShadow = true;
+        this.leftMirror.receiveShadow = true;
+        this.rightMirror = new THREE.Mesh(mirrorGeometry, mirrorMaterial);
+        this.rightMirror.position.set(0.4, 1.1, 0.5);
+        this.rightMirror.castShadow = true;
+        this.rightMirror.receiveShadow = true;
+
         // Rider
         const riderGeometry = new THREE.BoxGeometry(0.3, 0.6, 0.2);
         const riderMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.8, metalness: 0.0 });
@@ -99,6 +111,8 @@ class Vehicle {
         this.group.add(this.handlebar);
         this.group.add(this.rider);
         this.group.add(this.brakeLight);
+        this.group.add(this.leftMirror);
+        this.group.add(this.rightMirror);
         
         this.scene.add(this.group);
     }

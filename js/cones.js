@@ -93,13 +93,20 @@ class Cones {
             transparent: true,
             opacity: 0.6,
             roughness: 0.7,
-            metalness: 0.0
+            metalness: 0.0,
+            emissive: 0x002200,
+            emissiveIntensity: 0.1
         });
         const startLine = new THREE.Mesh(startGeometry, startMaterial);
         startLine.rotation.x = -Math.PI / 2;
         startLine.position.set(0, 0.03, 20);
         startLine.receiveShadow = true;
         this.scene.add(startLine);
+
+        // Start line light
+        const startLight = new THREE.PointLight(0x00ff00, 0.5, 50);
+        startLight.position.set(0, 5, 20);
+        this.scene.add(startLight);
         
         // Finish line
         if (this.environment && this.environment.roadPath.length > 0) {
@@ -109,7 +116,9 @@ class Cones {
                 transparent: true,
                 opacity: 0.6,
                 roughness: 0.7,
-                metalness: 0.0
+                metalness: 0.0,
+                emissive: 0x222222,
+                emissiveIntensity: 0.1
             });
             const finishLine = new THREE.Mesh(startGeometry, finishMaterial);
             finishLine.rotation.x = -Math.PI / 2;
@@ -117,6 +126,11 @@ class Cones {
             finishLine.position.set(lastPoint.x, 0.03, lastPoint.z + 20);
             finishLine.receiveShadow = true;
             this.scene.add(finishLine);
+
+            // Finish line light
+            const finishLight = new THREE.PointLight(0xffffff, 0.5, 50);
+            finishLight.position.set(lastPoint.x, 5, lastPoint.z + 20);
+            this.scene.add(finishLight);
         }
     }
     
