@@ -3,7 +3,7 @@ class Environment {
         this.scene = scene;
         this.roadPath = []; // Store the path for other uses
         this.createRoad();
-        this.createTerrain();
+        this.createGrass();
         this.createRoadMarkings();
         this.addEnvironmentalDetails();
     }
@@ -126,47 +126,42 @@ class Environment {
         return texture;
     }
     
-    createTerrain() {
-        // Create heightmap-based terrain instead of flat planes
-        const terrainSize = 1000;
-        const terrainRes = 64;
-        const terrainGeometry = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainRes - 1, terrainRes - 1);
-        
-        // Modify vertices to create slope dropping off to the right
-        const vertices = terrainGeometry.attributes.position.array;
-        for (let i = 0; i < vertices.length; i += 3) {
-            const x = vertices[i];
-            const z = vertices[i + 2];
-            
-            // Create slope - higher on left side of road, drops off on right
-            if (x > 20) {
-                // Right side drops off progressively
-                const dropFactor = Math.min((x - 20) / 200, 1);
-                vertices[i + 1] = -dropFactor * 30; // Y coordinate
-            } else if (x < -20) {
-                // Left side stays level or slightly elevated
-                vertices[i + 1] = Math.max(0, (Math.abs(x) - 20) / 10);
-            } else {
-                // Road area stays level
-                vertices[i + 1] = 0;
-            }
-        }
-        
-        terrainGeometry.attributes.position.needsUpdate = true;
-        terrainGeometry.computeVertexNormals();
-        
-        const terrainMaterial = new THREE.MeshStandardMaterial({
+    createGrass() {
+        // Larger grass area for the loop course
+        const grassMaterial = new THREE.MeshStandardMaterial({
             color: 0x3a5f3a,
+            side: THREE.DoubleSide,
             roughness: 0.95,
-            metalness: 0.0,
-            wireframe: false
+            metalness: 0.0
         });
         
-        const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
-        terrain.rotation.x = -Math.PI / 2;
-        terrain.position.set(0, -0.01, 0);
-        terrain.receiveShadow = true;
-        this.scene.add(terrain);
+        const grassGeometry = new THREE.PlaneGeometry(2000, 2000);
+        const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+        grass.rotation.x = -Math.PI / 2;
+        grass.position.set(0, -0.01, 0);
+        grass.receiveShadow = true;
+        this.scene.add(grass);
+        
+        // Add some texture variation with darker patches
+        for (let i = 0; i < 20; i++) {
+            const patchSize = 50 + Math.random() * 100;
+            const patchGeometry = new THREE.PlaneGeometry(patchSize, patchSize);
+            const patchMaterial = new THREE.MeshStandardMaterial({
+                color: 0x2a4f2a,
+                side: THREE.DoubleSide,
+                roughness: 0.95,
+                metalness: 0.0
+            });
+            const patch = new THREE.Mesh(patchGeometry, patchMaterial);
+            patch.rotation.x = -Math.PI / 2;
+            patch.position.set(
+                (Math.random() - 0.5) * 1500,
+                -0.005,
+                (Math.random() - 0.5) * 1500
+            );
+            patch.receiveShadow = true;
+            this.scene.add(patch);
+        }
     }
     
     createRoadMarkings() {
