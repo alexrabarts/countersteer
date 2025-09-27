@@ -142,8 +142,23 @@ class Environment {
         grass.receiveShadow = true;
         this.scene.add(grass);
         
-        // Add some texture variation with darker patches
-        for (let i = 0; i < 20; i++) {
+        // Simple drop-off terrain on right side
+        const dropGeometry = new THREE.PlaneGeometry(500, 2000);
+        const dropMaterial = new THREE.MeshStandardMaterial({
+            color: 0x2a4f2a,
+            side: THREE.DoubleSide,
+            roughness: 0.95,
+            metalness: 0.0
+        });
+        const dropTerrain = new THREE.Mesh(dropGeometry, dropMaterial);
+        dropTerrain.rotation.x = -Math.PI / 2;
+        dropTerrain.rotation.z = Math.PI / 8; // Slight tilt down
+        dropTerrain.position.set(300, -10, 0); // Right side, lower
+        dropTerrain.receiveShadow = true;
+        this.scene.add(dropTerrain);
+
+        // Add some texture variation with darker patches  
+        for (let i = 0; i < 15; i++) {
             const patchSize = 50 + Math.random() * 100;
             const patchGeometry = new THREE.PlaneGeometry(patchSize, patchSize);
             const patchMaterial = new THREE.MeshStandardMaterial({
