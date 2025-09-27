@@ -160,39 +160,6 @@ class Environment {
             }
         });
 
-        // Drop-off terrain on right side
-        this.roadPath.forEach((point, index) => {
-            if (index % 3 === 0) {
-                // First tier - slight drop
-                const tier1Geometry = new THREE.PlaneGeometry(30, 20);
-                const tier1Material = new THREE.MeshStandardMaterial({ 
-                    color: 0x2a4f2a, 
-                    roughness: 0.95, 
-                    metalness: 0.0 
-                });
-                const tier1 = new THREE.Mesh(tier1Geometry, tier1Material);
-                tier1.rotation.x = -Math.PI / 2;
-                tier1.position.set(point.x + 20, -3, point.z);
-                tier1.rotation.z = point.heading;
-                tier1.receiveShadow = true;
-                this.scene.add(tier1);
-
-                // Second tier - deeper drop
-                const tier2Geometry = new THREE.PlaneGeometry(40, 20);
-                const tier2Material = new THREE.MeshStandardMaterial({ 
-                    color: 0x1a3f1a, 
-                    roughness: 0.95, 
-                    metalness: 0.0 
-                });
-                const tier2 = new THREE.Mesh(tier2Geometry, tier2Material);
-                tier2.rotation.x = -Math.PI / 2;
-                tier2.position.set(point.x + 50, -8, point.z);
-                tier2.rotation.z = point.heading;
-                tier2.receiveShadow = true;
-                this.scene.add(tier2);
-            }
-        });
-
         // Add some texture variation with darker patches
         for (let i = 0; i < 15; i++) {
             const patchSize = 50 + Math.random() * 100;
