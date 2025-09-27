@@ -96,6 +96,21 @@ class Vehicle {
         this.rider.castShadow = true;
         this.rider.receiveShadow = true;
 
+        // Legs
+        const legGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.4, 8);
+        const legMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff, roughness: 0.8, metalness: 0.0 });
+        this.leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+        this.leftLeg.position.set(-0.1, -0.5, 0);
+        this.leftLeg.castShadow = true;
+        this.leftLeg.receiveShadow = true;
+        this.rider.add(this.leftLeg);
+
+        this.rightLeg = new THREE.Mesh(legGeometry, legMaterial);
+        this.rightLeg.position.set(0.1, -0.5, 0);
+        this.rightLeg.castShadow = true;
+        this.rightLeg.receiveShadow = true;
+        this.rider.add(this.rightLeg);
+
         // Helmet
         const helmetGeometry = new THREE.SphereGeometry(0.15, 8, 6);
         const helmetMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.9, metalness: 0.0 });
