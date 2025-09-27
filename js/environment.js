@@ -149,40 +149,77 @@ class Environment {
         grass.receiveShadow = true;
         this.scene.add(grass);
 
-        // Create drop-off terrain following road elevation
-        this.roadPath.forEach((point, index) => {
-            if (index % 3 === 0) {
+        // Create continuous terrain strips along the road
+        const createTerrainStrip = (side, offset, dropAmount, color) => {
+            const points = [];
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const indices = [];
+            
+            // Create vertices for terrain strip
+            for (let i = 0; i < this.roadPath.length - 1; i++) {
+                const point = this.roadPath[i];
+                const nextPoint = this.roadPath[i + 1];
                 const roadY = point.y !== undefined ? point.y : 0;
+                const nextRoadY = nextPoint.y !== undefined ? nextPoint.y : 0;
                 
-                // Right side drop-off terrain
-                const dropGeometry = new THREE.PlaneGeometry(60, 30);
-                const dropMaterial = new THREE.MeshStandardMaterial({
-                    color: 0x2a4f2a,
-                    roughness: 0.95,
-                    metalness: 0.0
-                });
-                const dropTerrain = new THREE.Mesh(dropGeometry, dropMaterial);
-                dropTerrain.rotation.x = -Math.PI / 2;
-                dropTerrain.position.set(point.x + 35, roadY - 15, point.z);
-                dropTerrain.rotation.z = point.heading;
-                dropTerrain.receiveShadow = true;
-                this.scene.add(dropTerrain);
+                // Calculate perpendicular offset
+                const perpX = Math.cos(point.heading) * offset * side;
+                const perpZ = -Math.sin(point.heading) * offset * side;
+                const nextPerpX = Math.cos(nextPoint.heading) * offset * side;
+                const nextPerpZ = -Math.sin(nextPoint.heading) * offset * side;
                 
-                // Left side elevated terrain
-                const leftTerrainGeometry = new THREE.PlaneGeometry(40, 30);
-                const leftTerrainMaterial = new THREE.MeshStandardMaterial({
-                    color: 0x3a5f3a,
-                    roughness: 0.95,
-                    metalness: 0.0
-                });
-                const leftTerrain = new THREE.Mesh(leftTerrainGeometry, leftTerrainMaterial);
-                leftTerrain.rotation.x = -Math.PI / 2;
-                leftTerrain.position.set(point.x - 25, roadY + 3, point.z);
-                leftTerrain.rotation.z = point.heading;
-                leftTerrain.receiveShadow = true;
-                this.scene.add(leftTerrain);
+                // Inner edge (closer to road)
+                vertices.push(
+                    point.x + perpX, roadY + dropAmount, point.z + perpZ,
+                    nextPoint.x + nextPerpX, nextRoadY + dropAmount, nextPoint.z + nextPerpZ
+                );
+                
+                // Outer edge (further from road)
+                vertices.push(
+                    point.x + perpX * 3, roadY + dropAmount * 1.5, point.z + perpZ * 3,
+                    nextPoint.x + nextPerpX * 3, nextRoadY + dropAmount * 1.5, nextPoint.z + nextPerpZ * 3
+                );
             }
-        });
+            
+            // Create triangles
+            for (let i = 0; i < this.roadPath.length - 1; i++) {
+                const baseIndex = i * 4;
+                // Two triangles per segment
+                indices.push(
+                    baseIndex, baseIndex + 1, baseIndex + 2,
+                    baseIndex + 1, baseIndex + 3, baseIndex + 2
+                );
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+            
+            const material = new THREE.MeshStandardMaterial({
+                color: color,
+                roughness: 0.95,
+                metalness: 0.0,
+                side: THREE.DoubleSide
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.receiveShadow = true;
+            mesh.castShadow = true;
+            return mesh;
+        };
+        
+        // Create left side elevated terrain
+        const leftTerrain = createTerrainStrip(-1, 12, 2, 0x3a5f3a);
+        this.scene.add(leftTerrain);
+        
+        // Create right side drop-off terrain
+        const rightTerrain = createTerrainStrip(1, 12, -10, 0x2a4f2a);
+        this.scene.add(rightTerrain);
+        
+        // Create far right deep drop-off
+        const deepDropTerrain = createTerrainStrip(1, 36, -20, 0x1a3f1a);
+        this.scene.add(deepDropTerrain);
         
         // Add some texture variation with darker patches
         for (let i = 0; i < 20; i++) {
