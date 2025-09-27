@@ -65,6 +65,11 @@ class Game {
         this.directionalLight.shadow.bias = -0.0001; // Reduce shadow acne
         this.scene.add(this.directionalLight);
 
+        // Fill light from opposite side for softer shadows
+        this.fillLight = new THREE.DirectionalLight(0xffffff, 0.2);
+        this.fillLight.position.set(-50, 30, 0);
+        this.scene.add(this.fillLight);
+
         // Vehicle headlights
         this.leftHeadlight = new THREE.SpotLight(0xffffff, 1, 100, Math.PI/6, 0.1, 2);
         this.leftHeadlight.castShadow = true;
