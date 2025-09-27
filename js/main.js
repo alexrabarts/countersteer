@@ -80,6 +80,9 @@ class Game {
         this.camera.lookAt(0, 0, 0);
         this.cameraOffset = new THREE.Vector3(0, 4, -10); // Slightly higher and further back
         this.cameraTarget = new THREE.Vector3();
+        this.currentCameraPos = this.camera.position.clone();
+        this.currentLookTarget = new THREE.Vector3(0, 1, 0);
+        this.cameraLerpFactor = 0.05; // Smooth lag
         console.log('Camera setup complete');
     }
 
@@ -89,17 +92,21 @@ class Game {
         // Follow camera - keep camera behind vehicle
         const vehiclePos = this.vehicle.position.clone();
         const vehicleRotation = new THREE.Euler(0, this.vehicle.yawAngle, 0);
-        
+
         // Calculate camera position relative to vehicle
         const offset = this.cameraOffset.clone();
         offset.applyEuler(vehicleRotation);
         const cameraPos = vehiclePos.clone().add(offset);
-        this.camera.position.copy(cameraPos);
-        
-        // Look at vehicle
+
+        // Smooth camera movement with lag
+        this.currentCameraPos.lerp(cameraPos, this.cameraLerpFactor);
+        this.camera.position.copy(this.currentCameraPos);
+
+        // Look at vehicle with lag
         const lookTarget = this.vehicle.position.clone();
         lookTarget.y += 1;
-        this.camera.lookAt(lookTarget);
+        this.currentLookTarget.lerp(lookTarget, this.cameraLerpFactor);
+        this.camera.lookAt(this.currentLookTarget);
     }
 
     updateUI() {

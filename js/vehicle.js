@@ -58,11 +58,18 @@ class Vehicle {
         const handlebarMaterial = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.4, metalness: 0.9 });
         this.handlebar = new THREE.Mesh(handlebarGeometry, handlebarMaterial);
         this.handlebar.position.set(0, 1.0, 0.6);
-        
+
+        // Rider
+        const riderGeometry = new THREE.BoxGeometry(0.3, 0.6, 0.2);
+        const riderMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.8, metalness: 0.0 });
+        this.rider = new THREE.Mesh(riderGeometry, riderMaterial);
+        this.rider.position.set(0, 1.2, 0);
+
         this.group.add(this.rearWheel);
         this.group.add(this.frontWheel);
         this.group.add(this.frame);
         this.group.add(this.handlebar);
+        this.group.add(this.rider);
         
         this.scene.add(this.group);
     }
