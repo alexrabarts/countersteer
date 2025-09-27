@@ -54,7 +54,7 @@ class Cones {
         
         // Create the cone meshes
         const coneGeometry = new THREE.ConeGeometry(0.25, 0.8, 6);
-        const coneMaterial = new THREE.MeshPhongMaterial({ color: 0xff6600, shininess: 20, specular: 0x331100 });
+        const coneMaterial = new THREE.MeshStandardMaterial({ color: 0xff6600, roughness: 0.8, metalness: 0.0 });
         
         conePositions.forEach((pos, index) => {
             const cone = new THREE.Mesh(coneGeometry, coneMaterial);
@@ -64,7 +64,7 @@ class Cones {
             
             // Add base
             const baseGeometry = new THREE.CylinderGeometry(0.35, 0.35, 0.05, 6);
-            const baseMaterial = new THREE.MeshPhongMaterial({ color: 0x333333, shininess: 10, specular: 0x111111 });
+            const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9, metalness: 0.0 });
             const base = new THREE.Mesh(baseGeometry, baseMaterial);
             base.position.set(pos.x, 0.025, pos.z);
             this.scene.add(base);
@@ -77,12 +77,12 @@ class Cones {
     createStartFinishMarkers() {
         // Start line
         const startGeometry = new THREE.PlaneGeometry(16, 2);
-        const startMaterial = new THREE.MeshPhongMaterial({
+        const startMaterial = new THREE.MeshStandardMaterial({
             color: 0x00ff00,
             transparent: true,
             opacity: 0.6,
-            shininess: 30,
-            specular: 0x003300
+            roughness: 0.7,
+            metalness: 0.0
         });
         const startLine = new THREE.Mesh(startGeometry, startMaterial);
         startLine.rotation.x = -Math.PI / 2;
@@ -92,12 +92,12 @@ class Cones {
         // Finish line
         if (this.environment && this.environment.roadPath.length > 0) {
             const lastPoint = this.environment.roadPath[this.environment.roadPath.length - 1];
-            const finishMaterial = new THREE.MeshPhongMaterial({
+            const finishMaterial = new THREE.MeshStandardMaterial({
                 color: 0xffffff,
                 transparent: true,
                 opacity: 0.6,
-                shininess: 30,
-                specular: 0x333333
+                roughness: 0.7,
+                metalness: 0.0
             });
             const finishLine = new THREE.Mesh(startGeometry, finishMaterial);
             finishLine.rotation.x = -Math.PI / 2;

@@ -37,7 +37,7 @@ class Vehicle {
         
         // Rear wheel
         const rearWheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.15, 16);
-        const wheelMaterial = new THREE.MeshPhongMaterial({ color: 0x333333, shininess: 30, specular: 0x111111 });
+        const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.7, metalness: 0.0 });
         this.rearWheel = new THREE.Mesh(rearWheelGeometry, wheelMaterial);
         this.rearWheel.rotation.z = Math.PI / 2;
         this.rearWheel.position.set(0, 0.3, -0.7);
@@ -49,13 +49,13 @@ class Vehicle {
         
         // Frame
         const frameGeometry = new THREE.BoxGeometry(0.1, 0.8, 1.2);
-        const frameMaterial = new THREE.MeshPhongMaterial({ color: 0x0066cc, shininess: 50, specular: 0x002244 });
+        const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x0066cc, roughness: 0.3, metalness: 0.8 });
         this.frame = new THREE.Mesh(frameGeometry, frameMaterial);
         this.frame.position.set(0, 0.6, 0);
         
         // Handlebars
         const handlebarGeometry = new THREE.BoxGeometry(0.6, 0.05, 0.05);
-        const handlebarMaterial = new THREE.MeshPhongMaterial({ color: 0x666666, shininess: 40, specular: 0x222222 });
+        const handlebarMaterial = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.4, metalness: 0.9 });
         this.handlebar = new THREE.Mesh(handlebarGeometry, handlebarMaterial);
         this.handlebar.position.set(0, 1.0, 0.6);
         

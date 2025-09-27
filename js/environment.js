@@ -11,11 +11,11 @@ class Environment {
     createRoad() {
         // Create road texture
         const roadTexture = this.createRoadTexture();
-        const roadMaterial = new THREE.MeshPhongMaterial({
+        const roadMaterial = new THREE.MeshStandardMaterial({
             map: roadTexture,
             side: THREE.DoubleSide,
-            shininess: 10,
-            specular: 0x111111
+            roughness: 0.9,
+            metalness: 0.0
         });
         
         const roadWidth = 16;
@@ -126,11 +126,11 @@ class Environment {
     
     createGrass() {
         // Larger grass area for the loop course
-        const grassMaterial = new THREE.MeshPhongMaterial({
+        const grassMaterial = new THREE.MeshStandardMaterial({
             color: 0x3a5f3a,
             side: THREE.DoubleSide,
-            shininess: 5,
-            specular: 0x0a1a0a
+            roughness: 0.95,
+            metalness: 0.0
         });
         
         const grassGeometry = new THREE.PlaneGeometry(2000, 2000);
@@ -143,11 +143,11 @@ class Environment {
         for (let i = 0; i < 20; i++) {
             const patchSize = 50 + Math.random() * 100;
             const patchGeometry = new THREE.PlaneGeometry(patchSize, patchSize);
-            const patchMaterial = new THREE.MeshPhongMaterial({
+            const patchMaterial = new THREE.MeshStandardMaterial({
                 color: 0x2a4f2a,
                 side: THREE.DoubleSide,
-                shininess: 5,
-                specular: 0x0a1a0a
+                roughness: 0.95,
+                metalness: 0.0
             });
             const patch = new THREE.Mesh(patchGeometry, patchMaterial);
             patch.rotation.x = -Math.PI / 2;
@@ -162,12 +162,12 @@ class Environment {
     
     createRoadMarkings() {
         // Yellow center line dashes
-        const dashMaterial = new THREE.MeshPhongMaterial({
+        const dashMaterial = new THREE.MeshStandardMaterial({
             color: 0xffff00,
             emissive: 0xffff00,
             emissiveIntensity: 0.1,
-            shininess: 20,
-            specular: 0x333300
+            roughness: 0.8,
+            metalness: 0.0
         });
         
         // Place dashes along the road path
@@ -185,12 +185,12 @@ class Environment {
         // Add start/finish line
         if (this.roadPath.length > 0) {
             const startGeometry = new THREE.PlaneGeometry(16, 2);
-            const startMaterial = new THREE.MeshPhongMaterial({
+            const startMaterial = new THREE.MeshStandardMaterial({
                 color: 0x00ff00,
                 transparent: true,
                 opacity: 0.6,
-                shininess: 30,
-                specular: 0x003300
+                roughness: 0.7,
+                metalness: 0.0
             });
             const startLine = new THREE.Mesh(startGeometry, startMaterial);
             startLine.rotation.x = -Math.PI / 2;
@@ -198,12 +198,12 @@ class Environment {
             this.scene.add(startLine);
             
             // Checkered pattern for finish (near the start)
-            const finishMaterial = new THREE.MeshPhongMaterial({
+            const finishMaterial = new THREE.MeshStandardMaterial({
                 color: 0xffffff,
                 transparent: true,
                 opacity: 0.6,
-                shininess: 30,
-                specular: 0x333333
+                roughness: 0.7,
+                metalness: 0.0
             });
             const lastSegments = this.roadPath.length - 5;
             const finishLine = new THREE.Mesh(startGeometry, finishMaterial);
@@ -217,9 +217,9 @@ class Environment {
     addEnvironmentalDetails() {
         // Trees along the roadside - more sparse for visibility
         const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.6, 4);
-        const trunkMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513, shininess: 10, specular: 0x1a0a05 });
+        const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9, metalness: 0.0 });
         const foliageGeometry = new THREE.SphereGeometry(3, 6, 5);
-        const foliageMaterial = new THREE.MeshPhongMaterial({ color: 0x228B22, shininess: 5, specular: 0x0a1a0a });
+        const foliageMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22, roughness: 0.95, metalness: 0.0 });
         
         // Place trees along road path
         this.roadPath.forEach((point, index) => {
@@ -258,14 +258,14 @@ class Environment {
         
         // Posts along the road - especially on curves
         const postGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1.5);
-        const postMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff, shininess: 20, specular: 0x333333 });
+        const postMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.0 });
         const reflectorGeometry = new THREE.BoxGeometry(0.2, 0.3, 0.05);
-        const reflectorMaterial = new THREE.MeshPhongMaterial({
+        const reflectorMaterial = new THREE.MeshStandardMaterial({
             color: 0xff0000,
             emissive: 0xff0000,
             emissiveIntensity: 0.2,
-            shininess: 50,
-            specular: 0x330000
+            roughness: 0.5,
+            metalness: 0.0
         });
         
         this.roadPath.forEach((point, index) => {
