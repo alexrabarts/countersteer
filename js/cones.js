@@ -59,14 +59,18 @@ class Cones {
         conePositions.forEach((pos, index) => {
             const cone = new THREE.Mesh(coneGeometry, coneMaterial);
             cone.position.set(pos.x, 0.4, pos.z);
+            cone.castShadow = true;
+            cone.receiveShadow = true;
             this.scene.add(cone);
             this.cones.push(cone);
-            
+
             // Add base
             const baseGeometry = new THREE.CylinderGeometry(0.35, 0.35, 0.05, 6);
             const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9, metalness: 0.0 });
             const base = new THREE.Mesh(baseGeometry, baseMaterial);
             base.position.set(pos.x, 0.025, pos.z);
+            base.castShadow = true;
+            base.receiveShadow = true;
             this.scene.add(base);
         });
         
@@ -87,6 +91,7 @@ class Cones {
         const startLine = new THREE.Mesh(startGeometry, startMaterial);
         startLine.rotation.x = -Math.PI / 2;
         startLine.position.set(0, 0.03, 20);
+        startLine.receiveShadow = true;
         this.scene.add(startLine);
         
         // Finish line
@@ -103,6 +108,7 @@ class Cones {
             finishLine.rotation.x = -Math.PI / 2;
             finishLine.rotation.z = -lastPoint.heading;
             finishLine.position.set(lastPoint.x, 0.03, lastPoint.z + 20);
+            finishLine.receiveShadow = true;
             this.scene.add(finishLine);
         }
     }

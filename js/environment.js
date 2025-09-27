@@ -56,14 +56,16 @@ class Environment {
                 // Create road segment
                 const roadGeometry = new THREE.PlaneGeometry(roadWidth, segmentLength * 1.05); // Slight overlap
                 const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
-                
+
                 // Position segment
                 roadMesh.position.set(centerX, 0.01, centerZ);
-                
+
                 // Rotate segment - first lay it flat, then rotate to match heading
                 roadMesh.rotation.x = -Math.PI / 2;  // Lay flat
                 roadMesh.rotation.z = currentHeading; // Rotate to match road direction
-                
+
+                roadMesh.receiveShadow = true;
+
                 this.scene.add(roadMesh);
                 
                 // Store path point
@@ -137,6 +139,7 @@ class Environment {
         const grass = new THREE.Mesh(grassGeometry, grassMaterial);
         grass.rotation.x = -Math.PI / 2;
         grass.position.set(0, -0.01, 0);
+        grass.receiveShadow = true;
         this.scene.add(grass);
         
         // Add some texture variation with darker patches
@@ -156,6 +159,7 @@ class Environment {
                 -0.005,
                 (Math.random() - 0.5) * 1500
             );
+            patch.receiveShadow = true;
             this.scene.add(patch);
         }
     }
@@ -178,6 +182,7 @@ class Environment {
                 dash.rotation.x = -Math.PI / 2;
                 dash.rotation.z = point.heading;
                 dash.position.set(point.x, 0.02, point.z);
+                dash.receiveShadow = true;
                 this.scene.add(dash);
             }
         });
@@ -195,6 +200,7 @@ class Environment {
             const startLine = new THREE.Mesh(startGeometry, startMaterial);
             startLine.rotation.x = -Math.PI / 2;
             startLine.position.set(this.roadPath[5].x, 0.03, this.roadPath[5].z);
+            startLine.receiveShadow = true;
             this.scene.add(startLine);
             
             // Checkered pattern for finish (near the start)
@@ -210,6 +216,7 @@ class Environment {
             finishLine.rotation.x = -Math.PI / 2;
             finishLine.rotation.z = this.roadPath[lastSegments].heading;
             finishLine.position.set(this.roadPath[lastSegments].x, 0.03, this.roadPath[lastSegments].z);
+            finishLine.receiveShadow = true;
             this.scene.add(finishLine);
         }
     }
@@ -235,10 +242,14 @@ class Environment {
                     
                     const leftTrunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
                     leftTrunk.position.set(leftX, 2, leftZ);
+                    leftTrunk.castShadow = true;
+                    leftTrunk.receiveShadow = true;
                     this.scene.add(leftTrunk);
-                    
+
                     const leftFoliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
                     leftFoliage.position.set(leftX, 5.5, leftZ);
+                    leftFoliage.castShadow = true;
+                    leftFoliage.receiveShadow = true;
                     this.scene.add(leftFoliage);
                 } else {
                     // Right side tree
@@ -247,10 +258,14 @@ class Environment {
                     
                     const rightTrunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
                     rightTrunk.position.set(rightX, 2, rightZ);
+                    rightTrunk.castShadow = true;
+                    rightTrunk.receiveShadow = true;
                     this.scene.add(rightTrunk);
-                    
+
                     const rightFoliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
                     rightFoliage.position.set(rightX, 5.5, rightZ);
+                    rightFoliage.castShadow = true;
+                    rightFoliage.receiveShadow = true;
                     this.scene.add(rightFoliage);
                 }
             }
@@ -281,6 +296,8 @@ class Environment {
                     const leftZ = point.z - 9 * Math.cos(point.heading + Math.PI/2);
                     const leftPost = new THREE.Mesh(postGeometry, postMaterial);
                     leftPost.position.set(leftX, 0.75, leftZ);
+                    leftPost.castShadow = true;
+                    leftPost.receiveShadow = true;
                     this.scene.add(leftPost);
                     
                     // Right post
@@ -288,6 +305,8 @@ class Environment {
                     const rightZ = point.z + 9 * Math.cos(point.heading + Math.PI/2);
                     const rightPost = new THREE.Mesh(postGeometry, postMaterial);
                     rightPost.position.set(rightX, 0.75, rightZ);
+                    rightPost.castShadow = true;
+                    rightPost.receiveShadow = true;
                     this.scene.add(rightPost);
                 } else {
                     // Curve - post on outside only
@@ -296,12 +315,16 @@ class Environment {
                     const postZ = point.z + side * 9 * Math.cos(point.heading + Math.PI/2);
                     const post = new THREE.Mesh(postGeometry, postMaterial);
                     post.position.set(postX, 0.75, postZ);
+                    post.castShadow = true;
+                    post.receiveShadow = true;
                     this.scene.add(post);
-                    
+
                     // Add reflector
                     const reflector = new THREE.Mesh(reflectorGeometry, reflectorMaterial);
                     reflector.position.set(postX, 1.2, postZ);
                     reflector.rotation.y = point.heading;
+                    reflector.castShadow = true;
+                    reflector.receiveShadow = true;
                     this.scene.add(reflector);
                 }
             }

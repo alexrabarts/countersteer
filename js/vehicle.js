@@ -41,29 +41,39 @@ class Vehicle {
         this.rearWheel = new THREE.Mesh(rearWheelGeometry, wheelMaterial);
         this.rearWheel.rotation.z = Math.PI / 2;
         this.rearWheel.position.set(0, 0.3, -0.7);
-        
+        this.rearWheel.castShadow = true;
+        this.rearWheel.receiveShadow = true;
+
         // Front wheel
         this.frontWheel = new THREE.Mesh(rearWheelGeometry, wheelMaterial);
         this.frontWheel.rotation.z = Math.PI / 2;
         this.frontWheel.position.set(0, 0.3, 0.7);
-        
+        this.frontWheel.castShadow = true;
+        this.frontWheel.receiveShadow = true;
+
         // Frame
         const frameGeometry = new THREE.BoxGeometry(0.1, 0.8, 1.2);
         const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x0066cc, roughness: 0.3, metalness: 0.8 });
         this.frame = new THREE.Mesh(frameGeometry, frameMaterial);
         this.frame.position.set(0, 0.6, 0);
-        
+        this.frame.castShadow = true;
+        this.frame.receiveShadow = true;
+
         // Handlebars
         const handlebarGeometry = new THREE.BoxGeometry(0.6, 0.05, 0.05);
         const handlebarMaterial = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.4, metalness: 0.9 });
         this.handlebar = new THREE.Mesh(handlebarGeometry, handlebarMaterial);
         this.handlebar.position.set(0, 1.0, 0.6);
+        this.handlebar.castShadow = true;
+        this.handlebar.receiveShadow = true;
 
         // Rider
         const riderGeometry = new THREE.BoxGeometry(0.3, 0.6, 0.2);
         const riderMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.8, metalness: 0.0 });
         this.rider = new THREE.Mesh(riderGeometry, riderMaterial);
         this.rider.position.set(0, 1.2, 0);
+        this.rider.castShadow = true;
+        this.rider.receiveShadow = true;
 
         this.group.add(this.rearWheel);
         this.group.add(this.frontWheel);
