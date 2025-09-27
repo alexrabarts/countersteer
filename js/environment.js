@@ -192,11 +192,11 @@ class Environment {
         };
         
         // Left wall (connecting to elevated terrain - goes up)
-        const leftWall = createWall(-1, 2, 0x8B4513); // Brown wall, 2 units high
+        const leftWall = createWall(-1, 15, 0x8B4513); // Brown wall, 15 units high
         this.scene.add(leftWall);
         
         // Right wall (connecting to drop-off - goes down)
-        const rightWall = createWall(1, -10, 0x654321); // Darker brown wall, 10 units down
+        const rightWall = createWall(1, -30, 0x654321); // Darker brown wall, 30 units down
         this.scene.add(rightWall);
     }
     
