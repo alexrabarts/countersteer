@@ -75,6 +75,15 @@ class Vehicle {
         this.rider.castShadow = true;
         this.rider.receiveShadow = true;
 
+        // Helmet
+        const helmetGeometry = new THREE.SphereGeometry(0.15, 8, 6);
+        const helmetMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, roughness: 0.9, metalness: 0.0 });
+        this.helmet = new THREE.Mesh(helmetGeometry, helmetMaterial);
+        this.helmet.position.set(0, 0.25, 0);
+        this.helmet.castShadow = true;
+        this.helmet.receiveShadow = true;
+        this.rider.add(this.helmet);
+
         this.group.add(this.rearWheel);
         this.group.add(this.frontWheel);
         this.group.add(this.frame);
