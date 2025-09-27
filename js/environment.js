@@ -397,66 +397,215 @@ class Environment {
     }
     
     createRoadWalls() {
-        // Create vertical walls along the road edges
-        const createWall = (side, height, color) => {
+        // Create detailed rocky cliff walls along the road edges
+        const createDetailedCliff = (side, height, isDropOff) => {
+            const group = new THREE.Group();
+            
+            // Multiple rock materials for variation
+            const rockMaterials = [
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x696969, 
+                    roughness: 0.95, 
+                    metalness: 0.0 
+                }),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x5c5c5c, 
+                    roughness: 0.9, 
+                    metalness: 0.0 
+                }),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x7a6b5d, 
+                    roughness: 0.95, 
+                    metalness: 0.0 
+                }),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x8b7355, 
+                    roughness: 0.85, 
+                    metalness: 0.0 
+                })
+            ];
+            
+            // Create main cliff face with displacement
             const geometry = new THREE.BufferGeometry();
             const vertices = [];
             const indices = [];
+            const normals = [];
+            const uvs = [];
             
-            // Create vertices for wall
+            // Higher resolution for more detail
+            const verticalSegments = 8;
+            const segmentHeight = Math.abs(height) / verticalSegments;
+            
+            // Create vertices with displacement for rocky appearance
             for (let i = 0; i < this.roadPath.length; i++) {
                 const point = this.roadPath[i];
                 const roadY = point.y;
                 
                 // Calculate perpendicular offset for road edge
-                const perpX = Math.cos(point.heading) * 8 * side; // 8 units from center (road width/2)
+                const perpX = Math.cos(point.heading) * 8 * side;
                 const perpZ = -Math.sin(point.heading) * 8 * side;
                 
-                // Bottom vertex (at road level)
-                vertices.push(
-                    point.x + perpX, roadY, point.z + perpZ
-                );
-                
-                // Top vertex (at terrain level)
-                vertices.push(
-                    point.x + perpX, roadY + height, point.z + perpZ
-                );
+                // Create multiple vertices vertically for each point
+                for (let j = 0; j <= verticalSegments; j++) {
+                    const verticalProgress = j / verticalSegments;
+                    const currentHeight = height * verticalProgress;
+                    
+                    // Add displacement for rocky texture
+                    const displacement = Math.sin(i * 0.3 + j * 0.5) * 0.8 + 
+                                       Math.cos(i * 0.7 - j * 0.3) * 0.5;
+                    
+                    // Vary the wall distance slightly for more natural look
+                    const wallOffset = displacement * (1 - verticalProgress * 0.5);
+                    
+                    vertices.push(
+                        point.x + perpX + wallOffset * Math.cos(point.heading),
+                        roadY + currentHeight,
+                        point.z + perpZ - wallOffset * Math.sin(point.heading)
+                    );
+                    
+                    // UV coordinates
+                    uvs.push(i * 0.1, verticalProgress);
+                }
             }
             
-            // Create triangles for the wall
+            // Create triangles for the detailed wall
             for (let i = 0; i < this.roadPath.length - 1; i++) {
-                const baseIndex = i * 2;
-                // Two triangles per segment
-                indices.push(
-                    baseIndex, baseIndex + 2, baseIndex + 1,
-                    baseIndex + 1, baseIndex + 2, baseIndex + 3
-                );
+                for (let j = 0; j < verticalSegments; j++) {
+                    const baseIndex = i * (verticalSegments + 1) + j;
+                    const nextBaseIndex = (i + 1) * (verticalSegments + 1) + j;
+                    
+                    // Two triangles per segment
+                    indices.push(
+                        baseIndex, nextBaseIndex, baseIndex + 1,
+                        baseIndex + 1, nextBaseIndex, nextBaseIndex + 1
+                    );
+                }
             }
             
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
             geometry.setIndex(indices);
             geometry.computeVertexNormals();
             
-            const material = new THREE.MeshStandardMaterial({
-                color: color,
-                roughness: 0.9,
-                metalness: 0.0,
-                side: THREE.DoubleSide
-            });
+            // Main cliff face with layered appearance
+            const mainCliff = new THREE.Mesh(geometry, rockMaterials[0]);
+            mainCliff.receiveShadow = true;
+            mainCliff.castShadow = true;
+            group.add(mainCliff);
             
-            const mesh = new THREE.Mesh(geometry, material);
-            mesh.receiveShadow = true;
-            mesh.castShadow = true;
-            return mesh;
+            // Add rocky outcroppings and details
+            for (let i = 0; i < this.roadPath.length; i += 3) {
+                const point = this.roadPath[i];
+                
+                // Random rock formations along the cliff
+                if (Math.random() > 0.5) {
+                    const rockSize = 1 + Math.random() * 2;
+                    const rockGeometry = new THREE.DodecahedronGeometry(rockSize, 0);
+                    const rock = new THREE.Mesh(
+                        rockGeometry, 
+                        rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
+                    );
+                    
+                    const perpX = Math.cos(point.heading) * (8 + Math.random() * 2) * side;
+                    const perpZ = -Math.sin(point.heading) * (8 + Math.random() * 2) * side;
+                    
+                    rock.position.set(
+                        point.x + perpX,
+                        point.y + height * (0.3 + Math.random() * 0.4),
+                        point.z + perpZ
+                    );
+                    
+                    rock.rotation.set(
+                        Math.random() * Math.PI,
+                        Math.random() * Math.PI,
+                        Math.random() * Math.PI
+                    );
+                    
+                    rock.scale.set(
+                        1 + Math.random() * 0.5,
+                        0.6 + Math.random() * 0.8,
+                        1 + Math.random() * 0.5
+                    );
+                    
+                    rock.castShadow = true;
+                    rock.receiveShadow = true;
+                    group.add(rock);
+                }
+                
+                // Add horizontal ledges for stratified look
+                if (i % 6 === 0 && Math.random() > 0.6) {
+                    const ledgeGeometry = new THREE.BoxGeometry(
+                        3 + Math.random() * 2,
+                        0.3,
+                        1 + Math.random()
+                    );
+                    const ledge = new THREE.Mesh(
+                        ledgeGeometry,
+                        rockMaterials[2]
+                    );
+                    
+                    const perpX = Math.cos(point.heading) * 8.5 * side;
+                    const perpZ = -Math.sin(point.heading) * 8.5 * side;
+                    
+                    ledge.position.set(
+                        point.x + perpX,
+                        point.y + height * (0.2 + Math.random() * 0.6),
+                        point.z + perpZ
+                    );
+                    
+                    ledge.rotation.y = point.heading;
+                    ledge.castShadow = true;
+                    ledge.receiveShadow = true;
+                    group.add(ledge);
+                }
+            }
+            
+            // Add vegetation on upper cliff (if going up)
+            if (height > 0) {
+                const bushGeometry = new THREE.SphereGeometry(0.8, 5, 4);
+                const bushMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x2d4a2b,
+                    roughness: 0.9,
+                    metalness: 0.0
+                });
+                
+                for (let i = 0; i < this.roadPath.length; i += 5) {
+                    if (Math.random() > 0.7) {
+                        const point = this.roadPath[i];
+                        const bush = new THREE.Mesh(bushGeometry, bushMaterial);
+                        
+                        const perpX = Math.cos(point.heading) * 9 * side;
+                        const perpZ = -Math.sin(point.heading) * 9 * side;
+                        
+                        bush.position.set(
+                            point.x + perpX,
+                            point.y + height - 0.5,
+                            point.z + perpZ
+                        );
+                        
+                        bush.scale.set(
+                            1 + Math.random() * 0.5,
+                            0.8 + Math.random() * 0.4,
+                            1 + Math.random() * 0.5
+                        );
+                        
+                        bush.castShadow = true;
+                        bush.receiveShadow = true;
+                        group.add(bush);
+                    }
+                }
+            }
+            
+            return group;
         };
         
-        // Left wall (connecting to elevated terrain - goes up)
-        const leftWall = createWall(-1, 15, 0x8B4513); // Brown wall, 15 units high
-        this.scene.add(leftWall);
+        // Left cliff wall (elevated terrain)
+        const leftCliff = createDetailedCliff(-1, 15, false);
+        this.scene.add(leftCliff);
         
-        // Right wall (connecting to drop-off - goes down)
-        const rightWall = createWall(1, -30, 0x654321); // Darker brown wall, 30 units down
-        this.scene.add(rightWall);
+        // Right cliff wall (drop-off)
+        const rightCliff = createDetailedCliff(1, -30, true);
+        this.scene.add(rightCliff);
     }
     
     createRoadTexture() {
