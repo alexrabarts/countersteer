@@ -204,7 +204,9 @@ class Vehicle {
         
         // 1. STEERING TORQUE: Counter-steering effect (speed-dependent)
         // Higher speed = more gyroscopic stability = harder to lean
-        const steeringTorque = -steeringInput * this.steeringForce * speedFactor;
+        // Higher lean = harder to lean further
+        let steeringTorque = -steeringInput * this.steeringForce * speedFactor;
+        steeringTorque *= (1 - Math.abs(this.leanAngle) / this.maxLeanAngle);
         
         // 2. GRAVITY TORQUE: Always tries to increase lean (destabilizing)
         // Once leaning, gravity pulls the bike further over
