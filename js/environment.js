@@ -487,31 +487,39 @@ class Environment {
             mainCliff.castShadow = true;
             group.add(mainCliff);
             
-            // Add occasional rocky outcroppings for detail (fewer to maintain wall visibility)
+            // Add many rocky outcroppings and boulders for detail
             const rockMaterials = [
                 new THREE.MeshStandardMaterial({ color: 0x696969, roughness: 0.95, metalness: 0.0 }),
                 new THREE.MeshStandardMaterial({ color: 0x5c5c5c, roughness: 0.9, metalness: 0.0 }),
-                new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.85, metalness: 0.0 })
+                new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.85, metalness: 0.0 }),
+                new THREE.MeshStandardMaterial({ color: 0x7d7d7d, roughness: 0.92, metalness: 0.0 }),
+                new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.88, metalness: 0.0 })
             ];
             
-            for (let i = 0; i < this.roadPath.length; i += 8) { // Less frequent
+            // Main large boulders embedded in cliff
+            for (let i = 0; i < this.roadPath.length; i += 2) { // Much more frequent
                 const point = this.roadPath[i];
                 
-                // Occasional rock formations protruding from cliff
-                if (Math.random() > 0.6) {
-                    const rockSize = 1.5 + Math.random() * 1.5;
+                // Large protruding rocks
+                if (Math.random() > 0.3) { // 70% chance
+                    const rockSize = 1.2 + Math.random() * 2.5;
                     const rockGeometry = new THREE.DodecahedronGeometry(rockSize, 0);
                     const rock = new THREE.Mesh(
                         rockGeometry, 
                         rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
                     );
                     
-                    const perpX = Math.cos(point.heading) * 8 * side;
-                    const perpZ = -Math.sin(point.heading) * 8 * side;
+                    // Vary the distance from wall center for depth
+                    const depthVariation = (Math.random() - 0.3) * 1.5;
+                    const perpX = Math.cos(point.heading) * (8 + depthVariation) * side;
+                    const perpZ = -Math.sin(point.heading) * (8 + depthVariation) * side;
+                    
+                    // Vary height across the cliff face
+                    const heightPosition = 0.2 + Math.random() * 0.6;
                     
                     rock.position.set(
                         point.x + perpX,
-                        (point.y || 0) + height * (0.3 + Math.random() * 0.4),
+                        (point.y || 0) + height * heightPosition,
                         point.z + perpZ
                     );
                     
@@ -521,15 +529,85 @@ class Environment {
                         Math.random() * Math.PI
                     );
                     
+                    // Elongated shapes for more natural look
                     rock.scale.set(
-                        1.2,
-                        0.8 + Math.random() * 0.4,
-                        1 + Math.random() * 0.3
+                        1.5 + Math.random() * 0.5,
+                        0.7 + Math.random() * 0.5,
+                        1 + Math.random() * 0.5
                     );
                     
                     rock.castShadow = true;
                     rock.receiveShadow = true;
                     group.add(rock);
+                }
+                
+                // Medium sized rocks
+                if (Math.random() > 0.2) { // 80% chance
+                    for (let j = 0; j < 1 + Math.floor(Math.random() * 2); j++) {
+                        const mediumRockSize = 0.8 + Math.random() * 1.2;
+                        const mediumRockGeometry = new THREE.TetrahedronGeometry(mediumRockSize, 0);
+                        const mediumRock = new THREE.Mesh(
+                            mediumRockGeometry,
+                            rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
+                        );
+                        
+                        const offset = Math.random() * 2 - 1;
+                        const perpX = Math.cos(point.heading) * (8 + offset) * side;
+                        const perpZ = -Math.sin(point.heading) * (8 + offset) * side;
+                        
+                        mediumRock.position.set(
+                            point.x + perpX + (Math.random() - 0.5) * 2,
+                            (point.y || 0) + height * (0.1 + Math.random() * 0.8),
+                            point.z + perpZ + (Math.random() - 0.5) * 2
+                        );
+                        
+                        mediumRock.rotation.set(
+                            Math.random() * Math.PI * 2,
+                            Math.random() * Math.PI * 2,
+                            Math.random() * Math.PI * 2
+                        );
+                        
+                        mediumRock.scale.set(
+                            1 + Math.random() * 0.4,
+                            0.8 + Math.random() * 0.4,
+                            1 + Math.random() * 0.4
+                        );
+                        
+                        mediumRock.castShadow = true;
+                        mediumRock.receiveShadow = true;
+                        group.add(mediumRock);
+                    }
+                }
+                
+                // Small detail rocks
+                if (i % 3 === 0) {
+                    for (let k = 0; k < 2 + Math.floor(Math.random() * 3); k++) {
+                        const smallRockSize = 0.3 + Math.random() * 0.5;
+                        const smallRockGeometry = new THREE.SphereGeometry(smallRockSize, 5, 4);
+                        const smallRock = new THREE.Mesh(
+                            smallRockGeometry,
+                            rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
+                        );
+                        
+                        const perpX = Math.cos(point.heading) * (8 + Math.random() * 0.5) * side;
+                        const perpZ = -Math.sin(point.heading) * (8 + Math.random() * 0.5) * side;
+                        
+                        smallRock.position.set(
+                            point.x + perpX + (Math.random() - 0.5) * 3,
+                            (point.y || 0) + height * Math.random(),
+                            point.z + perpZ + (Math.random() - 0.5) * 3
+                        );
+                        
+                        smallRock.scale.set(
+                            1 + Math.random() * 0.3,
+                            0.7 + Math.random() * 0.3,
+                            1 + Math.random() * 0.3
+                        );
+                        
+                        smallRock.castShadow = true;
+                        smallRock.receiveShadow = true;
+                        group.add(smallRock);
+                    }
                 }
             }
             
