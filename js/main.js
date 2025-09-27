@@ -43,8 +43,12 @@ class Game {
 
     setupLighting() {
         // Ambient light - increased for better visibility
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
         this.scene.add(ambientLight);
+
+        // Hemisphere light for natural sky/ground lighting
+        const hemisphereLight = new THREE.HemisphereLight(0x87CEEB, 0x3a5f3a, 0.3);
+        this.scene.add(hemisphereLight);
 
         // Directional light (sun)
         this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
