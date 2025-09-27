@@ -94,12 +94,12 @@ class Game {
 
     setupCamera() {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
-        this.camera.position.set(0, 5, -10);
+        this.camera.position.set(0, 10, -10);
         this.camera.lookAt(0, 0, 0);
-        this.cameraOffset = new THREE.Vector3(0, 4, -10); // Slightly higher and further back
+        this.cameraOffset = new THREE.Vector3(0, 9, -10); // Higher for mountain view
         this.cameraTarget = new THREE.Vector3();
         this.currentCameraPos = this.camera.position.clone();
-        this.currentLookTarget = new THREE.Vector3(0, 1, 0);
+        this.currentLookTarget = new THREE.Vector3(0, 6, 0);
         this.cameraLerpFactor = 0.05; // Smooth lag
         console.log('Camera setup complete');
     }
@@ -127,7 +127,7 @@ class Game {
 
         // Look at vehicle with lag
         const lookTarget = this.vehicle.position.clone();
-        lookTarget.y += 1;
+        lookTarget.y += 6;
         this.currentLookTarget.lerp(lookTarget, this.cameraLerpFactor);
         this.camera.lookAt(this.currentLookTarget);
     }
