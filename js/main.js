@@ -103,6 +103,11 @@ class Game {
         this.currentCameraPos.lerp(cameraPos, this.cameraLerpFactor);
         this.camera.position.copy(this.currentCameraPos);
 
+        // Dynamic FOV based on speed for immersion
+        const speedFactor = this.vehicle.speed / this.vehicle.maxSpeed;
+        this.camera.fov = 75 + speedFactor * 10; // 75 to 85 degrees
+        this.camera.updateProjectionMatrix();
+
         // Look at vehicle with lag
         const lookTarget = this.vehicle.position.clone();
         lookTarget.y += 1;
