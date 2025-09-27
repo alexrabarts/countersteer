@@ -58,6 +58,7 @@ class Game {
         this.directionalLight.shadow.camera.right = 100;
         this.directionalLight.shadow.camera.top = 100;
         this.directionalLight.shadow.camera.bottom = -100;
+        this.directionalLight.shadow.bias = -0.0001; // Reduce shadow acne
         this.scene.add(this.directionalLight);
 
         // Vehicle headlights
