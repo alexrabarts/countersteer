@@ -141,20 +141,6 @@ class Environment {
         grass.position.set(0, -0.01, 0);
         grass.receiveShadow = true;
         this.scene.add(grass);
-
-        // Lower ground on right side of road (drop-off)
-        const dropGeometry = new THREE.PlaneGeometry(1000, 2000);
-        const dropMaterial = new THREE.MeshStandardMaterial({
-            color: 0x2a4f2a,
-            side: THREE.DoubleSide,
-            roughness: 0.95,
-            metalness: 0.0
-        });
-        const dropGround = new THREE.Mesh(dropGeometry, dropMaterial);
-        dropGround.rotation.x = -Math.PI / 2;
-        dropGround.position.set(500, -10, 0); // 10 units lower, offset to right
-        dropGround.receiveShadow = true;
-        this.scene.add(dropGround);
         
         // Add some texture variation with darker patches
         for (let i = 0; i < 20; i++) {
@@ -306,30 +292,24 @@ class Environment {
             }
         });
 
-        // Create drop-off edge along right side of road
+        // Track barriers for detail
+        const barrierGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8);
+        const barrierMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.8, metalness: 0.0 });
         this.roadPath.forEach((point, index) => {
-            if (index % 2 === 0) {
-                // Drop-off edge
-                const edgeGeometry = new THREE.BoxGeometry(2, 10, 20);
-                const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9, metalness: 0.0 });
-                const edge = new THREE.Mesh(edgeGeometry, edgeMaterial);
-                edge.position.set(point.x + 12, -5, point.z);
-                edge.rotation.y = point.heading;
-                edge.castShadow = true;
-                edge.receiveShadow = true;
-                this.scene.add(edge);
+            if (index % 2 === 0 && index > 5 && index < this.roadPath.length - 5) { // Skip start/end
+                // Left barrier
+                const leftBarrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
+                leftBarrier.position.set(point.x - 8, 0.25, point.z);
+                leftBarrier.castShadow = true;
+                leftBarrier.receiveShadow = true;
+                this.scene.add(leftBarrier);
 
-                // Safety barrier on drop-off side
-                if (index > 5 && index < this.roadPath.length - 5) {
-                    const barrierGeometry = new THREE.BoxGeometry(0.8, 0.8, 20);
-                    const barrierMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.7, metalness: 0.3 });
-                    const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
-                    barrier.position.set(point.x + 9, 0.4, point.z);
-                    barrier.rotation.y = point.heading;
-                    barrier.castShadow = true;
-                    barrier.receiveShadow = true;
-                    this.scene.add(barrier);
-                }
+                // Right barrier
+                const rightBarrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
+                rightBarrier.position.set(point.x + 8, 0.25, point.z);
+                rightBarrier.castShadow = true;
+                rightBarrier.receiveShadow = true;
+                this.scene.add(rightBarrier);
             }
         });
 
