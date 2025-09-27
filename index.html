@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Counter-Steering Motorcycle</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #222;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 14px;
+            z-index: 100;
+        }
+        .info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 12px;
+            z-index: 100;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h3>Controls</h3>
+        <p>W - Throttle</p>
+        <p>S - Brake</p>
+        <p>A - Steer left (initiates right lean)</p>
+        <p>D - Steer right (initiates left lean)</p>
+        <p>R - Reset after crash</p>
+        <p style="color: #ff6600; font-size: 12px; margin-top: 10px;"><b>Course:</b> Slalom through the cones!</p>
+        <p style="color: #99ff99; font-size: 11px;">Min speed: 18 km/h to stay upright</p>
+        <p style="color: #ffcc99; font-size: 11px;">Counter-steer to initiate turn,<br>then steer into it to balance!</p>
+        <p style="color: #ff9999; font-size: 11px;">Max lean: 60° before crash!</p>
+    </div>
+    
+    <div class="info">
+        <div id="speed">Speed: 0 km/h</div>
+        <div id="lean">Lean: 0°</div>
+        <div id="leanVel">Lean Rate: 0°/s</div>
+        <div id="steering">Steering: 0°</div>
+    </div>
+
+    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/vehicle.js"></script>
+    <script src="js/environment.js"></script>
+    <script src="js/cones.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
