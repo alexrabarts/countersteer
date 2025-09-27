@@ -137,6 +137,69 @@ class Environment {
         console.log('Created continuous road with', vertices.length / 3, 'vertices');
     }
     
+    createRoadWalls() {
+        // Create vertical walls along the road edges
+        const createWall = (side, height, color) => {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const indices = [];
+            
+            // Create vertices for wall
+            for (let i = 0; i < this.roadPath.length; i++) {
+                const point = this.roadPath[i];
+                const roadY = point.y;
+                
+                // Calculate perpendicular offset for road edge
+                const perpX = Math.cos(point.heading) * 8 * side; // 8 units from center (road width/2)
+                const perpZ = -Math.sin(point.heading) * 8 * side;
+                
+                // Bottom vertex (at road level)
+                vertices.push(
+                    point.x + perpX, roadY, point.z + perpZ
+                );
+                
+                // Top vertex (at terrain level)
+                vertices.push(
+                    point.x + perpX, roadY + height, point.z + perpZ
+                );
+            }
+            
+            // Create triangles for the wall
+            for (let i = 0; i < this.roadPath.length - 1; i++) {
+                const baseIndex = i * 2;
+                // Two triangles per segment
+                indices.push(
+                    baseIndex, baseIndex + 2, baseIndex + 1,
+                    baseIndex + 1, baseIndex + 2, baseIndex + 3
+                );
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+            
+            const material = new THREE.MeshStandardMaterial({
+                color: color,
+                roughness: 0.9,
+                metalness: 0.0,
+                side: THREE.DoubleSide
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.receiveShadow = true;
+            mesh.castShadow = true;
+            return mesh;
+        };
+        
+        // Left wall (connecting to elevated terrain - goes up)
+        const leftWall = createWall(-1, 2, 0x8B4513); // Brown wall, 2 units high
+        this.scene.add(leftWall);
+        
+        // Right wall (connecting to drop-off - goes down)
+        const rightWall = createWall(1, -10, 0x654321); // Darker brown wall, 10 units down
+        this.scene.add(rightWall);
+    }
+    
     createRoadTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 256;
@@ -260,6 +323,9 @@ class Environment {
         // Create far right deep drop-off
         const deepDropTerrain = createTerrainStrip(1, 36, -20, 0x1a3f1a);
         this.scene.add(deepDropTerrain);
+        
+        // Add vertical walls connecting road to terrain
+        this.createRoadWalls();
         
         // Add some texture variation with darker patches
         for (let i = 0; i < 20; i++) {
