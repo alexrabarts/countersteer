@@ -157,18 +157,11 @@ class Environment {
         const terrainSegments = 64;
         
         const terrainGeometry = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
-        // Phase 4: Enhanced materials and vertex colors
         const terrainMaterial = new THREE.MeshStandardMaterial({
             color: 0x3a5f3a,
             roughness: 0.95,
-            metalness: 0.0,
-            vertexColors: true
+            metalness: 0.0
         });
-        
-        // Add vertex colors based on height and slope
-        const colors = [];
-        const normals = [];
-        const positions = terrainGeometry.attributes.position.array;
         
         // Phase 3: Use road path for proper terrain generation
         const vertices = terrainGeometry.attributes.position.array;
@@ -201,27 +194,6 @@ class Environment {
         terrainGeometry.attributes.position.needsUpdate = true;
         terrainGeometry.computeVertexNormals();
         
-        // Phase 4: Add vertex colors for visual enhancement
-        for (let i = 0; i < positions.length; i += 3) {
-            const height = positions[i + 1];
-            
-            if (height < -10) {
-                // Deep areas - darker green
-                colors.push(0.2, 0.4, 0.2);
-            } else if (height < -2) {
-                // Sloped areas - brown/green mix
-                colors.push(0.4, 0.3, 0.2);
-            } else if (height > 2) {
-                // High areas - rocky brown
-                colors.push(0.5, 0.4, 0.3);
-            } else {
-                // Normal grass - standard green
-                colors.push(0.23, 0.37, 0.23);
-            }
-        }
-        
-        terrainGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-        
         const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
         terrain.rotation.x = -Math.PI / 2;
         terrain.position.set(0, -0.01, 0);
@@ -231,7 +203,7 @@ class Environment {
         this.terrain = terrain;
         this.terrainGeometry = terrainGeometry;
         
-        console.log('Phase 4: Created terrain with enhanced materials and vertex colors');
+        console.log('Phase 3: Created terrain with road path integration');
     }
     
     createRoadMarkings() {
