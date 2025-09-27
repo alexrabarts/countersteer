@@ -270,7 +270,66 @@ class Environment {
                 }
             }
         });
-        
+
+        // Bushes along the trackside for detail
+        const bushGeometry = new THREE.SphereGeometry(1, 6, 4);
+        const bushMaterial = new THREE.MeshStandardMaterial({ color: 0x2d5016, roughness: 0.9, metalness: 0.0 });
+        this.roadPath.forEach((point, index) => {
+            if (index % 4 === 0) { // Every 4th segment
+                // Left bush
+                const leftBush = new THREE.Mesh(bushGeometry, bushMaterial);
+                leftBush.position.set(point.x - 35 + Math.random() * 10, 0.5, point.z + Math.random() * 20 - 10);
+                leftBush.castShadow = true;
+                leftBush.receiveShadow = true;
+                this.scene.add(leftBush);
+
+                // Right bush
+                const rightBush = new THREE.Mesh(bushGeometry, bushMaterial);
+                rightBush.position.set(point.x + 35 + Math.random() * 10, 0.5, point.z + Math.random() * 20 - 10);
+                rightBush.castShadow = true;
+                rightBush.receiveShadow = true;
+                this.scene.add(rightBush);
+            }
+        });
+
+        // Track barriers for detail
+        const barrierGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8);
+        const barrierMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.8, metalness: 0.0 });
+        this.roadPath.forEach((point, index) => {
+            if (index % 2 === 0 && index > 5 && index < this.roadPath.length - 5) { // Skip start/end
+                // Left barrier
+                const leftBarrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
+                leftBarrier.position.set(point.x - 8, 0.25, point.z);
+                leftBarrier.castShadow = true;
+                leftBarrier.receiveShadow = true;
+                this.scene.add(leftBarrier);
+
+                // Right barrier
+                const rightBarrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
+                rightBarrier.position.set(point.x + 8, 0.25, point.z);
+                rightBarrier.castShadow = true;
+                rightBarrier.receiveShadow = true;
+                this.scene.add(rightBarrier);
+            }
+        });
+
+        // Start sign
+        const signPostGeometry = new THREE.CylinderGeometry(0.05, 0.05, 2, 8);
+        const signPostMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9, metalness: 0.0 });
+        const signPost = new THREE.Mesh(signPostGeometry, signPostMaterial);
+        signPost.position.set(-5, 1, 10);
+        signPost.castShadow = true;
+        signPost.receiveShadow = true;
+        this.scene.add(signPost);
+
+        const signGeometry = new THREE.PlaneGeometry(2, 1);
+        const signMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.0 });
+        const sign = new THREE.Mesh(signGeometry, signMaterial);
+        sign.position.set(-5, 2, 10);
+        sign.castShadow = true;
+        sign.receiveShadow = true;
+        this.scene.add(sign);
+
         // Posts along the road - especially on curves
         const postGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1.5);
         const postMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.0, emissive: 0x222222, emissiveIntensity: 0.05 });
