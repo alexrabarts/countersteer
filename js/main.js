@@ -16,6 +16,13 @@ class Game {
         console.log('Creating vehicle...');
         this.vehicle = new Vehicle(this.scene);
         this.vehicle.environment = this.environment; // Pass environment reference for elevation
+        
+        // Initialize vehicle at proper road height
+        if (this.environment.roadPath && this.environment.roadPath.length > 0) {
+            const startY = this.environment.roadPath[0].y || 0;
+            this.vehicle.position.y = startY;
+        }
+        
         this.input = new InputHandler();
         
         this.clock = new THREE.Clock();

@@ -3,7 +3,7 @@ class Vehicle {
         this.scene = scene;
         
         // Physical properties
-        this.position = new THREE.Vector3(0, 0, 0);
+        this.position = new THREE.Vector3(0, 0, 0); // Will be adjusted to road height after environment loads
         this.velocity = new THREE.Vector3(0, 0, 0);
         
         // Vehicle parameters
@@ -363,10 +363,8 @@ class Vehicle {
         if (this.crashed) {
             // Fall over animation
             this.group.rotation.z = this.crashAngle > 0 ? Math.PI/2 : -Math.PI/2;
-            // Only lower the vehicle if it's a normal crash (not falling off cliff)
-            if (!this.fallingOffCliff) {
-                this.group.position.y = this.position.y - 0.3;
-            }
+            // Don't lower the vehicle below ground - it's already at the correct position
+            // The rotation itself will make it appear fallen over
             this.rider.rotation.z = 0; // Rider doesn't lean when crashed
         } else {
             // Normal lean
@@ -391,7 +389,12 @@ class Vehicle {
     }
 
     reset() {
-        this.position.set(0, 0, 0);
+        // Find the starting road elevation
+        let startY = 0;
+        if (this.environment && this.environment.roadPath && this.environment.roadPath.length > 0) {
+            startY = this.environment.roadPath[0].y || 0;
+        }
+        this.position.set(0, startY, 0);
         this.velocity.set(0, 0, 0);
         this.speed = 20; // Reset to starting speed
         this.leanAngle = 0;
