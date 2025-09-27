@@ -401,45 +401,29 @@ class Environment {
         const createDetailedCliff = (side, height, isDropOff) => {
             const group = new THREE.Group();
             
-            // Multiple rock materials for variation
-            const rockMaterials = [
-                new THREE.MeshStandardMaterial({ 
-                    color: 0x696969, 
-                    roughness: 0.95, 
-                    metalness: 0.0 
-                }),
-                new THREE.MeshStandardMaterial({ 
-                    color: 0x5c5c5c, 
-                    roughness: 0.9, 
-                    metalness: 0.0 
-                }),
-                new THREE.MeshStandardMaterial({ 
-                    color: 0x7a6b5d, 
-                    roughness: 0.95, 
-                    metalness: 0.0 
-                }),
-                new THREE.MeshStandardMaterial({ 
-                    color: 0x8b7355, 
-                    roughness: 0.85, 
-                    metalness: 0.0 
-                })
-            ];
+            // Rock material with vertex colors for variation
+            const cliffMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x7a6b5d,
+                vertexColors: true,
+                roughness: 0.95, 
+                metalness: 0.0,
+                side: THREE.DoubleSide
+            });
             
             // Create main cliff face with displacement
             const geometry = new THREE.BufferGeometry();
             const vertices = [];
             const indices = [];
-            const normals = [];
+            const colors = [];
             const uvs = [];
             
             // Higher resolution for more detail
-            const verticalSegments = 8;
-            const segmentHeight = Math.abs(height) / verticalSegments;
+            const verticalSegments = 6;
             
             // Create vertices with displacement for rocky appearance
             for (let i = 0; i < this.roadPath.length; i++) {
                 const point = this.roadPath[i];
-                const roadY = point.y;
+                const roadY = point.y || 0;
                 
                 // Calculate perpendicular offset for road edge
                 const perpX = Math.cos(point.heading) * 8 * side;
@@ -450,12 +434,12 @@ class Environment {
                     const verticalProgress = j / verticalSegments;
                     const currentHeight = height * verticalProgress;
                     
-                    // Add displacement for rocky texture
-                    const displacement = Math.sin(i * 0.3 + j * 0.5) * 0.8 + 
-                                       Math.cos(i * 0.7 - j * 0.3) * 0.5;
+                    // Add subtle displacement for rocky texture (reduced for continuity)
+                    const displacement = Math.sin(i * 0.2 + j * 0.4) * 0.3 + 
+                                       Math.cos(i * 0.5 - j * 0.2) * 0.2;
                     
                     // Vary the wall distance slightly for more natural look
-                    const wallOffset = displacement * (1 - verticalProgress * 0.5);
+                    const wallOffset = displacement * 0.5;
                     
                     vertices.push(
                         point.x + perpX + wallOffset * Math.cos(point.heading),
@@ -463,12 +447,21 @@ class Environment {
                         point.z + perpZ - wallOffset * Math.sin(point.heading)
                     );
                     
+                    // Color variation for rock layers
+                    const colorVariation = 0.7 + Math.random() * 0.3;
+                    const layerTint = 0.9 + verticalProgress * 0.1;
+                    colors.push(
+                        colorVariation * layerTint,
+                        colorVariation * layerTint * 0.9,
+                        colorVariation * layerTint * 0.8
+                    );
+                    
                     // UV coordinates
                     uvs.push(i * 0.1, verticalProgress);
                 }
             }
             
-            // Create triangles for the detailed wall
+            // Create triangles for the continuous wall
             for (let i = 0; i < this.roadPath.length - 1; i++) {
                 for (let j = 0; j < verticalSegments; j++) {
                     const baseIndex = i * (verticalSegments + 1) + j;
@@ -483,35 +476,42 @@ class Environment {
             }
             
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
             geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
             geometry.setIndex(indices);
             geometry.computeVertexNormals();
             
-            // Main cliff face with layered appearance
-            const mainCliff = new THREE.Mesh(geometry, rockMaterials[0]);
+            // Main continuous cliff face
+            const mainCliff = new THREE.Mesh(geometry, cliffMaterial);
             mainCliff.receiveShadow = true;
             mainCliff.castShadow = true;
             group.add(mainCliff);
             
-            // Add rocky outcroppings and details
-            for (let i = 0; i < this.roadPath.length; i += 3) {
+            // Add occasional rocky outcroppings for detail (fewer to maintain wall visibility)
+            const rockMaterials = [
+                new THREE.MeshStandardMaterial({ color: 0x696969, roughness: 0.95, metalness: 0.0 }),
+                new THREE.MeshStandardMaterial({ color: 0x5c5c5c, roughness: 0.9, metalness: 0.0 }),
+                new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.85, metalness: 0.0 })
+            ];
+            
+            for (let i = 0; i < this.roadPath.length; i += 8) { // Less frequent
                 const point = this.roadPath[i];
                 
-                // Random rock formations along the cliff
-                if (Math.random() > 0.5) {
-                    const rockSize = 1 + Math.random() * 2;
+                // Occasional rock formations protruding from cliff
+                if (Math.random() > 0.6) {
+                    const rockSize = 1.5 + Math.random() * 1.5;
                     const rockGeometry = new THREE.DodecahedronGeometry(rockSize, 0);
                     const rock = new THREE.Mesh(
                         rockGeometry, 
                         rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
                     );
                     
-                    const perpX = Math.cos(point.heading) * (8 + Math.random() * 2) * side;
-                    const perpZ = -Math.sin(point.heading) * (8 + Math.random() * 2) * side;
+                    const perpX = Math.cos(point.heading) * 8 * side;
+                    const perpZ = -Math.sin(point.heading) * 8 * side;
                     
                     rock.position.set(
                         point.x + perpX,
-                        point.y + height * (0.3 + Math.random() * 0.4),
+                        (point.y || 0) + height * (0.3 + Math.random() * 0.4),
                         point.z + perpZ
                     );
                     
@@ -522,45 +522,18 @@ class Environment {
                     );
                     
                     rock.scale.set(
-                        1 + Math.random() * 0.5,
-                        0.6 + Math.random() * 0.8,
-                        1 + Math.random() * 0.5
+                        1.2,
+                        0.8 + Math.random() * 0.4,
+                        1 + Math.random() * 0.3
                     );
                     
                     rock.castShadow = true;
                     rock.receiveShadow = true;
                     group.add(rock);
                 }
-                
-                // Add horizontal ledges for stratified look
-                if (i % 6 === 0 && Math.random() > 0.6) {
-                    const ledgeGeometry = new THREE.BoxGeometry(
-                        3 + Math.random() * 2,
-                        0.3,
-                        1 + Math.random()
-                    );
-                    const ledge = new THREE.Mesh(
-                        ledgeGeometry,
-                        rockMaterials[2]
-                    );
-                    
-                    const perpX = Math.cos(point.heading) * 8.5 * side;
-                    const perpZ = -Math.sin(point.heading) * 8.5 * side;
-                    
-                    ledge.position.set(
-                        point.x + perpX,
-                        point.y + height * (0.2 + Math.random() * 0.6),
-                        point.z + perpZ
-                    );
-                    
-                    ledge.rotation.y = point.heading;
-                    ledge.castShadow = true;
-                    ledge.receiveShadow = true;
-                    group.add(ledge);
-                }
             }
             
-            // Add vegetation on upper cliff (if going up)
+            // Add sparse vegetation on upper cliff (if going up)
             if (height > 0) {
                 const bushGeometry = new THREE.SphereGeometry(0.8, 5, 4);
                 const bushMaterial = new THREE.MeshStandardMaterial({ 
@@ -569,17 +542,17 @@ class Environment {
                     metalness: 0.0
                 });
                 
-                for (let i = 0; i < this.roadPath.length; i += 5) {
-                    if (Math.random() > 0.7) {
+                for (let i = 0; i < this.roadPath.length; i += 10) { // Less frequent
+                    if (Math.random() > 0.5) {
                         const point = this.roadPath[i];
                         const bush = new THREE.Mesh(bushGeometry, bushMaterial);
                         
-                        const perpX = Math.cos(point.heading) * 9 * side;
-                        const perpZ = -Math.sin(point.heading) * 9 * side;
+                        const perpX = Math.cos(point.heading) * 8.5 * side;
+                        const perpZ = -Math.sin(point.heading) * 8.5 * side;
                         
                         bush.position.set(
                             point.x + perpX,
-                            point.y + height - 0.5,
+                            (point.y || 0) + height - 0.5,
                             point.z + perpZ
                         );
                         
