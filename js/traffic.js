@@ -288,37 +288,34 @@ class Car {
         const nextSegment = (Math.floor(this.currentSegment) + 1) % totalSegments;
         const nextPoint = this.environment.roadPath[nextSegment];
         
-        // Get interpolation value
-        const t = this.segmentProgress;
-        
         // Interpolate position between segments
+        const t = this.segmentProgress;
         const x = currentPoint.x + (nextPoint.x - currentPoint.x) * t;
-        const y = (currentPoint.y || 0) + ((nextPoint.y || 0) - (currentPoint.y || 0)) * t;
+        const y = currentPoint.y + (nextPoint.y - currentPoint.y) * t;
         const z = currentPoint.z + (nextPoint.z - currentPoint.z) * t;
         
-        // Use current point heading (simpler and more stable)
-        const interpolatedHeading = currentPoint.heading;
+        // Interpolate heading for smoother turns
+        let headingDiff = nextPoint.heading - currentPoint.heading;
+        // Handle wrap-around
+        if (headingDiff > Math.PI) headingDiff -= 2 * Math.PI;
+        if (headingDiff < -Math.PI) headingDiff += 2 * Math.PI;
+        const interpolatedHeading = currentPoint.heading + headingDiff * t;
         
         // Calculate lane offset based on interpolated heading
         const laneOffset = this.lane === 'left' ? -3 : 3;
         const perpX = Math.cos(interpolatedHeading) * laneOffset;
         const perpZ = -Math.sin(interpolatedHeading) * laneOffset;
         
-        // Set car position with slight elevation above road
-        this.carGroup.position.set(x + perpX, y + 0.5, z + perpZ);
+        this.carGroup.position.set(x + perpX, y + 0.2, z + perpZ);
         
         // Set rotation to match road direction using interpolated heading
-        // Car model faces +Z in local space (headlights at +Z)
-        // Road heading: 0 = north (+Z), increases clockwise (turning right)
-        // Three.js Y rotation: positive = counterclockwise when viewed from above
-        
+        // Road heading: 0 = north (+Z), increases clockwise
+        // Three.js rotation: 0 = +Z, positive = counterclockwise
         if (this.direction === 1) {
-            // Forward direction - car should face along road heading
-            // Road heading 0 = +Z, car faces +Z, so rotate by -heading
+            // Forward direction - follow road heading
             this.carGroup.rotation.y = -interpolatedHeading;
         } else {
-            // Opposite direction - car should face opposite to road heading
-            // Add PI to face backwards
+            // Opposite direction - face 180 degrees from road heading
             this.carGroup.rotation.y = -interpolatedHeading + Math.PI;
         }
     }
@@ -329,12 +326,7 @@ class Car {
         const distanceToMove = this.currentSpeed * deltaTime;
         const segmentsToMove = distanceToMove / segmentLength;
         
-        // Update progress based on direction
-        if (this.direction === 1) {
-            this.segmentProgress += segmentsToMove;
-        } else {
-            this.segmentProgress -= segmentsToMove;
-        }
+        this.segmentProgress += segmentsToMove * this.direction;
         
         while (this.segmentProgress >= 1) {
             this.segmentProgress -= 1;

@@ -203,38 +203,36 @@ class Environment {
                 this.scene.add(rockGroup);
             }
             
-            // Rocks scattered on the mountain slope (right side)
-            if (index % 3 === 0 && Math.random() > 0.3) {
-                // Multiple rocks at different distances down the RIGHT slope
-                for (let s = 0; s < 2 + Math.floor(Math.random() * 2); s++) {
-                    const slopeDistance = 15 + Math.random() * 30; // 15-45 units away
-                    // Right side is positive perpendicular direction
-                    const boulderX = point.x + slopeDistance * Math.cos(point.heading);
-                    const boulderZ = point.z - slopeDistance * Math.sin(point.heading);
-                    // Height follows slope: further = lower
-                    const boulderY = point.y - (slopeDistance - 10) * 1.2 - Math.random() * 2;
+            // Smaller rocks and boulders scattered around
+            if (index % 4 === 0 && Math.random() > 0.5) {
+                const side = Math.random() > 0.5 ? 1 : -1;
+                const boulderX = point.x + side * (12 + Math.random() * 8) * Math.cos(point.heading);
+                const boulderZ = point.z - side * (12 + Math.random() * 8) * Math.sin(point.heading);
+                const boulderY = point.y - 0.5 + Math.random();  // Partially embedded in ground
                 
-                    const boulderSize = 1 + Math.random() * 2.5;
-                    const boulderGeometry = new THREE.DodecahedronGeometry(boulderSize, 0);
-                    const boulder = new THREE.Mesh(
-                        boulderGeometry,
-                        rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
-                    );
-                    boulder.position.set(boulderX, boulderY, boulderZ);
-                    boulder.scale.set(
-                        1 + Math.random() * 0.3,
-                        0.7 + Math.random() * 0.4,
-                        1 + Math.random() * 0.3
-                    );
-                    boulder.rotation.set(
-                        Math.random() * Math.PI,
-                        Math.random() * Math.PI,
-                        Math.random() * Math.PI
-                    );
-                    boulder.castShadow = true;
-                    boulder.receiveShadow = true;
-                    this.scene.add(boulder);
-                }
+                const boulderGeometry = new THREE.SphereGeometry(
+                    0.5 + Math.random() * 1.5,
+                    6 + Math.floor(Math.random() * 3),
+                    5 + Math.floor(Math.random() * 3)
+                );
+                const boulder = new THREE.Mesh(
+                    boulderGeometry,
+                    rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
+                );
+                boulder.position.set(boulderX, boulderY, boulderZ);
+                boulder.scale.set(
+                    1 + Math.random() * 0.3,
+                    0.7 + Math.random() * 0.4,
+                    1 + Math.random() * 0.3
+                );
+                boulder.rotation.set(
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI
+                );
+                boulder.castShadow = true;
+                boulder.receiveShadow = true;
+                this.scene.add(boulder);
             }
         });
         
@@ -428,43 +426,26 @@ class Environment {
                 const roadY = point.y || 0;
                 
                 // Calculate perpendicular offset for road edge
-                // Base distance from road (8 units)
-                const baseDistance = 8;
-                const perpX = Math.cos(point.heading) * baseDistance * side;
-                const perpZ = -Math.sin(point.heading) * baseDistance * side;
+                const perpX = Math.cos(point.heading) * 8 * side;
+                const perpZ = -Math.sin(point.heading) * 8 * side;
                 
                 // Create multiple vertices vertically for each point
                 for (let j = 0; j <= verticalSegments; j++) {
                     const verticalProgress = j / verticalSegments;
                     const currentHeight = height * verticalProgress;
                     
-                    // Add displacement for rocky texture
+                    // Add more dramatic displacement for mountain rock face
                     const displacement = Math.sin(i * 0.2 + j * 0.4) * 0.8 + 
                                        Math.cos(i * 0.5 - j * 0.2) * 0.6 +
                                        Math.sin(i * 0.3 + j * 0.7) * 0.4;
                     
-                    // Calculate position - for right cliff, add slope
-                    let wallX, wallZ;
-                    
-                    if (side === 1 && height < 0) {
-                        // RIGHT CLIFF - Add slope that increases with depth
-                        // Start at 8 units from road, end at 80 units from road
-                        const totalDistance = baseDistance + verticalProgress * 72;
-                        wallX = point.x + Math.cos(point.heading) * totalDistance;
-                        wallZ = point.z - Math.sin(point.heading) * totalDistance;
-                    } else {
-                        // Other walls - no slope
-                        wallX = point.x + perpX;
-                        wallZ = point.z + perpZ;
-                    }
-                    
-                    // Add small displacement for texture
-                    const textureOffset = displacement * 0.5;
+                    // Vary the wall distance for jagged mountain appearance
+                    const wallOffset = displacement * (height > 0 ? 1.5 : 0.8);
                     
                     vertices.push(
-                        point.x + slopedPerpX + textureOffset * Math.cos(point.heading),
+                        point.x + perpX + wallOffset * Math.cos(point.heading),
                         roadY + currentHeight,
-                        point.z + slopedPerpZ - textureOffset * Math.sin(point.heading)
+                        point.z + perpZ - wallOffset * Math.sin(point.heading)
                     );
                     
                     // Color variation for rock layers
@@ -793,8 +774,8 @@ class Environment {
         const leftCliff = createDetailedCliff(-1, 40, false);  // Taller mountain wall
         this.scene.add(leftCliff);
         
-        // Right cliff wall (sloped mountain drop-off)
-        const rightCliff = createDetailedCliff(1, -60, true);  // Reduced height due to slope
+        // Right cliff wall (drop-off) - massive mountainside cliff
+        const rightCliff = createDetailedCliff(1, -100, true);
         this.scene.add(rightCliff);
     }
     
@@ -964,12 +945,10 @@ class Environment {
                     nextPoint.x + nextPerpX, nextRoadY + dropAmount, nextPoint.z + nextPerpZ
                 );
                 
-                // Outer edge (further from road) - create sloped mountainside
-                const slopeDistance = side > 0 ? 12 : 8; // Right side (positive) extends further for slope
-                const slopeDropMultiplier = side > 0 ? 2.5 : 1.5; // More gradual slope on right
+                // Outer edge (further from road) - extend much further for mountainside
                 vertices.push(
-                    point.x + perpX * slopeDistance, roadY + dropAmount * slopeDropMultiplier, point.z + perpZ * slopeDistance,
-                    nextPoint.x + nextPerpX * slopeDistance, nextRoadY + dropAmount * slopeDropMultiplier, nextPoint.z + nextPerpZ * slopeDistance
+                    point.x + perpX * 8, roadY + dropAmount * 2, point.z + perpZ * 8,
+                    nextPoint.x + nextPerpX * 8, nextRoadY + dropAmount * 2, nextPoint.z + nextPerpZ * 8
                 );
             }
             
@@ -1004,12 +983,12 @@ class Environment {
         const leftTerrain = createTerrainStrip(-1, 12, 2, 0x3a5f3a);
         this.scene.add(leftTerrain);
         
-        // Create right side sloped terrain - massive mountainside
-        const rightTerrain = createTerrainStrip(1, 12, -30, 0x2a4f2a);
+        // Create right side drop-off terrain - massive mountainside drop
+        const rightTerrain = createTerrainStrip(1, 12, -50, 0x2a4f2a);
         this.scene.add(rightTerrain);
         
-        // Create far right mountain slope continuation
-        const deepDropTerrain = createTerrainStrip(1, 50, -80, 0x1a3f1a);
+        // Create far right deep drop-off - extreme cliff face
+        const deepDropTerrain = createTerrainStrip(1, 36, -150, 0x1a3f1a);
         this.scene.add(deepDropTerrain);
         
         // Add vertical walls connecting road to terrain
