@@ -435,43 +435,55 @@ class Vehicle {
     updateElevation() {
         // Find nearest road segments and interpolate between them
         if (this.environment && this.environment.roadPath) {
-            // Find two closest segments for interpolation
+            // Find closest segment
             let closest = { segment: null, distance: Infinity };
-            let secondClosest = { segment: null, distance: Infinity };
+            let closestIndex = -1;
             
-            this.environment.roadPath.forEach(segment => {
+            this.environment.roadPath.forEach((segment, index) => {
                 const distance = Math.sqrt(
                     Math.pow(this.position.x - segment.x, 2) + 
                     Math.pow(this.position.z - segment.z, 2)
                 );
                 
                 if (distance < closest.distance) {
-                    secondClosest = closest;
                     closest = { segment, distance };
-                } else if (distance < secondClosest.distance) {
-                    secondClosest = { segment, distance };
+                    closestIndex = index;
                 }
             });
             
             if (closest.segment && closest.segment.y !== undefined) {
-                let targetY;
+                let targetY = closest.segment.y;
                 
-                if (secondClosest.segment && secondClosest.segment.y !== undefined) {
-                    // Interpolate between two closest points
-                    const totalDist = closest.distance + secondClosest.distance;
-                    if (totalDist > 0) {
-                        const weight1 = 1 - (closest.distance / totalDist);
-                        const weight2 = 1 - (secondClosest.distance / totalDist);
-                        targetY = (closest.segment.y * weight1 + secondClosest.segment.y * weight2) / (weight1 + weight2);
-                    } else {
-                        targetY = closest.segment.y;
+                // If we have adjacent segments, interpolate for smoother transitions
+                if (closestIndex > 0 && closestIndex < this.environment.roadPath.length - 1) {
+                    const prevSegment = this.environment.roadPath[closestIndex - 1];
+                    const nextSegment = this.environment.roadPath[closestIndex + 1];
+                    
+                    // Simple linear interpolation based on position along the road
+                    const distToPrev = Math.sqrt(
+                        Math.pow(this.position.x - prevSegment.x, 2) + 
+                        Math.pow(this.position.z - prevSegment.z, 2)
+                    );
+                    const distToNext = Math.sqrt(
+                        Math.pow(this.position.x - nextSegment.x, 2) + 
+                        Math.pow(this.position.z - nextSegment.z, 2)
+                    );
+                    
+                    if (distToPrev < distToNext && prevSegment.y !== undefined) {
+                        // Closer to previous segment - interpolate between prev and current
+                        const totalDist = distToPrev + closest.distance;
+                        const weight = closest.distance / totalDist;
+                        targetY = prevSegment.y * weight + closest.segment.y * (1 - weight);
+                    } else if (nextSegment.y !== undefined) {
+                        // Closer to next segment - interpolate between current and next
+                        const totalDist = closest.distance + distToNext;
+                        const weight = distToNext / totalDist;
+                        targetY = closest.segment.y * weight + nextSegment.y * (1 - weight);
                     }
-                } else {
-                    targetY = closest.segment.y;
                 }
                 
-                // Very smooth transition (increase smoothing factor)
-                this.position.y = this.position.y * 0.95 + targetY * 0.05;
+                // Much more responsive - almost instant but with tiny smoothing to prevent jitter
+                this.position.y = this.position.y * 0.1 + targetY * 0.9;
             }
         }
     }
