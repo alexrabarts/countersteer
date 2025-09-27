@@ -30,20 +30,20 @@ class Environment {
         // Each element defines how many segments and the turn rate per segment
         const courseLayout = [
             { segments: 10, turnRate: 0 },        // Start straight - 200m
-            { segments: 8, turnRate: 0.04 },      // Right turn 1 - gentle
-            { segments: 8, turnRate: 0 },         // Straight
-            { segments: 10, turnRate: 0.05 },     // Right turn 2 - medium
-            { segments: 6, turnRate: 0 },         // Short straight
-            { segments: 12, turnRate: 0.04 },     // Right turn 3 - long gentle
-            { segments: 10, turnRate: 0 },        // Straight
-            { segments: 8, turnRate: 0.045 },     // Right turn 4 - back to start
-            { segments: 8, turnRate: 0 },         // Straight
-            { segments: 6, turnRate: 0.05 },      // Right turn 5 
-            { segments: 10, turnRate: 0 },        // Long straight
-            { segments: 8, turnRate: -0.06 },     // Left turn 1 - sharper
+            { segments: 6, turnRate: 0.12 },      // Right turn 1 - hairpin
+            { segments: 4, turnRate: 0 },         // Short straight
+            { segments: 8, turnRate: 0.14 },      // Right turn 2 - extreme hairpin
+            { segments: 3, turnRate: 0 },         // Very short straight
+            { segments: 10, turnRate: 0.11 },     // Right turn 3 - long sharp
+            { segments: 5, turnRate: 0 },         // Straight
+            { segments: 6, turnRate: 0.13 },      // Right turn 4 - hairpin
+            { segments: 4, turnRate: 0 },         // Short straight
+            { segments: 5, turnRate: 0.15 },      // Right turn 5 - switchback
             { segments: 6, turnRate: 0 },         // Straight
-            { segments: 8, turnRate: -0.04 },     // Left turn 2 - gentle
-            { segments: 12, turnRate: 0 },        // Final straight back to start area
+            { segments: 6, turnRate: -0.16 },     // Left turn 1 - extreme switchback
+            { segments: 3, turnRate: 0 },         // Short straight
+            { segments: 6, turnRate: -0.12 },     // Left turn 2 - hairpin
+            { segments: 8, turnRate: 0 },         // Final straight back to start area
         ];
         
         // First, build the road path

@@ -99,7 +99,7 @@ class Game {
         this.camera.lookAt(0, 0, 0);
         
         // Dynamic camera offset for mountain roads
-        this.baseCameraOffset = new THREE.Vector3(0, 6, -12); // Higher and further for mountain views
+        this.baseCameraOffset = new THREE.Vector3(0, 4, -8); // Closer view for more immersion
         this.cameraOffset = this.baseCameraOffset.clone();
         this.cameraTarget = new THREE.Vector3();
         this.currentCameraPos = this.camera.position.clone();
@@ -121,8 +121,8 @@ class Game {
         
         // Adjust height based on speed for dramatic effect
         const speedRatio = this.vehicle.speed / this.vehicle.maxSpeed;
-        this.cameraOffset.y = this.baseCameraOffset.y + speedRatio * 2; // Rise with speed
-        this.cameraOffset.z = this.baseCameraOffset.z - speedRatio * 3; // Move back with speed
+        this.cameraOffset.y = this.baseCameraOffset.y + speedRatio * 1; // Slight rise with speed
+        this.cameraOffset.z = this.baseCameraOffset.z - speedRatio * 2; // Move back less with speed
 
         // Calculate camera position relative to vehicle
         const offset = this.cameraOffset.clone();

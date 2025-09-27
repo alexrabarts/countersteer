@@ -30,13 +30,13 @@ class InputHandler {
     }
 
     updateInputs() {
-        // Steering
+        // Steering (inverted)
         this.steeringInput = 0;
         if (this.keys['KeyA']) {
-            this.steeringInput = -1;
+            this.steeringInput = 1;  // A now steers right
         }
         if (this.keys['KeyD']) {
-            this.steeringInput = 1;
+            this.steeringInput = -1;  // D now steers left
         }
         
         // Throttle and brake
