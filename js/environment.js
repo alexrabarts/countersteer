@@ -142,26 +142,8 @@ class Environment {
         grass.receiveShadow = true;
         this.scene.add(grass);
         
-        // Simple cliff wall on left side of road
-        this.roadPath.forEach((point, index) => {
-            if (index % 4 === 0) {
-                const cliffGeometry = new THREE.BoxGeometry(5, 8, 20);
-                const cliffMaterial = new THREE.MeshStandardMaterial({ 
-                    color: 0x8B4513, 
-                    roughness: 0.9, 
-                    metalness: 0.0 
-                });
-                const cliff = new THREE.Mesh(cliffGeometry, cliffMaterial);
-                cliff.position.set(point.x - 15, 4, point.z);
-                cliff.rotation.y = point.heading;
-                cliff.castShadow = true;
-                cliff.receiveShadow = true;
-                this.scene.add(cliff);
-            }
-        });
-
         // Add some texture variation with darker patches
-        for (let i = 0; i < 15; i++) {
+        for (let i = 0; i < 20; i++) {
             const patchSize = 50 + Math.random() * 100;
             const patchGeometry = new THREE.PlaneGeometry(patchSize, patchSize);
             const patchMaterial = new THREE.MeshStandardMaterial({
