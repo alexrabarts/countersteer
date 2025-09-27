@@ -331,26 +331,45 @@ class Vehicle {
     }
     
     updateElevation() {
-        // Find nearest road segment and match its elevation
+        // Find nearest road segments and interpolate between them
         if (this.environment && this.environment.roadPath) {
-            let minDistance = Infinity;
-            let closestSegment = null;
+            // Find two closest segments for interpolation
+            let closest = { segment: null, distance: Infinity };
+            let secondClosest = { segment: null, distance: Infinity };
             
             this.environment.roadPath.forEach(segment => {
                 const distance = Math.sqrt(
                     Math.pow(this.position.x - segment.x, 2) + 
                     Math.pow(this.position.z - segment.z, 2)
                 );
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    closestSegment = segment;
+                
+                if (distance < closest.distance) {
+                    secondClosest = closest;
+                    closest = { segment, distance };
+                } else if (distance < secondClosest.distance) {
+                    secondClosest = { segment, distance };
                 }
             });
             
-            if (closestSegment && closestSegment.y !== undefined) {
-                // Smoothly transition to road elevation
-                const targetY = closestSegment.y;
-                this.position.y = this.position.y * 0.9 + targetY * 0.1;
+            if (closest.segment && closest.segment.y !== undefined) {
+                let targetY;
+                
+                if (secondClosest.segment && secondClosest.segment.y !== undefined) {
+                    // Interpolate between two closest points
+                    const totalDist = closest.distance + secondClosest.distance;
+                    if (totalDist > 0) {
+                        const weight1 = 1 - (closest.distance / totalDist);
+                        const weight2 = 1 - (secondClosest.distance / totalDist);
+                        targetY = (closest.segment.y * weight1 + secondClosest.segment.y * weight2) / (weight1 + weight2);
+                    } else {
+                        targetY = closest.segment.y;
+                    }
+                } else {
+                    targetY = closest.segment.y;
+                }
+                
+                // Very smooth transition (increase smoothing factor)
+                this.position.y = this.position.y * 0.95 + targetY * 0.05;
             }
         }
     }
