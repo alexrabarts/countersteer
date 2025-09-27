@@ -178,6 +178,40 @@ class Vehicle {
     }
     
     updateSpeed(deltaTime, throttleInput, brakeInput) {
+        // Calculate road gradient effect
+        let gradientForce = 0;
+        if (this.environment && this.environment.roadPath) {
+            // Find the road gradient by looking ahead and behind
+            const lookDistance = 5; // meters
+            let currentY = this.position.y;
+            
+            // Find point ahead
+            const forward = new THREE.Vector3(0, 0, lookDistance);
+            forward.applyEuler(new THREE.Euler(0, this.yawAngle, 0));
+            const aheadPos = this.position.clone().add(forward);
+            
+            // Find elevation ahead
+            let aheadY = currentY;
+            let minDist = Infinity;
+            this.environment.roadPath.forEach(segment => {
+                const dist = Math.sqrt(
+                    Math.pow(aheadPos.x - segment.x, 2) + 
+                    Math.pow(aheadPos.z - segment.z, 2)
+                );
+                if (dist < minDist) {
+                    minDist = dist;
+                    aheadY = segment.y || 0;
+                }
+            });
+            
+            // Calculate gradient (rise over run)
+            const gradient = (aheadY - currentY) / lookDistance;
+            
+            // Gravity component along the slope
+            // Going uphill: negative force, going downhill: positive force
+            gradientForce = -gradient * 9.81 * 0.3; // Scaled for gameplay
+        }
+        
         // Apply throttle
         if (throttleInput > 0) {
             this.speed += this.acceleration * throttleInput * deltaTime;
@@ -187,6 +221,9 @@ class Vehicle {
         if (brakeInput > 0) {
             this.speed -= this.brakeForce * brakeInput * deltaTime;
         }
+        
+        // Apply gradient force
+        this.speed += gradientForce * deltaTime;
         
         // Air resistance (much reduced so you don't need constant throttle)
         const dragForce = 0.002 * this.speed * this.speed;

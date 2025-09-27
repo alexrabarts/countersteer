@@ -97,11 +97,14 @@ class Game {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
         this.camera.position.set(0, 5, -10);
         this.camera.lookAt(0, 0, 0);
-        this.cameraOffset = new THREE.Vector3(0, 4, -10); // Slightly higher and further back
+        
+        // Dynamic camera offset for mountain roads
+        this.baseCameraOffset = new THREE.Vector3(0, 6, -12); // Higher and further for mountain views
+        this.cameraOffset = this.baseCameraOffset.clone();
         this.cameraTarget = new THREE.Vector3();
         this.currentCameraPos = this.camera.position.clone();
         this.currentLookTarget = new THREE.Vector3(0, 1, 0);
-        this.cameraLerpFactor = 0.05; // Smooth lag
+        this.cameraLerpFactor = 0.08; // Slightly faster response for mountain roads
         console.log('Camera setup complete');
     }
 
@@ -111,6 +114,15 @@ class Game {
         // Follow camera - keep camera behind vehicle
         const vehiclePos = this.vehicle.position.clone();
         const vehicleRotation = new THREE.Euler(0, this.vehicle.yawAngle, 0);
+
+        // Dynamic camera offset based on lean angle for better mountain road feel
+        const leanInfluence = this.vehicle.leanAngle * 2; // Shift camera opposite to lean
+        this.cameraOffset.x = this.baseCameraOffset.x - leanInfluence;
+        
+        // Adjust height based on speed for dramatic effect
+        const speedRatio = this.vehicle.speed / this.vehicle.maxSpeed;
+        this.cameraOffset.y = this.baseCameraOffset.y + speedRatio * 2; // Rise with speed
+        this.cameraOffset.z = this.baseCameraOffset.z - speedRatio * 3; // Move back with speed
 
         // Calculate camera position relative to vehicle
         const offset = this.cameraOffset.clone();
@@ -123,13 +135,17 @@ class Game {
 
         // Dynamic FOV based on speed for immersion
         const speedFactor = this.vehicle.speed / this.vehicle.maxSpeed;
-        this.camera.fov = 75 + speedFactor * 10; // 75 to 85 degrees
+        this.camera.fov = 70 + speedFactor * 15; // 70 to 85 degrees for mountain roads
         this.camera.updateProjectionMatrix();
 
-        // Look at vehicle with lag
-        const lookTarget = this.vehicle.position.clone();
+        // Look ahead of vehicle for better anticipation on mountain roads
+        const lookAheadDistance = 5 + speedRatio * 10; // Look further ahead at speed
+        const lookAhead = new THREE.Vector3(0, 0, lookAheadDistance);
+        lookAhead.applyEuler(vehicleRotation);
+        
+        const lookTarget = this.vehicle.position.clone().add(lookAhead);
         lookTarget.y += 1;
-        this.currentLookTarget.lerp(lookTarget, this.cameraLerpFactor);
+        this.currentLookTarget.lerp(lookTarget, this.cameraLerpFactor * 1.5);
         this.camera.lookAt(this.currentLookTarget);
     }
 

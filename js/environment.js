@@ -137,6 +137,265 @@ class Environment {
         console.log('Created continuous road with', vertices.length / 3, 'vertices');
     }
     
+    addRockFormations() {
+        // Create rock materials with variation
+        const rockMaterials = [
+            new THREE.MeshStandardMaterial({ color: 0x808080, roughness: 0.95, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x696969, roughness: 0.95, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x5c5c5c, roughness: 0.95, metalness: 0.0 })
+        ];
+        
+        // Large cliff rocks on elevated side
+        this.roadPath.forEach((point, index) => {
+            if (index % 7 === 0) { // Every 7th segment for spacing
+                // Left side cliff rocks (elevated side)
+                const cliffX = point.x - (20 + Math.random() * 15) * Math.cos(point.heading);
+                const cliffZ = point.z + (20 + Math.random() * 15) * Math.sin(point.heading);
+                const cliffY = point.y + 5 + Math.random() * 10;
+                
+                // Create irregular rock shape using multiple merged geometries
+                const rockGroup = new THREE.Group();
+                
+                // Main rock body
+                const mainRockGeometry = new THREE.DodecahedronGeometry(3 + Math.random() * 4, 0);
+                const mainRock = new THREE.Mesh(
+                    mainRockGeometry, 
+                    rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
+                );
+                mainRock.position.set(0, 0, 0);
+                mainRock.rotation.set(
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI
+                );
+                mainRock.scale.set(
+                    1 + Math.random() * 0.5,
+                    0.7 + Math.random() * 0.6,
+                    1 + Math.random() * 0.5
+                );
+                mainRock.castShadow = true;
+                mainRock.receiveShadow = true;
+                rockGroup.add(mainRock);
+                
+                // Additional rock chunks for detail
+                for (let j = 0; j < 2 + Math.floor(Math.random() * 2); j++) {
+                    const chunkGeometry = new THREE.TetrahedronGeometry(1 + Math.random() * 2, 0);
+                    const chunk = new THREE.Mesh(
+                        chunkGeometry,
+                        rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
+                    );
+                    chunk.position.set(
+                        (Math.random() - 0.5) * 4,
+                        (Math.random() - 0.5) * 3,
+                        (Math.random() - 0.5) * 4
+                    );
+                    chunk.rotation.set(
+                        Math.random() * Math.PI,
+                        Math.random() * Math.PI,
+                        Math.random() * Math.PI
+                    );
+                    chunk.castShadow = true;
+                    chunk.receiveShadow = true;
+                    rockGroup.add(chunk);
+                }
+                
+                rockGroup.position.set(cliffX, cliffY, cliffZ);
+                this.scene.add(rockGroup);
+            }
+            
+            // Smaller rocks and boulders scattered around
+            if (index % 4 === 0 && Math.random() > 0.5) {
+                const side = Math.random() > 0.5 ? 1 : -1;
+                const boulderX = point.x + side * (12 + Math.random() * 8) * Math.cos(point.heading);
+                const boulderZ = point.z - side * (12 + Math.random() * 8) * Math.sin(point.heading);
+                const boulderY = point.y + Math.random() * 2;
+                
+                const boulderGeometry = new THREE.SphereGeometry(
+                    0.5 + Math.random() * 1.5,
+                    6 + Math.floor(Math.random() * 3),
+                    5 + Math.floor(Math.random() * 3)
+                );
+                const boulder = new THREE.Mesh(
+                    boulderGeometry,
+                    rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
+                );
+                boulder.position.set(boulderX, boulderY, boulderZ);
+                boulder.scale.set(
+                    1 + Math.random() * 0.3,
+                    0.7 + Math.random() * 0.4,
+                    1 + Math.random() * 0.3
+                );
+                boulder.rotation.set(
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI
+                );
+                boulder.castShadow = true;
+                boulder.receiveShadow = true;
+                this.scene.add(boulder);
+            }
+        });
+        
+        // Rock face walls for dramatic cliff sections
+        for (let i = 0; i < this.roadPath.length - 10; i += 10) {
+            if (Math.abs(this.roadPath[i].y) > 8) { // Only on high elevation sections
+                const wallLength = 10;
+                const wallGeometry = new THREE.PlaneGeometry(wallLength * 2, 25);
+                
+                // Displace vertices for rough rock face appearance
+                const positions = wallGeometry.attributes.position;
+                for (let j = 0; j < positions.count; j++) {
+                    const x = positions.getX(j);
+                    const y = positions.getY(j);
+                    const z = positions.getZ(j) + Math.random() * 2 - 1;
+                    positions.setZ(j, z);
+                }
+                wallGeometry.computeVertexNormals();
+                
+                const rockWall = new THREE.Mesh(
+                    wallGeometry,
+                    rockMaterials[0]
+                );
+                
+                // Position wall along road
+                const avgX = (this.roadPath[i].x + this.roadPath[i + 5].x) / 2;
+                const avgZ = (this.roadPath[i].z + this.roadPath[i + 5].z) / 2;
+                const avgY = (this.roadPath[i].y + this.roadPath[i + 5].y) / 2;
+                const avgHeading = (this.roadPath[i].heading + this.roadPath[i + 5].heading) / 2;
+                
+                rockWall.position.set(
+                    avgX - 25 * Math.cos(avgHeading),
+                    avgY + 10,
+                    avgZ + 25 * Math.sin(avgHeading)
+                );
+                rockWall.rotation.y = avgHeading + Math.PI / 2;
+                rockWall.castShadow = true;
+                rockWall.receiveShadow = true;
+                this.scene.add(rockWall);
+            }
+        }
+    }
+    
+    createGuardRails() {
+        // Create metal guard rails for dangerous sections
+        const railHeight = 0.8;
+        const postSpacing = 4; // meters between posts
+        
+        // Metal rail material
+        const railMaterial = new THREE.MeshStandardMaterial({
+            color: 0xc0c0c0,
+            roughness: 0.6,
+            metalness: 0.8
+        });
+        
+        // Post material
+        const postMaterial = new THREE.MeshStandardMaterial({
+            color: 0x808080,
+            roughness: 0.8,
+            metalness: 0.6
+        });
+        
+        // Create continuous rail sections
+        for (let i = 0; i < this.roadPath.length - 1; i++) {
+            const point = this.roadPath[i];
+            const nextPoint = this.roadPath[i + 1];
+            
+            // Determine if this section needs guard rails based on elevation drop
+            const elevationDrop = Math.abs(point.y);
+            const nextIndex = Math.min(i + 1, this.roadPath.length - 1);
+            const headingChange = Math.abs(this.roadPath[nextIndex].heading - point.heading);
+            
+            // Add rails on curves and high elevation sections
+            if (elevationDrop > 5 || headingChange > 0.02) {
+                // Determine which side needs rails (outside of curves or both on dangerous sections)
+                const railSide = headingChange > 0.02 ? (headingChange > 0 ? -1 : 1) : 0;
+                
+                if (railSide <= 0) {
+                    // Left side rail - create as vertical cylindrical rail
+                    const railGeometry = new THREE.CylinderGeometry(0.05, 0.05, 
+                        Math.sqrt(Math.pow(nextPoint.x - point.x, 2) + Math.pow(nextPoint.z - point.z, 2)),
+                        8
+                    );
+                    const rail = new THREE.Mesh(railGeometry, railMaterial);
+                    
+                    const perpX = Math.cos(point.heading) * 8.2;
+                    const perpZ = -Math.sin(point.heading) * 8.2;
+                    
+                    // Position and rotate properly
+                    rail.position.set(
+                        (point.x + nextPoint.x) / 2 - perpX,
+                        (point.y + nextPoint.y) / 2 + railHeight,
+                        (point.z + nextPoint.z) / 2 - perpZ
+                    );
+                    rail.rotation.z = Math.PI / 2; // Rotate to horizontal
+                    rail.rotation.y = point.heading;
+                    rail.castShadow = true;
+                    rail.receiveShadow = true;
+                    this.scene.add(rail);
+                }
+                
+                if (railSide >= 0 || elevationDrop > 10) {
+                    // Right side rail - create as vertical cylindrical rail
+                    const railGeometry = new THREE.CylinderGeometry(0.05, 0.05,
+                        Math.sqrt(Math.pow(nextPoint.x - point.x, 2) + Math.pow(nextPoint.z - point.z, 2)),
+                        8
+                    );
+                    const rail = new THREE.Mesh(railGeometry, railMaterial);
+                    
+                    const perpX = Math.cos(point.heading) * 8.2;
+                    const perpZ = -Math.sin(point.heading) * 8.2;
+                    
+                    // Position and rotate properly
+                    rail.position.set(
+                        (point.x + nextPoint.x) / 2 + perpX,
+                        (point.y + nextPoint.y) / 2 + railHeight,
+                        (point.z + nextPoint.z) / 2 + perpZ
+                    );
+                    rail.rotation.z = Math.PI / 2; // Rotate to horizontal
+                    rail.rotation.y = point.heading;
+                    rail.castShadow = true;
+                    rail.receiveShadow = true;
+                    this.scene.add(rail);
+                }
+                
+                // Add posts every few segments
+                if (i % 2 === 0) {
+                    const postGeometry = new THREE.BoxGeometry(0.1, railHeight + 0.2, 0.1);
+                    
+                    if (railSide <= 0) {
+                        // Left post
+                        const perpX = Math.cos(point.heading) * 8.2;
+                        const perpZ = -Math.sin(point.heading) * 8.2;
+                        const post = new THREE.Mesh(postGeometry, postMaterial);
+                        post.position.set(
+                            point.x - perpX,
+                            point.y + (railHeight + 0.2) / 2,
+                            point.z - perpZ
+                        );
+                        post.castShadow = true;
+                        post.receiveShadow = true;
+                        this.scene.add(post);
+                    }
+                    
+                    if (railSide >= 0 || elevationDrop > 10) {
+                        // Right post
+                        const perpX = Math.cos(point.heading) * 8.2;
+                        const perpZ = -Math.sin(point.heading) * 8.2;
+                        const post = new THREE.Mesh(postGeometry, postMaterial);
+                        post.position.set(
+                            point.x + perpX,
+                            point.y + (railHeight + 0.2) / 2,
+                            point.z + perpZ
+                        );
+                        post.castShadow = true;
+                        post.receiveShadow = true;
+                        this.scene.add(post);
+                    }
+                }
+            }
+        }
+    }
+    
     createRoadWalls() {
         // Create vertical walls along the road edges
         const createWall = (side, height, color) => {
@@ -206,7 +465,7 @@ class Environment {
         canvas.height = 512;
         const ctx = canvas.getContext('2d');
         
-        // Asphalt
+        // Asphalt base
         ctx.fillStyle = '#3a3a3a';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
@@ -217,6 +476,78 @@ class Environment {
             ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 
                         Math.random() * 3 + 1, Math.random() * 3 + 1);
         }
+        
+        // Tire tracks and wear marks
+        ctx.globalAlpha = 0.3;
+        
+        // Left tire track
+        const leftTrackX = canvas.width * 0.35;
+        ctx.strokeStyle = '#2a2a2a';
+        ctx.lineWidth = 15;
+        ctx.beginPath();
+        ctx.moveTo(leftTrackX, 0);
+        for (let y = 0; y < canvas.height; y += 20) {
+            ctx.lineTo(leftTrackX + Math.sin(y * 0.02) * 3, y);
+        }
+        ctx.stroke();
+        
+        // Right tire track
+        const rightTrackX = canvas.width * 0.65;
+        ctx.beginPath();
+        ctx.moveTo(rightTrackX, 0);
+        for (let y = 0; y < canvas.height; y += 20) {
+            ctx.lineTo(rightTrackX + Math.sin(y * 0.02 + 1) * 3, y);
+        }
+        ctx.stroke();
+        
+        // Center wear (from motorcycles)
+        ctx.strokeStyle = '#323232';
+        ctx.lineWidth = 8;
+        ctx.globalAlpha = 0.2;
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2, 0);
+        for (let y = 0; y < canvas.height; y += 30) {
+            ctx.lineTo(canvas.width / 2 + Math.sin(y * 0.03) * 2, y);
+        }
+        ctx.stroke();
+        
+        // Oil stains and patches
+        ctx.globalAlpha = 0.15;
+        for (let i = 0; i < 5; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const radius = 10 + Math.random() * 20;
+            
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+            gradient.addColorStop(0, 'rgba(20, 20, 20, 0.5)');
+            gradient.addColorStop(1, 'rgba(20, 20, 20, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Cracks and repairs
+        ctx.globalAlpha = 0.4;
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 8; i++) {
+            ctx.beginPath();
+            const startX = Math.random() * canvas.width;
+            const startY = Math.random() * canvas.height;
+            ctx.moveTo(startX, startY);
+            
+            for (let j = 0; j < 3; j++) {
+                ctx.lineTo(
+                    startX + (Math.random() - 0.5) * 30,
+                    startY + Math.random() * 40
+                );
+            }
+            ctx.stroke();
+        }
+        
+        ctx.globalAlpha = 1.0;
         
         // White edge lines
         ctx.strokeStyle = '#ffffff';
@@ -229,6 +560,22 @@ class Environment {
         ctx.moveTo(canvas.width - 10, 0);
         ctx.lineTo(canvas.width - 10, canvas.height);
         ctx.stroke();
+        
+        // Edge line wear
+        ctx.globalAlpha = 0.3;
+        ctx.strokeStyle = '#3a3a3a';
+        ctx.lineWidth = 2;
+        for (let y = 0; y < canvas.height; y += 30 + Math.random() * 20) {
+            ctx.beginPath();
+            ctx.moveTo(8, y);
+            ctx.lineTo(12, y + 10);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(canvas.width - 12, y);
+            ctx.lineTo(canvas.width - 8, y + 10);
+            ctx.stroke();
+        }
         
         const texture = new THREE.CanvasTexture(canvas);
         texture.wrapS = THREE.RepeatWrapping;
@@ -327,6 +674,9 @@ class Environment {
         // Add vertical walls connecting road to terrain
         this.createRoadWalls();
         
+        // Guard rails commented out due to rendering issues
+        // this.createGuardRails();
+        
         // Add some texture variation with darker patches
         for (let i = 0; i < 20; i++) {
             const patchSize = 50 + Math.random() * 100;
@@ -410,6 +760,9 @@ class Environment {
     }
     
     addEnvironmentalDetails() {
+        // Rock formations and cliff details
+        this.addRockFormations();
+        
         // Trees along the roadside - more sparse for visibility
         const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.6, 4);
         const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9, metalness: 0.0 });
@@ -480,24 +833,36 @@ class Environment {
             }
         });
 
-        // Track barriers for detail
-        const barrierGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8);
-        const barrierMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.8, metalness: 0.0 });
+        // Small cones for track detail (not guard rails)
+        const coneGeometry = new THREE.ConeGeometry(0.15, 0.5, 8);
+        const coneMaterial = new THREE.MeshStandardMaterial({ color: 0xff4500, roughness: 0.8, metalness: 0.0 });
         this.roadPath.forEach((point, index) => {
-            if (index % 2 === 0 && index > 5 && index < this.roadPath.length - 5) { // Skip start/end
-                // Left barrier
-                const leftBarrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
-                leftBarrier.position.set(point.x - 8, 0.25, point.z);
-                leftBarrier.castShadow = true;
-                leftBarrier.receiveShadow = true;
-                this.scene.add(leftBarrier);
+            if (index % 8 === 0 && index > 5 && index < this.roadPath.length - 5) { // Sparse placement
+                const coneY = point.y !== undefined ? point.y + 0.25 : 0.25;
+                
+                // Only on straights
+                const nextIndex = Math.min(index + 1, this.roadPath.length - 1);
+                const headingChange = Math.abs(this.roadPath[nextIndex].heading - point.heading);
+                
+                if (headingChange < 0.01) {
+                    // Left side cone
+                    const leftX = point.x - 8.5 * Math.cos(point.heading);
+                    const leftZ = point.z + 8.5 * Math.sin(point.heading);
+                    const leftCone = new THREE.Mesh(coneGeometry, coneMaterial);
+                    leftCone.position.set(leftX, coneY, leftZ);
+                    leftCone.castShadow = true;
+                    leftCone.receiveShadow = true;
+                    this.scene.add(leftCone);
 
-                // Right barrier
-                const rightBarrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
-                rightBarrier.position.set(point.x + 8, 0.25, point.z);
-                rightBarrier.castShadow = true;
-                rightBarrier.receiveShadow = true;
-                this.scene.add(rightBarrier);
+                    // Right side cone
+                    const rightX = point.x + 8.5 * Math.cos(point.heading);
+                    const rightZ = point.z - 8.5 * Math.sin(point.heading);
+                    const rightCone = new THREE.Mesh(coneGeometry, coneMaterial);
+                    rightCone.position.set(rightX, coneY, rightZ);
+                    rightCone.castShadow = true;
+                    rightCone.receiveShadow = true;
+                    this.scene.add(rightCone);
+                }
             }
         });
 
