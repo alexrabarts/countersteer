@@ -136,7 +136,11 @@ class Game {
         }
         
         this.vehicle.update(deltaTime, steeringInput, throttleInput, brakeInput);
-        
+
+        // Dynamic ambient light based on speed
+        const speedFactor = this.vehicle.speed / this.vehicle.maxSpeed;
+        this.scene.children.find(obj => obj.type === 'AmbientLight').intensity = 0.6 + speedFactor * 0.2;
+
         // Check cone collisions
         if (!this.vehicle.crashed) {
             this.cones.checkCollision(this.vehicle.position);
