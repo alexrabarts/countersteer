@@ -54,8 +54,8 @@ class Environment {
                 const centerX = currentX + (segmentLength/2) * Math.sin(currentHeading);
                 const centerZ = currentZ + (segmentLength/2) * Math.cos(currentHeading);
                 
-                // Calculate elevation for this segment - gentle hills
-                const elevation = Math.sin(segmentIndex * 0.03) * 3 + Math.cos(segmentIndex * 0.02) * 2;
+                // Calculate elevation for this segment - more dramatic hills
+                const elevation = Math.sin(segmentIndex * 0.04) * 8 + Math.cos(segmentIndex * 0.02) * 5;
                 
                 // Create road segment
                 const roadGeometry = new THREE.PlaneGeometry(roadWidth, segmentLength * 1.05); // Slight overlap
@@ -149,27 +149,13 @@ class Environment {
         grass.receiveShadow = true;
         this.scene.add(grass);
 
-        // Create cliff walls and drop-off terrain following road elevation
+        // Create drop-off terrain following road elevation
         this.roadPath.forEach((point, index) => {
-            if (index % 4 === 0) {
+            if (index % 3 === 0) {
                 const roadY = point.y !== undefined ? point.y : 0;
                 
-                // Left side cliff wall
-                const cliffGeometry = new THREE.BoxGeometry(6, 10, 30);
-                const cliffMaterial = new THREE.MeshStandardMaterial({ 
-                    color: 0x8B4513, 
-                    roughness: 0.9, 
-                    metalness: 0.0 
-                });
-                const cliff = new THREE.Mesh(cliffGeometry, cliffMaterial);
-                cliff.position.set(point.x - 18, roadY + 5, point.z);
-                cliff.rotation.y = point.heading;
-                cliff.castShadow = true;
-                cliff.receiveShadow = true;
-                this.scene.add(cliff);
-                
                 // Right side drop-off terrain
-                const dropGeometry = new THREE.PlaneGeometry(40, 30);
+                const dropGeometry = new THREE.PlaneGeometry(60, 30);
                 const dropMaterial = new THREE.MeshStandardMaterial({
                     color: 0x2a4f2a,
                     roughness: 0.95,
@@ -177,10 +163,24 @@ class Environment {
                 });
                 const dropTerrain = new THREE.Mesh(dropGeometry, dropMaterial);
                 dropTerrain.rotation.x = -Math.PI / 2;
-                dropTerrain.position.set(point.x + 25, roadY - 8, point.z);
+                dropTerrain.position.set(point.x + 35, roadY - 15, point.z);
                 dropTerrain.rotation.z = point.heading;
                 dropTerrain.receiveShadow = true;
                 this.scene.add(dropTerrain);
+                
+                // Left side elevated terrain
+                const leftTerrainGeometry = new THREE.PlaneGeometry(40, 30);
+                const leftTerrainMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x3a5f3a,
+                    roughness: 0.95,
+                    metalness: 0.0
+                });
+                const leftTerrain = new THREE.Mesh(leftTerrainGeometry, leftTerrainMaterial);
+                leftTerrain.rotation.x = -Math.PI / 2;
+                leftTerrain.position.set(point.x - 25, roadY + 3, point.z);
+                leftTerrain.rotation.z = point.heading;
+                leftTerrain.receiveShadow = true;
+                this.scene.add(leftTerrain);
             }
         });
         
