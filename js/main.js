@@ -150,7 +150,7 @@ class Game {
     }
 
     updateUI() {
-        document.getElementById('speed').textContent = `Speed: ${this.vehicle.getSpeed().toFixed(0)} km/h`;
+        document.getElementById('speed').textContent = `Speed: ${this.vehicle.getSpeed().toFixed(0)} mph`;
         
         const leanText = this.vehicle.crashed ? 
             `CRASHED! (Press R to reset)` : 

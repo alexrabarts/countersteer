@@ -150,7 +150,7 @@ class Vehicle {
             this.crashed = true;
             this.crashAngle = this.leanAngle || 0.5; // Fall to the side
             this.frame.material.color.setHex(0xff6600); // Orange for low-speed fall
-            console.log('CRASHED! Speed too low:', (this.speed * 3.6).toFixed(1) + ' km/h');
+            console.log('CRASHED! Speed too low:', (this.speed * 2.237).toFixed(1) + ' mph');
         }
         
         // Update physics
@@ -172,6 +172,9 @@ class Vehicle {
         
         // Update elevation to follow road
         this.updateElevation();
+        
+        // Check for wall collision
+        this.checkWallCollision();
         
         // Update 3D model
         this.updateMesh();
@@ -356,7 +359,7 @@ class Vehicle {
     }
 
     getSpeed() {
-        return this.crashed ? 0 : this.speed * 3.6; // Convert m/s to km/h
+        return this.crashed ? 0 : this.speed * 2.237; // Convert m/s to mph
     }
 
     getLeanAngleDegrees() {
@@ -407,6 +410,64 @@ class Vehicle {
                 
                 // Very smooth transition (increase smoothing factor)
                 this.position.y = this.position.y * 0.95 + targetY * 0.05;
+            }
+        }
+    }
+    
+    checkWallCollision() {
+        // Check if bike has gone off the road edges
+        if (this.environment && this.environment.roadPath) {
+            // Find nearest road segment
+            let closestSegment = null;
+            let minDistance = Infinity;
+            
+            this.environment.roadPath.forEach(segment => {
+                const distance = Math.sqrt(
+                    Math.pow(this.position.x - segment.x, 2) + 
+                    Math.pow(this.position.z - segment.z, 2)
+                );
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestSegment = segment;
+                }
+            });
+            
+            if (closestSegment) {
+                // Calculate perpendicular distance from road centerline
+                const roadVector = new THREE.Vector3(
+                    Math.sin(closestSegment.heading),
+                    0,
+                    Math.cos(closestSegment.heading)
+                );
+                
+                const toVehicle = new THREE.Vector3(
+                    this.position.x - closestSegment.x,
+                    0,
+                    this.position.z - closestSegment.z
+                );
+                
+                // Cross product gives perpendicular distance
+                const perpVector = new THREE.Vector3().crossVectors(roadVector, new THREE.Vector3(0, 1, 0));
+                const perpDistance = toVehicle.dot(perpVector);
+                
+                const roadWidth = 8; // Half of total road width (16m)
+                const wallBuffer = 7.5; // Slightly inside the actual road edge
+                
+                // Check if we've hit the right wall (positive perpDistance)
+                if (perpDistance > wallBuffer) {
+                    this.crashed = true;
+                    this.crashAngle = -Math.PI/4; // Fall to the left after hitting right wall
+                    this.frame.material.color.setHex(0xff00ff); // Magenta for wall crash
+                    console.log('CRASHED! Hit the wall at', (this.speed * 2.237).toFixed(1) + ' mph');
+                    
+                    // Bounce back slightly
+                    this.velocity.x *= -0.5;
+                    this.velocity.z *= -0.5;
+                }
+                
+                // Could also check left wall if desired
+                // if (perpDistance < -wallBuffer) { ... }
             }
         }
     }
