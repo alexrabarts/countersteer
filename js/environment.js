@@ -231,67 +231,7 @@ class Environment {
         this.terrain = terrain;
         this.terrainGeometry = terrainGeometry;
         
-        // Phase 5: Add cliff faces for dramatic elevation changes
-        this.addCliffFaces();
-        
-        console.log('Phase 5: Created terrain with cliff faces and dramatic elevation');
-    }
-    
-    addCliffFaces() {
-        // Add vertical cliff faces where drop-off is steep
-        this.roadPath.forEach((point, index) => {
-            if (index % 3 === 0) {
-                // Check if this road section has a significant drop-off on right side
-                const rightX = point.x + 15;
-                const rightZ = point.z;
-                const roadInfo = this.getDistanceToRoadPath(rightX, rightZ);
-                
-                if (roadInfo.isRightSide && roadInfo.distance > 12) {
-                    // Create cliff face
-                    const cliffGeometry = new THREE.BoxGeometry(3, 15, 25);
-                    const cliffMaterial = new THREE.MeshStandardMaterial({ 
-                        color: 0x8B4513, 
-                        roughness: 0.9, 
-                        metalness: 0.0 
-                    });
-                    const cliffFace = new THREE.Mesh(cliffGeometry, cliffMaterial);
-                    cliffFace.position.set(point.x + 15, -7.5, point.z);
-                    cliffFace.rotation.y = point.heading;
-                    cliffFace.castShadow = true;
-                    cliffFace.receiveShadow = true;
-                    this.scene.add(cliffFace);
-                }
-            }
-        });
-        
-        // Add some scattered rocks on steep slopes
-        for (let i = 0; i < 30; i++) {
-            const x = (Math.random() - 0.5) * 800;
-            const z = (Math.random() - 0.5) * 800;
-            const roadInfo = this.getDistanceToRoadPath(x, z);
-            
-            // Only place rocks on steep drop-off areas
-            if (roadInfo.isRightSide && roadInfo.distance > 15 && roadInfo.distance < 100) {
-                const rockGeometry = new THREE.DodecahedronGeometry(0.5 + Math.random() * 1.5);
-                const rockMaterial = new THREE.MeshStandardMaterial({ 
-                    color: 0x555555, 
-                    roughness: 0.9, 
-                    metalness: 0.0 
-                });
-                const rock = new THREE.Mesh(rockGeometry, rockMaterial);
-                
-                // Position rock on terrain surface (approximate)
-                const dropDistance = roadInfo.distance - 8;
-                const dropFactor = Math.min(dropDistance / 80, 1);
-                const terrainHeight = -Math.pow(dropFactor, 1.5) * 25;
-                
-                rock.position.set(x, terrainHeight + 0.5, z);
-                rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-                rock.castShadow = true;
-                rock.receiveShadow = true;
-                this.scene.add(rock);
-            }
-        }
+        console.log('Phase 4: Created terrain with enhanced materials and vertex colors');
     }
     
     createRoadMarkings() {
