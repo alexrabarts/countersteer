@@ -219,13 +219,15 @@ class Vehicle {
             // Fall over animation
             this.group.rotation.z = this.crashAngle > 0 ? Math.PI/2 : -Math.PI/2;
             this.group.position.y = -0.3;
+            this.rider.rotation.z = 0; // Rider doesn't lean when crashed
         } else {
             // Normal lean
             this.group.rotation.z = this.leanAngle;
+            this.rider.rotation.z = this.leanAngle * 0.2; // Rider leans subtly
         }
-        
+
         // Rotate front wheel for steering visualization
-        this.frontWheel.rotation.y = this.steeringAngle * 2;
+        this.frontWheel.rotation.y = this.steeringAngle * 0.5;
     }
 
     reset() {
