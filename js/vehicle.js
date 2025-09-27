@@ -21,10 +21,11 @@ class Vehicle {
         this.leanVelocity = 0;
         this.steeringAngle = 0;
         this.yawAngle = 0;
-        this.crashed = false;
-        this.crashAngle = 0;
-        
-        // Physics tuning
+         this.crashed = false;
+         this.crashAngle = 0;
+         this.previousSpeed = 0;
+
+         // Physics tuning
         this.steeringForce = 8; // How much force steering creates
         this.leanDamping = 0.02; // Natural damping
         this.maxLeanAngle = Math.PI / 3; // 60 degrees before crash
@@ -59,6 +60,14 @@ class Vehicle {
         this.frame.castShadow = true;
         this.frame.receiveShadow = true;
 
+        // Brake light
+        const brakeGeometry = new THREE.BoxGeometry(0.05, 0.05, 0.05);
+        const brakeMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x000000, emissiveIntensity: 0.0 });
+        this.brakeLight = new THREE.Mesh(brakeGeometry, brakeMaterial);
+        this.brakeLight.position.set(0, 0.8, -0.6);
+        this.brakeLight.castShadow = true;
+        this.brakeLight.receiveShadow = true;
+
         // Handlebars
         const handlebarGeometry = new THREE.BoxGeometry(0.6, 0.05, 0.05);
         const handlebarMaterial = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.4, metalness: 0.9 });
@@ -89,6 +98,7 @@ class Vehicle {
         this.group.add(this.frame);
         this.group.add(this.handlebar);
         this.group.add(this.rider);
+        this.group.add(this.brakeLight);
         
         this.scene.add(this.group);
     }
@@ -247,6 +257,18 @@ class Vehicle {
 
         // Rotate front wheel for steering visualization
         this.frontWheel.rotation.y = this.steeringAngle * 0.5;
+
+        // Brake light glow
+        // Note: brakeInput not passed to updateMesh, so assume from speed decrease or add parameter
+        // For simplicity, glow when speed decreasing
+        if (this.speed < this.previousSpeed) {
+            this.brakeLight.material.emissive.setHex(0x440000);
+            this.brakeLight.material.emissiveIntensity = 0.5;
+        } else {
+            this.brakeLight.material.emissive.setHex(0x000000);
+            this.brakeLight.material.emissiveIntensity = 0.0;
+        }
+        this.previousSpeed = this.speed;
     }
 
     reset() {
