@@ -146,6 +146,8 @@ class Game {
         this.currentCameraPos = this.camera.position.clone();
         this.currentLookTarget = new THREE.Vector3(0, 1, 0);
         this.cameraLerpFactor = 0.08; // Slightly faster response for mountain roads
+        this.cameraLateralOffset = 0; // Track lateral offset for smooth side movement
+        this.previousYawAngle = 0; // Track yaw changes for lateral movement
         console.log('Camera setup complete');
     }
 
@@ -155,10 +157,20 @@ class Game {
         // Follow camera - keep camera behind vehicle
         const vehiclePos = this.vehicle.position.clone();
         const vehicleRotation = new THREE.Euler(0, this.vehicle.yawAngle, 0);
+        
+        // Calculate yaw change for lateral camera lag
+        const yawDelta = this.vehicle.yawAngle - this.previousYawAngle;
+        this.previousYawAngle = this.vehicle.yawAngle;
+        
+        // Update lateral offset - camera swings opposite to turn direction initially
+        const targetLateralOffset = -yawDelta * 25; // Strong lateral movement
+        this.cameraLateralOffset = this.cameraLateralOffset * 0.85 + targetLateralOffset * 0.15;
 
         // Dynamic camera offset based on lean angle for better mountain road feel
         const leanInfluence = this.vehicle.leanAngle * 2; // Shift camera opposite to lean
-        this.cameraOffset.x = this.baseCameraOffset.x - leanInfluence;
+        
+        // Combine lateral lag with lean influence
+        this.cameraOffset.x = this.baseCameraOffset.x - leanInfluence + this.cameraLateralOffset;
         
         // Adjust height based on speed for dramatic effect
         const speedRatio = this.vehicle.speed / this.vehicle.maxSpeed;

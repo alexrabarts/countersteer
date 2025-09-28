@@ -173,7 +173,7 @@ class Car {
             metalness: 0.75
         });
         this.body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-        this.body.position.y = 0.5;
+        this.body.position.y = 0.18;
         this.body.castShadow = true;
         this.body.receiveShadow = true;
         this.carGroup.add(this.body);
@@ -204,7 +204,7 @@ class Car {
             metalness: 0.7
         });
         this.cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
-        this.cabin.position.y = 1.15;
+        this.cabin.position.y = 0.83;
         this.cabin.position.z = -0.3;
         this.cabin.castShadow = true;
         this.cabin.receiveShadow = true;
@@ -222,38 +222,38 @@ class Car {
         // Windshield
         const windshieldGeometry = new THREE.PlaneGeometry(1.65, 0.65);
         const windshield = new THREE.Mesh(windshieldGeometry, windowMaterial);
-        windshield.position.set(0, 1.3, 0.65);
+        windshield.position.set(0, 0.98, 0.65);
         windshield.rotation.x = -0.35;
         this.carGroup.add(windshield);
         
         // Rear window
         const rearWindowGeometry = new THREE.PlaneGeometry(1.6, 0.55);
         const rearWindow = new THREE.Mesh(rearWindowGeometry, windowMaterial);
-        rearWindow.position.set(0, 1.25, -1.25);
+        rearWindow.position.set(0, 0.93, -1.25);
         rearWindow.rotation.x = 0.3;
         this.carGroup.add(rearWindow);
         
         // Side windows - front
         const frontSideWindowGeometry = new THREE.PlaneGeometry(0.9, 0.55);
         const leftFrontWindow = new THREE.Mesh(frontSideWindowGeometry, windowMaterial);
-        leftFrontWindow.position.set(0.88, 1.25, 0.1);
+        leftFrontWindow.position.set(0.88, 0.93, 0.1);
         leftFrontWindow.rotation.y = Math.PI / 2;
         this.carGroup.add(leftFrontWindow);
         
         const rightFrontWindow = new THREE.Mesh(frontSideWindowGeometry, windowMaterial);
-        rightFrontWindow.position.set(-0.88, 1.25, 0.1);
+        rightFrontWindow.position.set(-0.88, 0.93, 0.1);
         rightFrontWindow.rotation.y = -Math.PI / 2;
         this.carGroup.add(rightFrontWindow);
         
         // Side windows - rear
         const rearSideWindowGeometry = new THREE.PlaneGeometry(0.8, 0.5);
         const leftRearWindow = new THREE.Mesh(rearSideWindowGeometry, windowMaterial);
-        leftRearWindow.position.set(0.88, 1.2, -0.85);
+        leftRearWindow.position.set(0.88, 0.88, -0.85);
         leftRearWindow.rotation.y = Math.PI / 2;
         this.carGroup.add(leftRearWindow);
         
         const rightRearWindow = new THREE.Mesh(rearSideWindowGeometry, windowMaterial);
-        rightRearWindow.position.set(-0.88, 1.2, -0.85);
+        rightRearWindow.position.set(-0.88, 0.88, -0.85);
         rightRearWindow.rotation.y = -Math.PI / 2;
         this.carGroup.add(rightRearWindow);
         
@@ -310,7 +310,7 @@ class Car {
                 wheelGroup.add(spoke);
             }
             
-            wheelGroup.position.set(pos.x, 0.32, pos.z);
+            wheelGroup.position.set(pos.x, 0, pos.z);
             wheelGroup.castShadow = true;
             wheelGroup.receiveShadow = true;
             this.carGroup.add(wheelGroup);
@@ -327,12 +327,12 @@ class Car {
         });
         
         const leftHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
-        leftHeadlight.position.set(0.65, 0.5, 2.12);
+        leftHeadlight.position.set(0.65, 0.18, 2.12);
         leftHeadlight.rotation.z = Math.PI / 2;
         this.carGroup.add(leftHeadlight);
         
         const rightHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
-        rightHeadlight.position.set(-0.65, 0.5, 2.12);
+        rightHeadlight.position.set(-0.65, 0.18, 2.12);
         rightHeadlight.rotation.z = Math.PI / 2;
         this.carGroup.add(rightHeadlight);
         
@@ -347,11 +347,11 @@ class Car {
         });
         
         const leftTaillight = new THREE.Mesh(taillightGeometry, taillightMaterial);
-        leftTaillight.position.set(0.65, 0.55, -2.12);
+        leftTaillight.position.set(0.65, 0.23, -2.12);
         this.carGroup.add(leftTaillight);
         
         const rightTaillight = new THREE.Mesh(taillightGeometry, taillightMaterial);
-        rightTaillight.position.set(-0.65, 0.55, -2.12);
+        rightTaillight.position.set(-0.65, 0.23, -2.12);
         this.carGroup.add(rightTaillight);
         
         // Add grille
@@ -444,7 +444,8 @@ class Car {
         
         // Ensure car is placed at correct road elevation
         const roadElevation = y || 0;
-        this.carGroup.position.set(x + perpX, roadElevation + 0.4, z + perpZ);
+        // Lower the car to sit properly on the road (wheels are 0.3 radius)
+        this.carGroup.position.set(x + perpX, roadElevation, z + perpZ);
         
         // Calculate the car's facing direction based on movement
         // The car should look where it's going
