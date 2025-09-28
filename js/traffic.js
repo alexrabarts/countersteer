@@ -308,16 +308,23 @@ class Car {
         
         this.carGroup.position.set(x + perpX, y + 0.2, z + perpZ);
         
-        // Set rotation to match road direction using interpolated heading
-        // Road heading: 0 = north (+Z), increases clockwise
-        // Three.js rotation: 0 = +Z, positive = counterclockwise
+        // Calculate the car's facing direction based on movement
+        // The car should look where it's going
+        let facingAngle;
+        
         if (this.direction === 1) {
-            // Forward direction - follow road heading
-            this.carGroup.rotation.y = -interpolatedHeading;
+            // Forward - calculate angle from current to next position
+            const dx = nextPoint.x - currentPoint.x;
+            const dz = nextPoint.z - currentPoint.z;
+            facingAngle = Math.atan2(dx, dz);
         } else {
-            // Opposite direction - face 180 degrees from road heading
-            this.carGroup.rotation.y = -interpolatedHeading + Math.PI;
+            // Backward - opposite direction
+            const dx = currentPoint.x - nextPoint.x;
+            const dz = currentPoint.z - nextPoint.z;
+            facingAngle = Math.atan2(dx, dz);
         }
+        
+        this.carGroup.rotation.y = facingAngle;
     }
     
     update(deltaTime) {
