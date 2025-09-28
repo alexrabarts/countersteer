@@ -33,23 +33,30 @@ class InputHandler {
 
     updateInputs() {
         // Check both keyboard and virtual controls
+        // WASD keys
         const keyA = this.keys['KeyA'] || (this.virtualControls && this.virtualControls.getKey('KeyA'));
         const keyD = this.keys['KeyD'] || (this.virtualControls && this.virtualControls.getKey('KeyD'));
         const keyW = this.keys['KeyW'] || (this.virtualControls && this.virtualControls.getKey('KeyW'));
         const keyS = this.keys['KeyS'] || (this.virtualControls && this.virtualControls.getKey('KeyS'));
         
-        // Steering (inverted)
+        // Arrow keys
+        const keyLeft = this.keys['ArrowLeft'];
+        const keyRight = this.keys['ArrowRight'];
+        const keyUp = this.keys['ArrowUp'];
+        const keyDown = this.keys['ArrowDown'];
+        
+        // Steering (inverted) - combine WASD and arrow keys
         this.steeringInput = 0;
-        if (keyA) {
-            this.steeringInput = 1;  // A now steers right
+        if (keyA || keyLeft) {
+            this.steeringInput = 1;  // A/Left now steers right
         }
-        if (keyD) {
-            this.steeringInput = -1;  // D now steers left
+        if (keyD || keyRight) {
+            this.steeringInput = -1;  // D/Right now steers left
         }
         
-        // Throttle and brake
-        this.throttleInput = keyW ? 1 : 0;
-        this.brakeInput = keyS ? 1 : 0;
+        // Throttle and brake - combine WASD and arrow keys
+        this.throttleInput = (keyW || keyUp) ? 1 : 0;
+        this.brakeInput = (keyS || keyDown) ? 1 : 0;
     }
 
     getSteeringInput() {

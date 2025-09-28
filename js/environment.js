@@ -397,82 +397,149 @@ class Environment {
     }
     
     createRoadWalls() {
-        // Create detailed rocky cliff walls along the road edges
-        const createDetailedCliff = (side, height, isDropOff) => {
+        // Rock materials for boulders
+        const rockMaterials = [
+            new THREE.MeshStandardMaterial({ color: 0x808080, roughness: 0.95, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x696969, roughness: 0.95, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x5c5c5c, roughness: 0.95, metalness: 0.0 })
+        ];
+        
+        // Create continuous faceted rock walls with integrated slope
+        const createFacetedCliff = (side, height, isDropOff) => {
             const group = new THREE.Group();
             
-            // Rock material with mountain stone colors
+            // Rock material with flat shading for faceted appearance
             const cliffMaterial = new THREE.MeshStandardMaterial({ 
-                color: isDropOff ? 0x5a4a3a : 0x6a5a4a,  // Darker for drop-off, lighter for rise
+                color: isDropOff ? 0x5a4a3a : 0x6a5a4a,
                 vertexColors: true,
-                roughness: 0.98, 
+                roughness: 0.95, 
                 metalness: 0.0,
+                flatShading: true, // Enable flat shading for faceted look
                 side: THREE.DoubleSide
             });
             
-            // Create main cliff face with displacement
+            // Create main cliff face geometry
             const geometry = new THREE.BufferGeometry();
             const vertices = [];
             const indices = [];
             const colors = [];
             const uvs = [];
             
-            // Higher resolution for more detail
-            const verticalSegments = height > 0 ? 10 : 8;  // More segments for mountain wall
+            // Higher resolution for detailed faceting
+            const horizontalSubdivisions = 2; // Subdivide between road segments
+            const verticalSegments = 20; // More vertical detail for facets
             
-            // Create vertices with displacement for rocky appearance
+            // Create dense vertex grid with multi-layer displacement
             for (let i = 0; i < this.roadPath.length; i++) {
                 const point = this.roadPath[i];
+                const nextPoint = i < this.roadPath.length - 1 ? this.roadPath[i + 1] : point;
                 const roadY = point.y || 0;
                 
-                // Calculate perpendicular offset for road edge
-                const perpX = Math.cos(point.heading) * 8 * side;
-                const perpZ = -Math.sin(point.heading) * 8 * side;
-                
-                // Create multiple vertices vertically for each point
-                for (let j = 0; j <= verticalSegments; j++) {
-                    const verticalProgress = j / verticalSegments;
-                    const currentHeight = height * verticalProgress;
+                // Create horizontal subdivisions between road points
+                for (let h = 0; h < horizontalSubdivisions; h++) {
+                    const hProgress = h / horizontalSubdivisions;
                     
-                    // Add more dramatic displacement for mountain rock face
-                    const displacement = Math.sin(i * 0.2 + j * 0.4) * 0.8 + 
-                                       Math.cos(i * 0.5 - j * 0.2) * 0.6 +
-                                       Math.sin(i * 0.3 + j * 0.7) * 0.4;
+                    // Interpolate position along road
+                    const interpX = point.x + (nextPoint.x - point.x) * hProgress;
+                    const interpZ = point.z + (nextPoint.z - point.z) * hProgress;
+                    const interpY = roadY + ((nextPoint.y || 0) - roadY) * hProgress;
+                    const interpHeading = point.heading + ((nextPoint.heading - point.heading) * hProgress);
                     
-                    // Vary the wall distance for jagged mountain appearance
-                    const wallOffset = displacement * (height > 0 ? 1.5 : 0.8);
-                    
-                    vertices.push(
-                        point.x + perpX + wallOffset * Math.cos(point.heading),
-                        roadY + currentHeight,
-                        point.z + perpZ - wallOffset * Math.sin(point.heading)
-                    );
-                    
-                    // Color variation for rock layers
-                    const colorVariation = 0.7 + Math.random() * 0.3;
-                    const layerTint = 0.9 + verticalProgress * 0.1;
-                    colors.push(
-                        colorVariation * layerTint,
-                        colorVariation * layerTint * 0.9,
-                        colorVariation * layerTint * 0.8
-                    );
-                    
-                    // UV coordinates
-                    uvs.push(i * 0.1, verticalProgress);
+                    // Create vertical segments
+                    for (let j = 0; j <= verticalSegments; j++) {
+                        const verticalProgress = j / verticalSegments;
+                        const currentHeight = height * verticalProgress;
+                        
+                        // Calculate base perpendicular distance with slope for walls
+                        let baseDistance = 8;
+                        
+                        if (side > 0 && isDropOff) {
+                            // Right wall (drop-off) - add dramatic outward slope
+                            // Start at road edge, slope outward as we go down
+                            const slopeAmount = verticalProgress * verticalProgress * 50; // More dramatic quadratic slope
+                            baseDistance += slopeAmount;
+                            
+                            // Debug: Log slope amount for first segment
+                            if (i === 0 && h === 0 && j % 5 === 0) {
+                                console.log(`Right cliff slope at height ${verticalProgress.toFixed(2)}: base=${baseDistance.toFixed(1)}, slope=${slopeAmount.toFixed(1)}`);
+                            }
+                        } else if (side < 0 && !isDropOff) {
+                            // Left wall (mountain) - slight inward slope as it goes up
+                            const slopeAmount = verticalProgress * 5; // Linear gentle slope
+                            baseDistance += slopeAmount;
+                        }
+                        
+                        // Multi-layer displacement for natural rock face
+                        const idx = i * horizontalSubdivisions + h;
+                        
+                        // Layer 1: Large rock formations (3-6 unit scale)
+                        const primary = Math.sin(idx * 0.15 + j * 0.2) * Math.cos(j * 0.1) * 5.0;
+                        
+                        // Layer 2: Medium rock faces (2-3 unit scale)
+                        const secondary = Math.sin(idx * 0.4 + j * 0.5) * Math.cos(idx * 0.3) * 2.5;
+                        
+                        // Layer 3: Small surface details (0.5-1 unit scale)
+                        const tertiary = Math.sin(idx * 0.9 + j * 1.2) * 0.8;
+                        
+                        // Combine displacements with height-based variation
+                        const totalDisplacement = primary + secondary + tertiary;
+                        
+                        // Apply faceting by quantizing displacement - larger facets for more dramatic look
+                        const facetSize = 2.5;
+                        const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
+                        
+                        // Final distance from road
+                        const finalDistance = baseDistance + facetedDisplacement * 0.5;
+                        
+                        // Calculate position
+                        const perpX = Math.cos(interpHeading) * finalDistance * side;
+                        const perpZ = -Math.sin(interpHeading) * finalDistance * side;
+                        
+                        vertices.push(
+                            interpX + perpX,
+                            interpY + currentHeight,
+                            interpZ + perpZ
+                        );
+                        
+                        // Color variation based on height and displacement
+                        const baseColor = 0.3 + Math.abs(facetedDisplacement) * 0.08;
+                        const heightTint = 1.0 - verticalProgress * 0.3;
+                        
+                        // Add more color variation for facets
+                        const facetVariation = (Math.sin(idx * 0.7 + j * 0.5) * 0.1 + 0.9);
+                        
+                        colors.push(
+                            baseColor * heightTint * facetVariation * 1.15,
+                            baseColor * heightTint * facetVariation,
+                            baseColor * heightTint * facetVariation * 0.85
+                        );
+                        
+                        // UV coordinates
+                        uvs.push(idx * 0.1, verticalProgress);
+                    }
                 }
             }
             
-            // Create triangles for the continuous wall
-            for (let i = 0; i < this.roadPath.length - 1; i++) {
-                for (let j = 0; j < verticalSegments; j++) {
-                    const baseIndex = i * (verticalSegments + 1) + j;
-                    const nextBaseIndex = (i + 1) * (verticalSegments + 1) + j;
+            // Create triangles for the faceted wall
+            const vertsPerColumn = verticalSegments + 1;
+            const columnsPerSegment = horizontalSubdivisions;
+            const totalColumns = this.roadPath.length * columnsPerSegment;
+            
+            for (let col = 0; col < totalColumns - 1; col++) {
+                for (let row = 0; row < verticalSegments; row++) {
+                    const bl = col * vertsPerColumn + row; // bottom left
+                    const br = (col + 1) * vertsPerColumn + row; // bottom right
+                    const tl = bl + 1; // top left
+                    const tr = br + 1; // top right
                     
-                    // Two triangles per segment
-                    indices.push(
-                        baseIndex, nextBaseIndex, baseIndex + 1,
-                        baseIndex + 1, nextBaseIndex, nextBaseIndex + 1
-                    );
+                    // Create two triangles with varied winding for natural facets
+                    if ((col + row) % 2 === 0) {
+                        indices.push(bl, br, tl);
+                        indices.push(br, tr, tl);
+                    } else {
+                        indices.push(bl, tr, tl);
+                        indices.push(bl, br, tr);
+                    }
                 }
             }
             
@@ -480,25 +547,25 @@ class Environment {
             geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
             geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
             geometry.setIndex(indices);
+            
+            // Don't compute vertex normals - let flat shading handle it
             geometry.computeVertexNormals();
             
-            // Main continuous cliff face
+            // Main faceted cliff face
             const mainCliff = new THREE.Mesh(geometry, cliffMaterial);
             mainCliff.receiveShadow = true;
             mainCliff.castShadow = true;
             group.add(mainCliff);
             
-            // Add many rocky outcroppings and boulders for detail
-            const rockMaterials = [
-                new THREE.MeshStandardMaterial({ color: 0x696969, roughness: 0.95, metalness: 0.0 }),
-                new THREE.MeshStandardMaterial({ color: 0x5c5c5c, roughness: 0.9, metalness: 0.0 }),
-                new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.85, metalness: 0.0 }),
-                new THREE.MeshStandardMaterial({ color: 0x7d7d7d, roughness: 0.92, metalness: 0.0 }),
-                new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.88, metalness: 0.0 })
-            ];
+            // Add subtle rock detail textures (much fewer separate objects)
+            const detailMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x4a4a4a,
+                roughness: 0.98,
+                metalness: 0.0
+            });
             
-            // Main large boulders embedded in cliff
-            for (let i = 0; i < this.roadPath.length; i++) { // Every segment for dense coverage
+            // Add occasional accent rocks at base only
+            for (let i = 0; i < this.roadPath.length; i += 15) { // Much less frequent
                 const point = this.roadPath[i];
                 
                 // Large protruding rocks - more reasonable sizes
@@ -771,11 +838,11 @@ class Environment {
         };
         
         // Left cliff wall (mountain face rising above)
-        const leftCliff = createDetailedCliff(-1, 40, false);  // Taller mountain wall
+        const leftCliff = createFacetedCliff(-1, 40, false);  // Taller mountain wall
         this.scene.add(leftCliff);
         
         // Right cliff wall (drop-off) - massive mountainside cliff
-        const rightCliff = createDetailedCliff(1, -100, true);
+        const rightCliff = createFacetedCliff(1, -100, true);
         this.scene.add(rightCliff);
     }
     

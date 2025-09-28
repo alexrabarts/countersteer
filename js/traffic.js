@@ -140,49 +140,131 @@ class Car {
     createCarModel() {
         this.carGroup = new THREE.Group();
         
-        // Car body with more rounded shape
-        const bodyGeometry = new THREE.BoxGeometry(2, 1.2, 4.5);
-        // Round the edges slightly
-        bodyGeometry.translate(0, 0, 0);
+        // Main car body using a more detailed shape with beveled edges
+        const shape = new THREE.Shape();
+        const width = 1;
+        const length = 2.25;
+        shape.moveTo(-width, -length);
+        shape.lineTo(width, -length);
+        shape.lineTo(width, length);
+        shape.lineTo(-width, length);
+        shape.closePath();
+        
+        const extrudeSettings = {
+            depth: 1.2,
+            bevelEnabled: true,
+            bevelThickness: 0.1,
+            bevelSize: 0.1,
+            bevelSegments: 3
+        };
+        
+        const bodyGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        bodyGeometry.rotateX(Math.PI / 2);
+        bodyGeometry.translate(0, 0.6, 0);
+        
         const bodyMaterial = new THREE.MeshStandardMaterial({ 
             color: this.color,
             roughness: 0.3,
             metalness: 0.7
         });
         this.body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-        this.body.position.y = 0.6;
         this.body.castShadow = true;
         this.body.receiveShadow = true;
         this.carGroup.add(this.body);
         
-        // Hood detail
-        const hoodGeometry = new THREE.BoxGeometry(1.9, 0.1, 1.8);
+        // Hood with curved surface using a more detailed geometry
+        const hoodShape = new THREE.Shape();
+        hoodShape.moveTo(-0.95, -0.9);
+        hoodShape.quadraticCurveTo(0, -1, 0.95, -0.9);
+        hoodShape.lineTo(0.95, 0.9);
+        hoodShape.quadraticCurveTo(0, 0.8, -0.95, 0.9);
+        hoodShape.closePath();
+        
+        const hoodGeometry = new THREE.ExtrudeGeometry(hoodShape, {
+            depth: 0.15,
+            bevelEnabled: true,
+            bevelThickness: 0.02,
+            bevelSize: 0.02,
+            bevelSegments: 2
+        });
+        hoodGeometry.rotateX(Math.PI / 2);
+        
         const hoodMaterial = new THREE.MeshStandardMaterial({ 
             color: this.color,
             roughness: 0.4,
             metalness: 0.6
         });
         const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
-        hood.position.set(0, 1.1, 1.2);
-        hood.rotation.x = -0.1;
+        hood.position.set(0, 1.25, 1.2);
+        hood.rotation.x = -0.05;
         this.carGroup.add(hood);
         
-        // Car roof with better shape
-        const roofGeometry = new THREE.BoxGeometry(1.8, 0.7, 2.2);
+        // Car roof with curved top using sphere geometry for smoother shape
+        const roofGeometry = new THREE.SphereGeometry(1.5, 12, 8, 0, Math.PI, 0, Math.PI/2);
+        roofGeometry.scale(0.65, 0.5, 0.9);
         const roofMaterial = new THREE.MeshStandardMaterial({ 
             color: this.color,
             roughness: 0.35,
-            metalness: 0.65
+            metalness: 0.65,
+            side: THREE.DoubleSide
         });
         this.roof = new THREE.Mesh(roofGeometry, roofMaterial);
-        this.roof.position.y = 1.4;
+        this.roof.position.y = 1.3;
         this.roof.position.z = -0.2;
         this.roof.castShadow = true;
         this.roof.receiveShadow = true;
         this.carGroup.add(this.roof);
         
-        // Windshield
-        const windshieldGeometry = new THREE.BoxGeometry(1.7, 0.7, 0.1);
+        // Add roof pillars for more detail
+        const pillarGeometry = new THREE.CylinderGeometry(0.05, 0.08, 0.8, 8);
+        const pillarMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x2a2a2a,
+            roughness: 0.8,
+            metalness: 0.3
+        });
+        
+        // A-pillars (front)
+        const leftAPillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
+        leftAPillar.position.set(0.85, 1.0, 0.8);
+        leftAPillar.rotation.z = 0.1;
+        leftAPillar.rotation.x = -0.3;
+        this.carGroup.add(leftAPillar);
+        
+        const rightAPillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
+        rightAPillar.position.set(-0.85, 1.0, 0.8);
+        rightAPillar.rotation.z = -0.1;
+        rightAPillar.rotation.x = -0.3;
+        this.carGroup.add(rightAPillar);
+        
+        // C-pillars (rear)
+        const leftCPillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
+        leftCPillar.position.set(0.85, 1.0, -1.2);
+        leftCPillar.rotation.z = 0.1;
+        leftCPillar.rotation.x = 0.3;
+        this.carGroup.add(leftCPillar);
+        
+        const rightCPillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
+        rightCPillar.position.set(-0.85, 1.0, -1.2);
+        rightCPillar.rotation.z = -0.1;
+        rightCPillar.rotation.x = 0.3;
+        this.carGroup.add(rightCPillar);
+        
+        // Windshield with curved shape
+        const windshieldShape = new THREE.Shape();
+        windshieldShape.moveTo(-0.85, -0.35);
+        windshieldShape.quadraticCurveTo(0, -0.4, 0.85, -0.35);
+        windshieldShape.lineTo(0.85, 0.35);
+        windshieldShape.lineTo(-0.85, 0.35);
+        windshieldShape.closePath();
+        
+        const windshieldGeometry = new THREE.ExtrudeGeometry(windshieldShape, {
+            depth: 0.05,
+            bevelEnabled: true,
+            bevelThickness: 0.01,
+            bevelSize: 0.01,
+            bevelSegments: 1
+        });
+        
         const windshieldMaterial = new THREE.MeshStandardMaterial({ 
             color: 0x446688,
             roughness: 0.05,
@@ -196,37 +278,65 @@ class Car {
         windshield.rotation.x = -0.4;
         this.carGroup.add(windshield);
         
-        // Rear window
-        const rearWindowGeometry = new THREE.BoxGeometry(1.7, 0.6, 0.1);
+        // Rear window with curved shape
+        const rearWindowGeometry = windshieldGeometry.clone();
+        rearWindowGeometry.scale(0.95, 0.85, 1);
         const rearWindow = new THREE.Mesh(rearWindowGeometry, windshieldMaterial);
         rearWindow.position.y = 1.35;
         rearWindow.position.z = -1.3;
         rearWindow.rotation.x = 0.35;
         this.carGroup.add(rearWindow);
         
-        // Side windows
-        const sideWindowGeometry = new THREE.BoxGeometry(0.05, 0.5, 1.8);
+        // Side windows with proper frames
+        const sideWindowShape = new THREE.Shape();
+        sideWindowShape.moveTo(0, 0);
+        sideWindowShape.lineTo(0, 0.45);
+        sideWindowShape.quadraticCurveTo(0.6, 0.5, 1.2, 0.45);
+        sideWindowShape.lineTo(1.6, 0.35);
+        sideWindowShape.lineTo(1.6, 0);
+        sideWindowShape.closePath();
+        
+        const sideWindowGeometry = new THREE.ExtrudeGeometry(sideWindowShape, {
+            depth: 0.03,
+            bevelEnabled: false
+        });
+        
         const leftWindow = new THREE.Mesh(sideWindowGeometry, windshieldMaterial);
-        leftWindow.position.set(0.95, 1.3, -0.2);
+        leftWindow.position.set(0.92, 1.05, -0.8);
+        leftWindow.rotation.y = Math.PI/2;
         this.carGroup.add(leftWindow);
         
         const rightWindow = new THREE.Mesh(sideWindowGeometry, windshieldMaterial);
-        rightWindow.position.set(-0.95, 1.3, -0.2);
+        rightWindow.position.set(-0.92, 1.05, -0.8);
+        rightWindow.rotation.y = -Math.PI/2;
         this.carGroup.add(rightWindow);
         
-        // Wheels with rims
-        const wheelGeometry = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 16);
-        const wheelMaterial = new THREE.MeshStandardMaterial({ 
+        // Wheels with detailed rims and tire treads
+        const wheelGroup = new THREE.Group();
+        
+        // Tire geometry with tread pattern
+        const tireGeometry = new THREE.TorusGeometry(0.35, 0.12, 8, 24);
+        const tireMaterial = new THREE.MeshStandardMaterial({ 
             color: 0x1a1a1a,
-            roughness: 0.9,
-            metalness: 0.1
+            roughness: 0.95,
+            metalness: 0.05
         });
         
-        const rimGeometry = new THREE.CylinderGeometry(0.25, 0.25, 0.26, 8);
+        // Rim with spokes
+        const rimOuterGeometry = new THREE.CylinderGeometry(0.23, 0.23, 0.15, 32);
+        const rimInnerGeometry = new THREE.CylinderGeometry(0.12, 0.12, 0.16, 16);
         const rimMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0xaaaaaa,
-            roughness: 0.3,
-            metalness: 0.8
+            color: 0xcccccc,
+            roughness: 0.2,
+            metalness: 0.9
+        });
+        
+        // Spoke geometry
+        const spokeGeometry = new THREE.BoxGeometry(0.03, 0.16, 0.18);
+        const spokeMaterial = new THREE.MeshStandardMaterial({
+            color: 0xbbbbbb,
+            roughness: 0.25,
+            metalness: 0.85
         });
         
         const wheelPositions = [
@@ -237,53 +347,167 @@ class Car {
         ];
         
         wheelPositions.forEach(pos => {
-            const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-            wheel.rotation.z = Math.PI / 2;
-            wheel.position.set(pos.x, 0.35, pos.z);
-            wheel.castShadow = true;
-            wheel.receiveShadow = true;
-            this.carGroup.add(wheel);
+            const wheelAssembly = new THREE.Group();
             
-            const rim = new THREE.Mesh(rimGeometry, rimMaterial);
-            rim.rotation.z = Math.PI / 2;
-            rim.position.set(pos.x * 1.01, 0.35, pos.z);
-            this.carGroup.add(rim);
+            // Tire
+            const tire = new THREE.Mesh(tireGeometry, tireMaterial);
+            tire.rotation.y = Math.PI / 2;
+            wheelAssembly.add(tire);
+            
+            // Outer rim
+            const rimOuter = new THREE.Mesh(rimOuterGeometry, rimMaterial);
+            rimOuter.rotation.z = Math.PI / 2;
+            wheelAssembly.add(rimOuter);
+            
+            // Inner rim hub
+            const rimInner = new THREE.Mesh(rimInnerGeometry, rimMaterial);
+            rimInner.rotation.z = Math.PI / 2;
+            wheelAssembly.add(rimInner);
+            
+            // Add 5 spokes
+            for (let i = 0; i < 5; i++) {
+                const spoke = new THREE.Mesh(spokeGeometry, spokeMaterial);
+                spoke.rotation.z = Math.PI / 2;
+                spoke.rotation.y = (i * Math.PI * 2) / 5;
+                wheelAssembly.add(spoke);
+            }
+            
+            // Add brake disc behind wheel
+            const brakeDiscGeometry = new THREE.RingGeometry(0.08, 0.18, 32);
+            const brakeDiscMaterial = new THREE.MeshStandardMaterial({
+                color: 0x666666,
+                roughness: 0.7,
+                metalness: 0.6,
+                side: THREE.DoubleSide
+            });
+            const brakeDisc = new THREE.Mesh(brakeDiscGeometry, brakeDiscMaterial);
+            brakeDisc.rotation.y = Math.PI / 2;
+            brakeDisc.position.x = pos.x > 0 ? -0.08 : 0.08;
+            wheelAssembly.add(brakeDisc);
+            
+            wheelAssembly.position.set(pos.x, 0.35, pos.z);
+            wheelAssembly.castShadow = true;
+            wheelAssembly.receiveShadow = true;
+            this.carGroup.add(wheelAssembly);
         });
         
-        // Headlights
-        const headlightGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.1);
-        const headlightMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0xffffcc,
+        // Headlights with reflector housing
+        const headlightHousingGeometry = new THREE.CylinderGeometry(0.18, 0.22, 0.15, 16);
+        const headlightHousingMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x333333,
+            roughness: 0.8,
+            metalness: 0.3
+        });
+        
+        const headlightLensGeometry = new THREE.SphereGeometry(0.17, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+        const headlightLensMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffffff,
             emissive: 0xffffcc,
-            emissiveIntensity: 0.3,
-            roughness: 0.1,
-            metalness: 0.8
+            emissiveIntensity: 0.4,
+            roughness: 0.05,
+            metalness: 0.1,
+            opacity: 0.9,
+            transparent: true
         });
         
-        const leftHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
-        leftHeadlight.position.set(0.6, 0.6, 2.3);
-        this.carGroup.add(leftHeadlight);
+        // Left headlight
+        const leftHeadlightGroup = new THREE.Group();
+        const leftHousing = new THREE.Mesh(headlightHousingGeometry, headlightHousingMaterial);
+        leftHousing.rotation.z = Math.PI / 2;
+        leftHeadlightGroup.add(leftHousing);
+        const leftLens = new THREE.Mesh(headlightLensGeometry, headlightLensMaterial);
+        leftLens.rotation.z = -Math.PI / 2;
+        leftLens.position.z = 0.05;
+        leftHeadlightGroup.add(leftLens);
+        leftHeadlightGroup.position.set(0.65, 0.6, 2.25);
+        this.carGroup.add(leftHeadlightGroup);
         
-        const rightHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
-        rightHeadlight.position.set(-0.6, 0.6, 2.3);
-        this.carGroup.add(rightHeadlight);
+        // Right headlight
+        const rightHeadlightGroup = new THREE.Group();
+        const rightHousing = new THREE.Mesh(headlightHousingGeometry, headlightHousingMaterial);
+        rightHousing.rotation.z = Math.PI / 2;
+        rightHeadlightGroup.add(rightHousing);
+        const rightLens = new THREE.Mesh(headlightLensGeometry, headlightLensMaterial);
+        rightLens.rotation.z = -Math.PI / 2;
+        rightLens.position.z = 0.05;
+        rightHeadlightGroup.add(rightLens);
+        rightHeadlightGroup.position.set(-0.65, 0.6, 2.25);
+        this.carGroup.add(rightHeadlightGroup);
         
-        // Tail lights
+        // Tail lights with detailed housing
+        const taillightGeometry = new THREE.BoxGeometry(0.35, 0.25, 0.08);
         const taillightMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0xff0000,
+            color: 0xcc0000,
             emissive: 0xff0000,
-            emissiveIntensity: 0.2,
-            roughness: 0.1,
-            metalness: 0.8
+            emissiveIntensity: 0.25,
+            roughness: 0.15,
+            metalness: 0.1,
+            opacity: 0.85,
+            transparent: true
         });
         
-        const leftTaillight = new THREE.Mesh(headlightGeometry, taillightMaterial);
-        leftTaillight.position.set(0.6, 0.6, -2.3);
+        const leftTaillight = new THREE.Mesh(taillightGeometry, taillightMaterial);
+        leftTaillight.position.set(0.7, 0.65, -2.28);
         this.carGroup.add(leftTaillight);
         
-        const rightTaillight = new THREE.Mesh(headlightGeometry, taillightMaterial);
-        rightTaillight.position.set(-0.6, 0.6, -2.3);
+        const rightTaillight = new THREE.Mesh(taillightGeometry, taillightMaterial);
+        rightTaillight.position.set(-0.7, 0.65, -2.28);
         this.carGroup.add(rightTaillight);
+        
+        // Add brake light strip
+        const brakeLightGeometry = new THREE.BoxGeometry(0.8, 0.08, 0.05);
+        const brakeLightMaterial = new THREE.MeshStandardMaterial({
+            color: 0xff0000,
+            emissive: 0xff0000,
+            emissiveIntensity: 0.3,
+            roughness: 0.2,
+            metalness: 0.1
+        });
+        const brakeLight = new THREE.Mesh(brakeLightGeometry, brakeLightMaterial);
+        brakeLight.position.set(0, 1.5, -1.4);
+        this.carGroup.add(brakeLight);
+        
+        // Add side mirrors
+        const mirrorGeometry = new THREE.BoxGeometry(0.12, 0.08, 0.15);
+        const mirrorMaterial = new THREE.MeshStandardMaterial({
+            color: this.color,
+            roughness: 0.3,
+            metalness: 0.7
+        });
+        
+        const leftMirror = new THREE.Mesh(mirrorGeometry, mirrorMaterial);
+        leftMirror.position.set(1.05, 1.1, 0.3);
+        this.carGroup.add(leftMirror);
+        
+        const rightMirror = new THREE.Mesh(mirrorGeometry, mirrorMaterial);
+        rightMirror.position.set(-1.05, 1.1, 0.3);
+        this.carGroup.add(rightMirror);
+        
+        // Add door handles
+        const handleGeometry = new THREE.BoxGeometry(0.15, 0.03, 0.05);
+        const handleMaterial = new THREE.MeshStandardMaterial({
+            color: 0x888888,
+            roughness: 0.3,
+            metalness: 0.8
+        });
+        
+        // Front door handles
+        const leftFrontHandle = new THREE.Mesh(handleGeometry, handleMaterial);
+        leftFrontHandle.position.set(1.0, 0.85, 0.2);
+        this.carGroup.add(leftFrontHandle);
+        
+        const rightFrontHandle = new THREE.Mesh(handleGeometry, handleMaterial);
+        rightFrontHandle.position.set(-1.0, 0.85, 0.2);
+        this.carGroup.add(rightFrontHandle);
+        
+        // Rear door handles
+        const leftRearHandle = new THREE.Mesh(handleGeometry, handleMaterial);
+        leftRearHandle.position.set(1.0, 0.85, -0.8);
+        this.carGroup.add(leftRearHandle);
+        
+        const rightRearHandle = new THREE.Mesh(handleGeometry, handleMaterial);
+        rightRearHandle.position.set(-1.0, 0.85, -0.8);
+        this.carGroup.add(rightRearHandle);
         
         this.scene.add(this.carGroup);
     }
