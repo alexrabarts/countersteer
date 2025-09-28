@@ -883,8 +883,8 @@ class Environment {
         const leftCliff = createFacetedCliff(-1, 40, false);  // Taller mountain wall
         this.scene.add(leftCliff);
         
-        // Right cliff wall (drop-off) - massive mountainside cliff
-        const rightCliff = createFacetedCliff(1, -100, true);
+        // Right cliff wall (drop-off) - extremely tall mountainside cliff
+        const rightCliff = createFacetedCliff(1, -200, true);  // Doubled height from -100 to -200
         this.scene.add(rightCliff);
     }
     
