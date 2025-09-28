@@ -134,7 +134,11 @@ class Car {
         this.segmentProgress = 0;
         
         this.createCarModel();
-        this.updatePosition();
+        
+        // Ensure initial position is on the road
+        if (this.environment && this.environment.roadPath && this.environment.roadPath.length > 0) {
+            this.updatePosition();
+        }
     }
     
     createCarModel() {
@@ -396,15 +400,12 @@ class Car {
     updatePosition() {
         const totalSegments = this.environment.roadPath.length;
         
-        // Wrap around if needed
-        if (this.currentSegment >= totalSegments) {
-            this.currentSegment = 0;
-        } else if (this.currentSegment < 0) {
-            this.currentSegment = totalSegments - 1;
-        }
+        // Ensure currentSegment is valid
+        const safeCurrentSegment = Math.floor(this.currentSegment) % totalSegments;
+        const actualCurrentSegment = safeCurrentSegment < 0 ? safeCurrentSegment + totalSegments : safeCurrentSegment;
         
-        const currentPoint = this.environment.roadPath[Math.floor(this.currentSegment)];
-        const nextSegment = (Math.floor(this.currentSegment) + 1) % totalSegments;
+        const currentPoint = this.environment.roadPath[actualCurrentSegment];
+        const nextSegment = (actualCurrentSegment + 1) % totalSegments;
         const nextPoint = this.environment.roadPath[nextSegment];
         
         // Interpolate position between segments
@@ -425,7 +426,9 @@ class Car {
         const perpX = Math.cos(interpolatedHeading) * laneOffset;
         const perpZ = -Math.sin(interpolatedHeading) * laneOffset;
         
-        this.carGroup.position.set(x + perpX, y + 0.2, z + perpZ);
+        // Ensure car is placed at correct road elevation
+        const roadElevation = y || 0;
+        this.carGroup.position.set(x + perpX, roadElevation + 0.4, z + perpZ);
         
         // Calculate the car's facing direction based on movement
         // The car should look where it's going
@@ -454,6 +457,7 @@ class Car {
         
         this.segmentProgress += segmentsToMove * this.direction;
         
+        // Handle segment transitions
         while (this.segmentProgress >= 1) {
             this.segmentProgress -= 1;
             this.currentSegment += 1;
@@ -464,13 +468,9 @@ class Car {
             this.currentSegment -= 1;
         }
         
-        // Wrap around
+        // Wrap around properly
         const totalSegments = this.environment.roadPath.length;
-        if (this.currentSegment >= totalSegments) {
-            this.currentSegment -= totalSegments;
-        } else if (this.currentSegment < 0) {
-            this.currentSegment += totalSegments;
-        }
+        this.currentSegment = ((this.currentSegment % totalSegments) + totalSegments) % totalSegments;
         
         // Restore speed if slowed down
         if (this.currentSpeed < this.baseSpeed) {
