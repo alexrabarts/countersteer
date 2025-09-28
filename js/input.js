@@ -60,14 +60,26 @@ class InputHandler {
     }
 
     getSteeringInput() {
+        // Update inputs before returning (for virtual controls)
+        if (this.virtualControls) {
+            this.updateInputs();
+        }
         return this.steeringInput;
     }
     
     getThrottleInput() {
+        // Update inputs before returning (for virtual controls)
+        if (this.virtualControls) {
+            this.updateInputs();
+        }
         return this.throttleInput;
     }
     
     getBrakeInput() {
+        // Update inputs before returning (for virtual controls)
+        if (this.virtualControls) {
+            this.updateInputs();
+        }
         return this.brakeInput;
     }
     

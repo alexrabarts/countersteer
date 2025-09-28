@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Mobile Control Test</title>
+    <style>
+        body {
+            margin: 0;
+            background: #222;
+            color: white;
+            font-family: monospace;
+            overflow: hidden;
+        }
+        #debug {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            z-index: 2000;
+        }
+    </style>
+</head>
+<body>
+    <div id="debug">
+        <div>Touch Controls Debug</div>
+        <div id="w-status">W: false</div>
+        <div id="a-status">A: false</div>
+        <div id="s-status">S: false</div>
+        <div id="d-status">D: false</div>
+        <div id="r-status">R: false</div>
+        <hr>
+        <div id="steering">Steering: 0</div>
+        <div id="throttle">Throttle: 0</div>
+        <div id="brake">Brake: 0</div>
+    </div>
+
+    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+    <script src="js/virtualcontrols.js"></script>
+    <script src="js/input.js"></script>
+    <script>
+        // Force mobile mode for testing
+        const input = new InputHandler();
+        
+        // Force create virtual controls even on desktop
+        if (!input.virtualControls && typeof VirtualControls !== 'undefined') {
+            input.virtualControls = new VirtualControls();
+        }
+        
+        // Debug update loop
+        function updateDebug() {
+            if (input.virtualControls) {
+                document.getElementById('w-status').textContent = `W: ${input.virtualControls.getKey('KeyW')}`;
+                document.getElementById('a-status').textContent = `A: ${input.virtualControls.getKey('KeyA')}`;
+                document.getElementById('s-status').textContent = `S: ${input.virtualControls.getKey('KeyS')}`;
+                document.getElementById('d-status').textContent = `D: ${input.virtualControls.getKey('KeyD')}`;
+                document.getElementById('r-status').textContent = `R: ${input.virtualControls.getKey('KeyR')}`;
+                
+                document.getElementById('steering').textContent = `Steering: ${input.getSteeringInput()}`;
+                document.getElementById('throttle').textContent = `Throttle: ${input.getThrottleInput()}`;
+                document.getElementById('brake').textContent = `Brake: ${input.getBrakeInput()}`;
+            }
+            
+            requestAnimationFrame(updateDebug);
+        }
+        
+        updateDebug();
+    </script>
+</body>
+</html>
