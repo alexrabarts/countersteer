@@ -53,6 +53,7 @@ class Game {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.shadowMap.autoUpdate = true;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 0.8;
         document.body.appendChild(this.renderer.domElement);
@@ -80,16 +81,34 @@ class Game {
         this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         this.directionalLight.position.set(50, 80, 0);
         this.directionalLight.castShadow = true;
-        this.directionalLight.shadow.mapSize.width = 2048;
-        this.directionalLight.shadow.mapSize.height = 2048;
+        this.directionalLight.shadow.mapSize.width = 4096; // Increased resolution
+        this.directionalLight.shadow.mapSize.height = 4096;
         this.directionalLight.shadow.camera.near = 0.1;
-        this.directionalLight.shadow.camera.far = 500;
-        this.directionalLight.shadow.camera.left = -100;
-        this.directionalLight.shadow.camera.right = 100;
-        this.directionalLight.shadow.camera.top = 100;
-        this.directionalLight.shadow.camera.bottom = -100;
+        this.directionalLight.shadow.camera.far = 300; // Reduced for better precision
+        this.directionalLight.shadow.camera.left = -60; // Tighter frustum
+        this.directionalLight.shadow.camera.right = 60;
+        this.directionalLight.shadow.camera.top = 60;
+        this.directionalLight.shadow.camera.bottom = -60;
         this.directionalLight.shadow.bias = -0.0001; // Reduce shadow acne
         this.scene.add(this.directionalLight);
+        
+        // Store initial light offset from origin
+        this.lightOffset = this.directionalLight.position.clone();
+        
+        // Secondary directional light for distant shadows (lower quality but wider coverage)
+        this.distantLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        this.distantLight.position.set(50, 80, 0);
+        this.distantLight.castShadow = true;
+        this.distantLight.shadow.mapSize.width = 1024; // Lower resolution
+        this.distantLight.shadow.mapSize.height = 1024;
+        this.distantLight.shadow.camera.near = 50; // Start where near shadows end
+        this.distantLight.shadow.camera.far = 800; // Much further
+        this.distantLight.shadow.camera.left = -200;
+        this.distantLight.shadow.camera.right = 200;
+        this.distantLight.shadow.camera.top = 200;
+        this.distantLight.shadow.camera.bottom = -200;
+        this.distantLight.shadow.bias = -0.001;
+        this.scene.add(this.distantLight);
 
         // Fill light from opposite side for softer shadows
         this.fillLight = new THREE.DirectionalLight(0xffffff, 0.2);
@@ -169,6 +188,24 @@ class Game {
         lookTarget.y += 1;
         this.currentLookTarget.lerp(lookTarget, this.cameraLerpFactor * 1.5);
         this.camera.lookAt(this.currentLookTarget);
+        
+        // Update shadow camera to follow player
+        this.updateShadowCamera();
+    }
+    
+    updateShadowCamera() {
+        // Make the directional lights' shadow cameras follow the player
+        const playerPos = this.vehicle.position;
+        
+        // Update near shadow light position to stay relative to player
+        this.directionalLight.position.copy(playerPos).add(this.lightOffset);
+        this.directionalLight.target.position.copy(playerPos);
+        this.directionalLight.target.updateMatrixWorld();
+        
+        // Update distant shadow light similarly
+        this.distantLight.position.copy(playerPos).add(this.lightOffset);
+        this.distantLight.target.position.copy(playerPos);
+        this.distantLight.target.updateMatrixWorld();
     }
 
     updateUI() {
