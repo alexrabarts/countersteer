@@ -35,21 +35,21 @@ class Environment {
         // Each element defines how many segments and the turn rate per segment
         const courseLayout = [
             { segments: 10, turnRate: 0 },        // Start straight - 200m
-            { segments: 6, turnRate: 0.12 },      // Right turn 1 - hairpin
+            { segments: 5, turnRate: 0.10 },      // Right turn 1 - moderate
             { segments: 4, turnRate: 0 },         // Short straight
-            { segments: 8, turnRate: 0.14 },      // Right turn 2 - extreme hairpin
+            { segments: 6, turnRate: 0.12 },      // Right turn 2 - sharper
             { segments: 3, turnRate: 0 },         // Very short straight
-            { segments: 10, turnRate: 0.11 },     // Right turn 3 - long sharp
+            { segments: 8, turnRate: 0.08 },      // Right turn 3 - gradual
             { segments: 5, turnRate: 0 },         // Straight
             { segments: 2, turnRate: 0 },         // Short approach to hairpin
             { segments: 7, turnRate: 0.25 },      // EXTREME HAIRPIN - almost 180 degrees
             { segments: 2, turnRate: 0 },         // Short exit from hairpin
-            { segments: 5, turnRate: 0.15 },      // Right turn 5 - switchback
+            { segments: 4, turnRate: -0.10 },     // Left turn - moderate to change direction
             { segments: 6, turnRate: 0 },         // Straight
-            { segments: 6, turnRate: -0.16 },     // Left turn 1 - extreme switchback
+            { segments: 5, turnRate: -0.12 },     // Left turn 2 - sharper
             { segments: 3, turnRate: 0 },         // Short straight
-            { segments: 6, turnRate: -0.12 },     // Left turn 2 - hairpin
-            { segments: 8, turnRate: 0 },         // Final straight back to start area
+            { segments: 5, turnRate: -0.08 },     // Left turn 3 - gradual back toward start
+            { segments: 6, turnRate: 0 },         // Final straight back to start area
         ];
         
         // First, build the road path
