@@ -493,8 +493,10 @@ class Car {
         const dz = this.carGroup.position.z - playerPosition.z;
         const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
         
-        // More accurate collision detection considering car size
-        const collisionThreshold = 3.0; // Slightly larger for better detection
+        // More accurate collision detection considering actual vehicle sizes
+        // Car is about 1.9 units wide, 4.2 units long
+        // Motorcycle is much smaller, so reduce threshold
+        const collisionThreshold = 2.2; // Reduced from 3.0 for more accurate collision
         return distance < collisionThreshold;
     }
     

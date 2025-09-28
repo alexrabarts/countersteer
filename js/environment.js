@@ -498,20 +498,44 @@ class Environment {
                         // Weather staining - darker patches
                         const weathering = (Math.cos(idx * 0.5 - j * 0.3) > 0.6) ? -0.1 : 0;
                         
-                        // Final color calculation
-                        const finalGrey = Math.max(0.2, Math.min(0.8, 
-                            greyBase + heightVariation - depthVariation + weathering));
+                        // Vegetation patches - moss and grass on less steep areas
+                        let isVegetated = false;
+                        const vegetationNoise = Math.sin(idx * 0.25 + j * 0.35) * Math.cos(idx * 0.4 - j * 0.3);
                         
-                        // Add slight color tints for realism
-                        const redTint = finalGrey + mineralStreak;
-                        const greenTint = finalGrey - 0.02; // Slight moss/lichen tint
-                        const blueTint = finalGrey + 0.03; // Slight cool tint
+                        // More vegetation at lower elevations and on less displaced areas
+                        const vegetationChance = (1 - verticalProgress) * 0.5 + 
+                                                (1 - Math.abs(facetedDisplacement) / 10) * 0.3;
                         
-                        colors.push(
-                            redTint,
-                            greenTint,
-                            blueTint
-                        );
+                        if (vegetationNoise > 0.3 && Math.random() < vegetationChance) {
+                            isVegetated = true;
+                        }
+                        
+                        if (isVegetated) {
+                            // Muted green vegetation colors - more natural moss/lichen
+                            const greenBase = 0.28 + Math.random() * 0.1;
+                            const greenAmount = 0.15 + Math.random() * 0.1; // Much less green
+                            
+                            colors.push(
+                                greenBase * 0.85,  // Slightly less red
+                                greenBase + greenAmount,  // Subtle green tint
+                                greenBase * 0.75   // Less blue
+                            );
+                        } else {
+                            // Regular rock colors
+                            const finalGrey = Math.max(0.2, Math.min(0.8, 
+                                greyBase + heightVariation - depthVariation + weathering));
+                            
+                            // Add slight color tints for realism
+                            const redTint = finalGrey + mineralStreak;
+                            const greenTint = finalGrey - 0.02; // Slight moss/lichen tint
+                            const blueTint = finalGrey + 0.03; // Slight cool tint
+                            
+                            colors.push(
+                                redTint,
+                                greenTint,
+                                blueTint
+                            );
+                        }
                         
                         // UV coordinates
                         uvs.push(idx * 0.1, verticalProgress);
@@ -672,6 +696,109 @@ class Environment {
             }
             
             // Base boulders already handled above - no need for dense boulder field
+            
+            // Add vegetation patches on the cliff face - muted colors
+            const vegetationMaterial = new THREE.MeshStandardMaterial({
+                color: 0x3a4a32, // Darker, more muted green
+                roughness: 0.9,
+                metalness: 0.0
+            });
+            
+            const mossMaterial = new THREE.MeshStandardMaterial({
+                color: 0x4a5242, // Grey-green moss color
+                roughness: 0.95,
+                metalness: 0.0
+            });
+            
+            // Add moss and small vegetation patches
+            for (let i = 0; i < this.roadPath.length; i += 12) {
+                const point = this.roadPath[i];
+                
+                // Add vegetation at various heights
+                if (Math.random() > 0.4) {
+                    const numPatches = 1 + Math.floor(Math.random() * 2);
+                    
+                    for (let p = 0; p < numPatches; p++) {
+                        // Height on cliff (favor lower areas for vegetation)
+                        const heightRatio = Math.random() * 0.5; // Lower half of cliff
+                        const cliffHeight = Math.abs(height) * heightRatio;
+                        
+                        // Calculate position with slope
+                        let distance = 7.2 + Math.random() * 0.5;
+                        if (side > 0 && isDropOff) {
+                            distance += heightRatio * heightRatio * 25;
+                        } else if (side < 0 && !isDropOff) {
+                            distance += heightRatio * heightRatio * 12;
+                        }
+                        
+                        const perpX = Math.cos(point.heading) * distance * side;
+                        const perpZ = -Math.sin(point.heading) * distance * side;
+                        
+                        // Choose between moss patch or small bush
+                        if (Math.random() > 0.5) {
+                            // Moss patch (flat against cliff)
+                            const mossGeometry = new THREE.PlaneGeometry(
+                                1.5 + Math.random() * 2,
+                                1 + Math.random() * 1.5
+                            );
+                            const moss = new THREE.Mesh(mossGeometry, mossMaterial);
+                            
+                            if (height > 0) {
+                                moss.position.set(
+                                    point.x + perpX,
+                                    (point.y || 0) + cliffHeight,
+                                    point.z + perpZ
+                                );
+                            } else {
+                                moss.position.set(
+                                    point.x + perpX,
+                                    (point.y || 0) - cliffHeight,
+                                    point.z + perpZ
+                                );
+                            }
+                            
+                            // Rotate to face outward from cliff
+                            moss.rotation.y = point.heading + (side > 0 ? Math.PI/2 : -Math.PI/2);
+                            moss.rotation.x = (Math.random() - 0.5) * 0.3;
+                            moss.rotation.z = (Math.random() - 0.5) * 0.3;
+                            
+                            moss.receiveShadow = true;
+                            group.add(moss);
+                        } else {
+                            // Small bush/grass tuft
+                            const bushGeometry = new THREE.SphereGeometry(
+                                0.3 + Math.random() * 0.4,
+                                5, 4
+                            );
+                            const bush = new THREE.Mesh(bushGeometry, vegetationMaterial);
+                            
+                            if (height > 0) {
+                                bush.position.set(
+                                    point.x + perpX,
+                                    (point.y || 0) + cliffHeight,
+                                    point.z + perpZ
+                                );
+                            } else {
+                                bush.position.set(
+                                    point.x + perpX,
+                                    (point.y || 0) - cliffHeight,
+                                    point.z + perpZ
+                                );
+                            }
+                            
+                            bush.scale.set(
+                                1.2 + Math.random() * 0.3,
+                                0.8 + Math.random() * 0.3,
+                                1 + Math.random() * 0.3
+                            );
+                            
+                            bush.castShadow = true;
+                            bush.receiveShadow = true;
+                            group.add(bush);
+                        }
+                    }
+                }
+            }
             
             // Add snow patches and rocky outcrops on upper mountain (if going up)
             if (height > 20) {
