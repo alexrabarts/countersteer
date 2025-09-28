@@ -1756,19 +1756,18 @@ class Environment {
     }
     
     createRoadworks() {
-        // Define construction zones at strategic points on the track
+        // Define construction zones with variety - some with ramps, some without
         const roadworksLocations = [
-            { startSegment: 8, endSegment: 10 },   // After first turn
-            { startSegment: 25, endSegment: 27 },  // Mid-course straight
-            { startSegment: 45, endSegment: 47 }   // Near end
+            { startSegment: 25, endSegment: 27, hasRamp: true, type: 'major' },  // Mid-course major construction with jump
+            { startSegment: 45, endSegment: 46, hasRamp: false, type: 'minor' }  // Near end minor repairs
         ];
         
         roadworksLocations.forEach(zone => {
-            this.createConstructionZone(zone.startSegment, zone.endSegment);
+            this.createConstructionZone(zone.startSegment, zone.endSegment, zone.hasRamp, zone.type);
         });
     }
     
-    createConstructionZone(startSegment, endSegment) {
+    createConstructionZone(startSegment, endSegment, hasRamp = true, zoneType = 'major') {
         // Ensure segments are valid
         if (startSegment >= this.roadPath.length || endSegment >= this.roadPath.length) {
             return;
@@ -1795,24 +1794,33 @@ class Environment {
             metalness: 0.5
         });
         
-        // Place cones to block right lane
-        for (let i = startSegment; i <= endSegment; i++) {
+        // Place cones with appropriate density based on zone type
+        const coneSpacing = zoneType === 'major' ? 3 : 5; // Major zones have closer cones
+        
+        for (let i = startSegment - 1; i <= endSegment + 1; i++) {
+            if (i < 0 || i >= this.roadPath.length) continue;
             const point = this.roadPath[i];
             
-            // Place cones along the center line to block right lane
-            for (let j = 0; j < 3; j++) {
-                const offset = j * 2; // Space cones 2 units apart
-                const coneX = point.x + Math.cos(point.heading) * 1; // Slightly right of center
-                const coneZ = point.z - Math.sin(point.heading) * 1;
-                const progressX = Math.sin(point.heading) * offset;
-                const progressZ = Math.cos(point.heading) * offset;
+            // Place cones at intervals
+            const conesPerSegment = zoneType === 'major' ? 3 : 2; // Fewer cones
+            for (let j = 0; j < conesPerSegment; j++) {
+                const progress = j / conesPerSegment;
+                const nextIndex = Math.min(i + 1, this.roadPath.length - 1);
+                const nextPoint = this.roadPath[nextIndex];
+                
+                // Interpolate position along segment
+                const x = point.x + (nextPoint.x - point.x) * progress;
+                const z = point.z + (nextPoint.z - point.z) * progress;
+                const y = point.y + (nextPoint.y - point.y) * progress;
+                const heading = point.heading;
+                
+                // Place cone at lane divider
+                const laneOffset = zoneType === 'major' ? -0.5 : 0; // Major zones push traffic more left
+                const coneX = x + Math.cos(heading) * laneOffset;
+                const coneZ = z - Math.sin(heading) * laneOffset;
                 
                 const cone = new THREE.Mesh(coneGeometry, coneMaterial);
-                cone.position.set(
-                    coneX + progressX,
-                    point.y + 0.4,
-                    coneZ + progressZ
-                );
+                cone.position.set(coneX, y + 0.4, coneZ);
                 cone.castShadow = true;
                 cone.receiveShadow = true;
                 this.scene.add(cone);
@@ -1823,6 +1831,39 @@ class Environment {
                 stripe.position.y += 0.2;
                 stripe.rotation.x = -Math.PI / 2;
                 this.scene.add(stripe);
+                
+                // For major zones only, add edge cones
+                if (zoneType === 'major' && i >= startSegment && i <= endSegment && j === 0) {
+                    const rightCone = cone.clone();
+                    const rightX = x + Math.cos(heading) * 4; // Right lane edge
+                    const rightZ = z - Math.sin(heading) * 4;
+                    rightCone.position.set(rightX, y + 0.4, rightZ);
+                    rightCone.castShadow = true;
+                    rightCone.receiveShadow = true;
+                    this.scene.add(rightCone);
+                }
+            }
+        }
+        
+        // Add fewer warning cones before major construction zones
+        if (zoneType === 'major') {
+            const warningDistance = 5; // Shorter warning distance
+            for (let i = startSegment - warningDistance; i < startSegment - 1; i++) {
+                if (i < 0) continue;
+                const point = this.roadPath[i];
+                
+                if (i % 3 === 0) { // Every third segment only
+                    // Simple warning cone on right side
+                    const rightCone = new THREE.Mesh(coneGeometry, coneMaterial);
+                    rightCone.position.set(
+                        point.x + Math.cos(point.heading) * 5,
+                        point.y + 0.4,
+                        point.z - Math.sin(point.heading) * 5
+                    );
+                    rightCone.castShadow = true;
+                    rightCone.receiveShadow = true;
+                    this.scene.add(rightCone);
+                }
             }
         }
         
@@ -1864,32 +1905,61 @@ class Environment {
             this.scene.add(stripePanel);
         }
         
-        // Create dirt pile jump ramp in the middle of the construction zone
-        const midSegment = Math.floor((startSegment + endSegment) / 2);
-        const rampPoint = this.roadPath[midSegment];
+        // Only add ramp and heavy equipment for major construction zones
+        if (hasRamp && zoneType === 'major') {
+            const midSegment = Math.floor((startSegment + endSegment) / 2);
+            const rampPoint = this.roadPath[midSegment];
+            
+            this.createDirtRamp(rampPoint, midSegment);
+            
+            // Add construction equipment (static bulldozer)
+            this.createBulldozer(
+                rampPoint.x + Math.cos(rampPoint.heading) * 10,
+                rampPoint.y,
+                rampPoint.z - Math.sin(rampPoint.heading) * 10,
+                rampPoint.heading
+            );
+        } else if (zoneType === 'minor') {
+            // For minor zones, just add some work equipment
+            const workPoint = this.roadPath[startSegment];
+            
+            // Add a simple work truck instead of bulldozer
+            this.createWorkTruck(
+                workPoint.x + Math.cos(workPoint.heading) * 7,
+                workPoint.y,
+                workPoint.z - Math.sin(workPoint.heading) * 7,
+                workPoint.heading
+            );
+        }
         
-        this.createDirtRamp(rampPoint, midSegment);
-        
-        // Add construction equipment (static bulldozer)
-        this.createBulldozer(
-            rampPoint.x + Math.cos(rampPoint.heading) * 10,
-            rampPoint.y,
-            rampPoint.z - Math.sin(rampPoint.heading) * 10,
-            rampPoint.heading
-        );
-        
-        // Add warning signs
-        this.createConstructionSign(
-            this.roadPath[Math.max(0, startSegment - 5)],
-            "ROAD WORK AHEAD"
-        );
+        // Add appropriate signage based on zone type
+        if (zoneType === 'major') {
+            this.createConstructionSign(
+                this.roadPath[Math.max(0, startSegment - 5)],
+                "ROAD WORK AHEAD"
+            );
+            
+            // Add warning lights for major zones
+            this.createWarningLight(
+                this.roadPath[Math.max(0, startSegment - 1)],
+                'right'
+            );
+        } else {
+            // Minor zones just get a simple sign
+            this.createConstructionSign(
+                this.roadPath[Math.max(0, startSegment - 3)],
+                "SLOW"
+            );
+        }
         
         // Store construction zone info for traffic AI
         this.roadworksZones.push({
             startSegment: startSegment,
             endSegment: endSegment,
             blockedLane: 'right',
-            rampSegment: midSegment
+            rampSegment: hasRamp ? Math.floor((startSegment + endSegment) / 2) : null,
+            type: zoneType,
+            hasRamp: hasRamp
         });
     }
     
@@ -2203,5 +2273,119 @@ class Environment {
         });
         
         this.scene.add(signGroup);
+    }
+    
+    createWorkTruck(x, y, z, rotation) {
+        const group = new THREE.Group();
+        
+        // Truck body (smaller than bulldozer)
+        const bodyGeometry = new THREE.BoxGeometry(2, 1.5, 4);
+        const bodyMaterial = new THREE.MeshStandardMaterial({
+            color: 0xFFA500, // Orange work truck
+            roughness: 0.7,
+            metalness: 0.2
+        });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.position.set(0, 0.75, 0);
+        group.add(body);
+        
+        // Truck cab
+        const cabGeometry = new THREE.BoxGeometry(1.8, 1.2, 1.5);
+        const cabMaterial = new THREE.MeshStandardMaterial({
+            color: 0xFFA500,
+            roughness: 0.7,
+            metalness: 0.2
+        });
+        const cab = new THREE.Mesh(cabGeometry, cabMaterial);
+        cab.position.set(0, 1.5, 1);
+        group.add(cab);
+        
+        // Wheels
+        const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 8);
+        const wheelMaterial = new THREE.MeshStandardMaterial({
+            color: 0x333333,
+            roughness: 0.95,
+            metalness: 0.1
+        });
+        
+        const wheelPositions = [
+            { x: -0.8, y: 0.3, z: 1.5 },
+            { x: 0.8, y: 0.3, z: 1.5 },
+            { x: -0.8, y: 0.3, z: -1.5 },
+            { x: 0.8, y: 0.3, z: -1.5 }
+        ];
+        
+        wheelPositions.forEach(pos => {
+            const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            wheel.position.set(pos.x, pos.y, pos.z);
+            wheel.rotation.z = Math.PI / 2;
+            group.add(wheel);
+        });
+        
+        // Work light on top
+        const lightBarGeometry = new THREE.BoxGeometry(1.5, 0.2, 0.2);
+        const lightBarMaterial = new THREE.MeshStandardMaterial({
+            color: 0xFFFF00,
+            emissive: 0xFFFF00,
+            emissiveIntensity: 0.3
+        });
+        const lightBar = new THREE.Mesh(lightBarGeometry, lightBarMaterial);
+        lightBar.position.set(0, 2.2, 1);
+        group.add(lightBar);
+        
+        group.position.set(x, y, z);
+        group.rotation.y = rotation;
+        group.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+        
+        this.scene.add(group);
+    }
+    
+    createWarningLight(point, side) {
+        const lightGroup = new THREE.Group();
+        
+        // Light pole
+        const poleGeometry = new THREE.CylinderGeometry(0.05, 0.05, 2);
+        const poleMaterial = new THREE.MeshStandardMaterial({
+            color: 0x333333,
+            roughness: 0.8,
+            metalness: 0.5
+        });
+        const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+        pole.position.set(0, 1, 0);
+        lightGroup.add(pole);
+        
+        // Warning light
+        const lightGeometry = new THREE.SphereGeometry(0.2, 8, 6);
+        const lightMaterial = new THREE.MeshStandardMaterial({
+            color: 0xFFA500,
+            emissive: 0xFFA500,
+            emissiveIntensity: 0.8,
+            roughness: 0.2,
+            metalness: 0.1
+        });
+        const warningLight = new THREE.Mesh(lightGeometry, lightMaterial);
+        warningLight.position.set(0, 2, 0);
+        lightGroup.add(warningLight);
+        
+        // Position beside construction zone entrance
+        const offset = side === 'left' ? -4 : 4;
+        const lightX = point.x + Math.cos(point.heading) * offset;
+        const lightZ = point.z - Math.sin(point.heading) * offset;
+        
+        lightGroup.position.set(lightX, point.y, lightZ);
+        
+        lightGroup.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+        
+        this.scene.add(lightGroup);
     }
 }

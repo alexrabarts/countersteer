@@ -428,7 +428,13 @@ class Car {
         let laneOffset;
         if (this.inDetour) {
             // Use detour lane with wider offset to avoid construction
-            laneOffset = this.detourSide === 'left' ? -5 : 5;
+            if (this.detourSide === 'far-left') {
+                laneOffset = -6; // Far left for opposite direction avoiding construction
+            } else if (this.detourSide === 'left') {
+                laneOffset = -5; // Left lane to avoid right lane construction
+            } else {
+                laneOffset = 5; // Right detour
+            }
         } else {
             // Normal lane position
             laneOffset = this.lane === 'left' ? -3 : 3;
@@ -546,30 +552,33 @@ class Car {
         
         // Check if we're approaching or in a construction zone
         for (const zone of this.environment.roadworksZones) {
-            // Check if we're near a construction zone (5 segments before to 2 after)
-            const approachDistance = this.direction === 1 ? 5 : -5;
-            const exitDistance = this.direction === 1 ? 2 : -2;
+            // Check much earlier - 10 segments before to properly merge
+            const approachDistance = 10;
+            const exitDistance = 3;
             
             if (this.direction === 1) {
                 // Moving forward
-                if (currentSegmentIndex >= zone.startSegment - 5 && 
-                    currentSegmentIndex <= zone.endSegment + 2) {
+                if (currentSegmentIndex >= zone.startSegment - approachDistance && 
+                    currentSegmentIndex <= zone.endSegment + exitDistance) {
                     inConstructionZone = true;
                     
-                    // If in right lane and construction blocks right lane, move to left
-                    if (this.lane === 'right' && zone.blockedLane === 'right') {
+                    // All traffic should move to left lane for right lane closure
+                    // Force both lanes to merge left to avoid construction
+                    if (zone.blockedLane === 'right') {
                         this.enterDetour('left');
                     }
                 }
             } else {
-                // Moving backward
-                if (currentSegmentIndex <= zone.endSegment + 5 && 
-                    currentSegmentIndex >= zone.startSegment - 2) {
+                // Moving backward (opposite direction)
+                if (currentSegmentIndex <= zone.endSegment + approachDistance && 
+                    currentSegmentIndex >= zone.startSegment - exitDistance) {
                     inConstructionZone = true;
                     
-                    // If in lane that's blocked, detour
-                    if (this.lane === zone.blockedLane) {
-                        this.enterDetour(this.lane === 'right' ? 'left' : 'right');
+                    // For opposite direction, also avoid construction
+                    // Since we're going backward, merge appropriately
+                    if (zone.blockedLane === 'right') {
+                        // Opposite traffic also needs to avoid the construction area
+                        this.enterDetour('far-left');
                     }
                 }
             }
@@ -587,8 +596,13 @@ class Car {
             this.detourSide = newLane;
             console.log(`Car entering detour, moving from ${this.lane} to ${newLane} lane`);
             
-            // Slow down when entering construction zone
-            this.currentSpeed = Math.min(this.currentSpeed, this.baseSpeed * 0.6);
+            // Slow down significantly when entering construction zone
+            this.currentSpeed = Math.min(this.currentSpeed, this.baseSpeed * 0.4);
+        } else if (this.detourSide !== newLane) {
+            // Update detour lane if needed
+            this.detourSide = newLane;
+            // Maintain slow speed
+            this.currentSpeed = Math.min(this.currentSpeed, this.baseSpeed * 0.4);
         }
     }
     
