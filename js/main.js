@@ -11,7 +11,11 @@ class Game {
         this.environment = new Environment(this.scene);
         
         console.log('Creating cones course...');
-        this.cones = new Cones(this.scene, this.environment);
+        this.cones = new Cones(this.scene, this.environment, (points) => {
+            this.addScore(points);
+            this.showConeHitNotification(points);
+            this.soundManager.playConeHitSound();
+        });
         
         console.log('Creating traffic...');
         this.traffic = new Traffic(this.scene, this.environment);
@@ -27,7 +31,10 @@ class Game {
         }
         
         this.input = new InputHandler();
-        
+
+        // Initialize sound system
+        this.soundManager = new SoundManager();
+
         this.clock = new THREE.Clock();
         this.fps = 0;
         this.frameCount = 0;
@@ -39,6 +46,7 @@ class Game {
         this.comboMultiplier = 1;
         this.checkpointsPassed = 0;
         this.lastCheckpointIndex = -1;
+        this.checkpointTimes = []; // Track when each checkpoint was passed
         
         // High score tracking
         this.highScore = parseInt(localStorage.getItem('motorcycleHighScore') || '0');
@@ -264,8 +272,7 @@ class Game {
             leanElement.className = 'gauge-value';
         }
 
-        document.getElementById('steering').textContent = `${this.vehicle.getSteeringAngleDegrees().toFixed(0)}°`;
-        
+
         // Update distance display
         const distance = this.vehicle.getDistanceTraveled();
         document.getElementById('distance').textContent = `${distance.toFixed(0)}m`;
@@ -383,32 +390,54 @@ class Game {
             this.cones.reset();
             this.finished = false;
             this.startTime = performance.now();
-            
+
             // Reset scoring
             this.score = 0;
             this.combo = 0;
             this.comboMultiplier = 1;
             this.checkpointsPassed = 0;
             this.lastCheckpointIndex = -1;
-            
+            this.checkpointTimes = []; // Reset checkpoint times
+
             // Reset checkpoints
             if (this.environment && this.environment.checkpoints) {
                 this.environment.checkpoints.forEach(cp => cp.passed = false);
             }
-            
+
             // Reset UI
             this.updateScoreDisplay();
-            document.getElementById('checkpointCount').textContent = 'Checkpoints: 0/10';
-            
+            document.getElementById('checkpointCount').textContent = 'Checkpoints: 0/5';
+
             // Show dashboard again
             const dashboard = document.querySelector('.dashboard');
             if (dashboard) {
                 dashboard.style.opacity = '1';
             }
         }
+
+        // Check for sound toggle
+        if (this.input.checkSoundToggle()) {
+            this.soundManager.toggleSound();
+        }
         
+        // Check for crash (before updating vehicle)
+        const wasCrashed = this.vehicle.crashed;
+
         this.vehicle.update(deltaTime, steeringInput, throttleInput, brakeInput);
-        
+
+        // Play crash sound if we just crashed
+        if (!wasCrashed && this.vehicle.crashed) {
+            this.soundManager.playCrashSound();
+        }
+
+        // Update engine sound based on speed
+        if (!this.vehicle.crashed && !this.finished) {
+            const speedRatio = this.vehicle.speed / this.vehicle.maxSpeed;
+            this.soundManager.playEngineSound(speedRatio);
+        } else {
+            this.soundManager.stopEngineSound();
+        }
+
         // Check for checkpoint passes and jump scoring
         if (!this.vehicle.crashed && !this.finished) {
             this.checkCheckpoints();
@@ -514,15 +543,42 @@ class Game {
                 // Check if within checkpoint gate (16 units wide)
                 if (distance < checkpoint.width) {
                     // Check if this is the next expected checkpoint (in order)
-                    if (checkpoint.index === this.lastCheckpointIndex + 1 || 
-                        (this.lastCheckpointIndex === 9 && checkpoint.index === 0)) {
+                    if (checkpoint.index === this.lastCheckpointIndex + 1 ||
+                        (this.lastCheckpointIndex === 4 && checkpoint.index === 0)) {
                         
                         checkpoint.passed = true;
                         this.lastCheckpointIndex = checkpoint.index;
                         this.checkpointsPassed++;
-                        
-                        // Award points
-                        const points = checkpoint.points * this.comboMultiplier;
+
+                        // Record checkpoint pass time
+                        const currentTime = performance.now();
+                        this.checkpointTimes[checkpoint.index] = currentTime;
+
+                        // Calculate speed-based points
+                        let sectionTime = 0;
+                        let basePoints = 100; // Base points per checkpoint
+
+                        if (checkpoint.index > 0 && this.checkpointTimes[checkpoint.index - 1]) {
+                            // Calculate time for this section
+                            sectionTime = (currentTime - this.checkpointTimes[checkpoint.index - 1]) / 1000; // Convert to seconds
+
+                            // Calculate actual distance between checkpoints
+                            const prevCheckpoint = this.environment.checkpoints[checkpoint.index - 1];
+                            const distance = checkpoint.position.distanceTo(prevCheckpoint.position);
+                            const averageSpeed = distance / sectionTime; // m/s
+                            const speedKmh = averageSpeed * 3.6; // km/h
+
+                            // Award points based on speed (faster = more points)
+                            // Base speed threshold: 60 km/h gives base points, faster gives bonus
+                            const speedBonus = Math.max(0, speedKmh - 60) * 1.5; // 1.5 points per km/h over 60
+                            basePoints += Math.floor(speedBonus);
+                        } else if (checkpoint.index === 0) {
+                            // First checkpoint gets base points
+                            basePoints = 100;
+                        }
+
+                        // Apply combo multiplier
+                        const points = basePoints * this.comboMultiplier;
                         this.addScore(points);
                         
                         // Increase combo
@@ -533,8 +589,17 @@ class Game {
                         
                         // Show checkpoint notification
                         this.showCheckpointNotification(checkpoint.index + 1, points);
-                        
-                        console.log(`Checkpoint ${checkpoint.index + 1} passed! +${points} points`);
+
+                        // Play checkpoint sound
+                        this.soundManager.playCheckpointSound();
+
+                        // Log speed info for first checkpoint or sections
+                        if (checkpoint.index === 0) {
+                            console.log(`Checkpoint ${checkpoint.index + 1} passed! +${points} points`);
+                        } else {
+                            const speedKmh = ((200 / sectionTime) * 3.6).toFixed(1);
+                            console.log(`Checkpoint ${checkpoint.index + 1} passed! +${points} points (${speedKmh} km/h)`);
+                        }
                     }
                 }
             }
@@ -542,6 +607,11 @@ class Game {
     }
     
     checkJumpScoring() {
+        // Check if we just started jumping
+        if (this.vehicle.isJumping && !this.wasJumping) {
+            this.soundManager.playJumpSound();
+        }
+
         if (!this.vehicle.isJumping) {
             // Check if we just landed
             if (this.wasJumping) {
@@ -607,11 +677,11 @@ class Game {
     showCheckpointNotification(checkpointNum, points) {
         const notification = document.createElement('div');
         notification.className = 'checkpoint-notification';
-        notification.textContent = `CHECKPOINT ${checkpointNum}/10! +${points}`;
+        notification.textContent = `CHECKPOINT ${checkpointNum}/5! +${points}`;
         document.body.appendChild(notification);
         
         // Update checkpoint counter
-        document.getElementById('checkpointCount').textContent = `Checkpoints: ${this.checkpointsPassed}/10`;
+        document.getElementById('checkpointCount').textContent = `Checkpoints: ${this.checkpointsPassed}/5`;
         
         setTimeout(() => {
             notification.remove();
@@ -624,7 +694,19 @@ class Game {
         notification.style.color = '#FF69B4';
         notification.textContent = text;
         document.body.appendChild(notification);
-        
+
+        setTimeout(() => {
+            notification.remove();
+        }, 1000);
+    }
+
+    showConeHitNotification(points) {
+        const notification = document.createElement('div');
+        notification.className = 'checkpoint-notification';
+        notification.style.color = '#FFA500'; // Orange color for cones
+        notification.textContent = `CONE HIT! +${points}`;
+        document.body.appendChild(notification);
+
         setTimeout(() => {
             notification.remove();
         }, 1000);
@@ -634,6 +716,209 @@ class Game {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+}
+
+class SoundManager {
+    constructor() {
+        this.audioContext = null;
+        this.masterVolume = 0.3;
+        this.enabled = false; // Start muted by default
+
+        // Initialize audio context on user interaction
+        this.initAudioContext();
+
+        // Sound effect caches
+        this.sounds = {};
+    }
+
+    initAudioContext() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+            console.warn('Web Audio API not supported');
+            this.enabled = false;
+        }
+    }
+
+    // Create a simple beep sound
+    createBeep(frequency = 440, duration = 0.2, type = 'sine') {
+        if (!this.enabled || !this.audioContext) return;
+
+        // Resume audio context if suspended (required by Web Audio API)
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+
+        oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+        oscillator.type = type;
+
+        gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(this.masterVolume * 0.5, this.audioContext.currentTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
+
+        oscillator.start(this.audioContext.currentTime);
+        oscillator.stop(this.audioContext.currentTime + duration);
+    }
+
+    // Engine sound (continuous)
+    playEngineSound(speed = 0) {
+        if (!this.enabled || !this.audioContext) return;
+
+        // Resume audio context if suspended (required by Web Audio API)
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+
+        // Stop previous engine sound
+        if (this.engineSound) {
+            this.engineSound.stop();
+        }
+
+        const baseFreq = 80 + (speed * 40); // 80-120 Hz based on speed
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        const filter = this.audioContext.createBiquadFilter();
+
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+
+        oscillator.frequency.setValueAtTime(baseFreq, this.audioContext.currentTime);
+        oscillator.type = 'sawtooth';
+
+        // Add some harmonics
+        const harmonicOsc = this.audioContext.createOscillator();
+        const harmonicGain = this.audioContext.createGain();
+        harmonicOsc.connect(harmonicGain);
+        harmonicGain.connect(gainNode);
+
+        harmonicOsc.frequency.setValueAtTime(baseFreq * 2, this.audioContext.currentTime);
+        harmonicOsc.type = 'square';
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(200 + speed * 100, this.audioContext.currentTime);
+
+        gainNode.gain.setValueAtTime(this.masterVolume * 0.2, this.audioContext.currentTime);
+
+        oscillator.start();
+        harmonicOsc.start();
+
+        this.engineSound = {
+            oscillator: oscillator,
+            harmonicOsc: harmonicOsc,
+            gainNode: gainNode,
+            stop: () => {
+                try {
+                    oscillator.stop();
+                    harmonicOsc.stop();
+                } catch (e) {}
+            }
+        };
+    }
+
+    stopEngineSound() {
+        if (this.engineSound) {
+            this.engineSound.stop();
+            this.engineSound = null;
+        }
+    }
+
+    // Checkpoint pass sound
+    playCheckpointSound() {
+        // Ascending chime
+        setTimeout(() => this.createBeep(523, 0.15), 0);   // C5
+        setTimeout(() => this.createBeep(659, 0.15), 100); // E5
+        setTimeout(() => this.createBeep(784, 0.15), 200); // G5
+    }
+
+    // Cone hit sound
+    playConeHitSound() {
+        // Descending thud
+        this.createBeep(220, 0.1, 'sawtooth'); // A3
+        setTimeout(() => this.createBeep(165, 0.1, 'sawtooth'), 50); // E3
+    }
+
+    // Jump sound
+    playJumpSound() {
+        // Quick ascending whoosh
+        this.createBeep(330, 0.08); // E4
+        setTimeout(() => this.createBeep(440, 0.08), 40); // A4
+        setTimeout(() => this.createBeep(554, 0.08), 80); // C#5
+    }
+
+    // Crash sound
+    playCrashSound() {
+        // Chaotic noise burst
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                const freq = 100 + Math.random() * 200;
+                this.createBeep(freq, 0.05 + Math.random() * 0.1, 'sawtooth');
+            }, i * 20);
+        }
+    }
+
+    // Tire screech
+    playTireScreech() {
+        if (!this.enabled || !this.audioContext) return;
+
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        const filter = this.audioContext.createBiquadFilter();
+
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+
+        oscillator.frequency.setValueAtTime(800, this.audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(200, this.audioContext.currentTime + 0.3);
+        oscillator.type = 'sawtooth';
+
+        filter.type = 'highpass';
+        filter.frequency.setValueAtTime(500, this.audioContext.currentTime);
+
+        gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(this.masterVolume * 0.4, this.audioContext.currentTime + 0.05);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.3);
+
+        oscillator.start();
+        oscillator.stop(this.audioContext.currentTime + 0.3);
+    }
+
+    // Brake sound
+    playBrakeSound() {
+        this.createBeep(150, 0.1, 'sawtooth');
+    }
+
+    // Toggle sound on/off
+    toggleSound() {
+        this.enabled = !this.enabled;
+        if (!this.enabled) {
+            this.stopEngineSound();
+        }
+
+        // Show sound toggle notification
+        this.showSoundToggleNotification(this.enabled);
+
+        console.log('Sound ' + (this.enabled ? 'enabled' : 'disabled'));
+    }
+
+    showSoundToggleNotification(enabled) {
+        const notification = document.createElement('div');
+        notification.className = 'checkpoint-notification';
+        notification.style.color = enabled ? '#00ff00' : '#ff0000';
+        notification.textContent = `SOUND ${enabled ? 'ON' : 'OFF'}`;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.remove();
+        }, 1000);
     }
 }
 

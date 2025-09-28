@@ -2,10 +2,13 @@ class InputHandler {
     constructor() {
         this.keys = {};
         this.steeringInput = 0;
+        this.targetSteeringInput = 0;
         this.throttleInput = 0;
         this.brakeInput = 0;
         this.resetPressed = false;
+        this.soundTogglePressed = false;
         this.virtualControls = null;
+        this.steeringSmoothing = 0.4; // How quickly steering ramps up (0-1, higher = faster)
         this.setupEventListeners();
         this.setupMobileControls();
     }
@@ -19,6 +22,11 @@ class InputHandler {
             if (event.code === 'KeyR') {
                 this.resetPressed = true;
             }
+
+            // Check for sound toggle
+            if (event.code === 'KeyM') {
+                this.soundTogglePressed = true;
+            }
         });
 
         document.addEventListener('keyup', (event) => {
@@ -27,6 +35,10 @@ class InputHandler {
             
             if (event.code === 'KeyR') {
                 this.resetPressed = false;
+            }
+
+            if (event.code === 'KeyM') {
+                this.soundTogglePressed = false;
             }
         });
     }
@@ -38,32 +50,34 @@ class InputHandler {
         const keyD = this.keys['KeyD'] || (this.virtualControls && this.virtualControls.getKey('KeyD'));
         const keyW = this.keys['KeyW'] || (this.virtualControls && this.virtualControls.getKey('KeyW'));
         const keyS = this.keys['KeyS'] || (this.virtualControls && this.virtualControls.getKey('KeyS'));
-        
+
         // Arrow keys
         const keyLeft = this.keys['ArrowLeft'];
         const keyRight = this.keys['ArrowRight'];
         const keyUp = this.keys['ArrowUp'];
         const keyDown = this.keys['ArrowDown'];
-        
+
         // Steering (inverted) - combine WASD and arrow keys
-        this.steeringInput = 0;
+        // Set target steering value
+        this.targetSteeringInput = 0;
         if (keyA || keyLeft) {
-            this.steeringInput = 1;  // A/Left now steers right
+            this.targetSteeringInput = 1;  // A/Left now steers right
         }
         if (keyD || keyRight) {
-            this.steeringInput = -1;  // D/Right now steers left
+            this.targetSteeringInput = -1;  // D/Right now steers left
         }
-        
+
+        // Smooth steering towards target
+        this.steeringInput = this.steeringInput + (this.targetSteeringInput - this.steeringInput) * this.steeringSmoothing;
+
         // Throttle and brake - combine WASD and arrow keys
         this.throttleInput = (keyW || keyUp) ? 1 : 0;
         this.brakeInput = (keyS || keyDown) ? 1 : 0;
     }
 
     getSteeringInput() {
-        // Update inputs before returning (for virtual controls)
-        if (this.virtualControls) {
-            this.updateInputs();
-        }
+        // Update inputs before returning (for virtual controls and smoothing)
+        this.updateInputs();
         return this.steeringInput;
     }
     
@@ -89,9 +103,17 @@ class InputHandler {
             this.virtualControls.touches['KeyR'] = false; // Clear after use
             return true;
         }
-        
+
         if (this.resetPressed) {
             this.resetPressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    checkSoundToggle() {
+        if (this.soundTogglePressed) {
+            this.soundTogglePressed = false;
             return true;
         }
         return false;

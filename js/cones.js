@@ -1,9 +1,31 @@
 class Cones {
-    constructor(scene, environment) {
+    constructor(scene, environment, onConeHit = null) {
         this.scene = scene;
         this.environment = environment;
         this.cones = [];
+        this.onConeHit = onConeHit; // Callback function for scoring
         this.createCones();
+    }
+
+    createCheckeredTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+
+        const squareSize = 8;
+        for (let x = 0; x < canvas.width; x += squareSize) {
+            for (let y = 0; y < canvas.height; y += squareSize) {
+                const isBlack = (Math.floor(x / squareSize) + Math.floor(y / squareSize)) % 2 === 0;
+                ctx.fillStyle = isBlack ? '#000000' : '#ffffff';
+                ctx.fillRect(x, y, squareSize, squareSize);
+            }
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        return texture;
     }
     
     createCones() {
@@ -57,10 +79,28 @@ class Cones {
         const coneMaterial = new THREE.MeshStandardMaterial({ color: 0xff6600, roughness: 0.8, metalness: 0.0, emissive: 0x331100, emissiveIntensity: 0.1 });
         
         conePositions.forEach((pos, index) => {
+            // Find the road elevation at this position
+            let roadY = 0;
+            if (this.environment && this.environment.roadPath) {
+                // Find nearest road point to get elevation
+                let minDist = Infinity;
+                for (const roadPoint of this.environment.roadPath) {
+                    const dist = Math.sqrt(
+                        Math.pow(pos.x - roadPoint.x, 2) +
+                        Math.pow(pos.z - roadPoint.z, 2)
+                    );
+                    if (dist < minDist) {
+                        minDist = dist;
+                        roadY = roadPoint.y || 0;
+                    }
+                }
+            }
+
             const cone = new THREE.Mesh(coneGeometry, coneMaterial);
-            cone.position.set(pos.x, 0.4, pos.z);
+            cone.position.set(pos.x, roadY + 0.4, pos.z); // Position at road elevation + 0.4
             cone.castShadow = true;
             cone.receiveShadow = true;
+            cone.hit = false; // Track if cone has been hit
             this.scene.add(cone);
             this.cones.push(cone);
 
@@ -86,16 +126,16 @@ class Cones {
     }
     
     createStartFinishMarkers() {
+        const checkeredTexture = this.createCheckeredTexture();
+
         // Start line
         const startGeometry = new THREE.PlaneGeometry(16, 2);
         const startMaterial = new THREE.MeshStandardMaterial({
-            color: 0x00ff00,
+            map: checkeredTexture,
             transparent: true,
-            opacity: 0.6,
+            opacity: 0.9,
             roughness: 0.7,
-            metalness: 0.0,
-            emissive: 0x002200,
-            emissiveIntensity: 0.1
+            metalness: 0.0
         });
         const startLine = new THREE.Mesh(startGeometry, startMaterial);
         startLine.rotation.x = -Math.PI / 2;
@@ -107,18 +147,16 @@ class Cones {
         const startLight = new THREE.PointLight(0x00ff00, 0.5, 50);
         startLight.position.set(0, 5, 20);
         this.scene.add(startLight);
-        
+
         // Finish line
         if (this.environment && this.environment.roadPath.length > 0) {
             const lastPoint = this.environment.roadPath[this.environment.roadPath.length - 1];
             const finishMaterial = new THREE.MeshStandardMaterial({
-                color: 0xffffff,
+                map: checkeredTexture,
                 transparent: true,
-                opacity: 0.6,
+                opacity: 0.9,
                 roughness: 0.7,
-                metalness: 0.0,
-                emissive: 0x222222,
-                emissiveIntensity: 0.1
+                metalness: 0.0
             });
             const finishLine = new THREE.Mesh(startGeometry, finishMaterial);
             finishLine.rotation.x = -Math.PI / 2;
@@ -135,19 +173,33 @@ class Cones {
     }
     
     checkCollision(vehiclePosition) {
-        const hitDistance = 1;
-        
+        const hitDistance = 1.5; // Slightly larger hit distance
+        const heightTolerance = 2; // Allow hitting cones from different heights
+
         for (let cone of this.cones) {
             const distance = Math.sqrt(
                 Math.pow(vehiclePosition.x - cone.position.x, 2) +
                 Math.pow(vehiclePosition.z - cone.position.z, 2)
             );
-            
-            if (distance < hitDistance) {
-                if (cone.rotation.z === 0) {
-                    cone.rotation.z = Math.PI / 3;
-                    cone.position.y = 0.2;
-                    console.log('Cone hit!');
+
+            const heightDiff = Math.abs(vehiclePosition.y - cone.position.y);
+
+            // Debug: log when close to cones
+            if (distance < 3 && heightDiff < 3 && !cone.hit) {
+                console.log(`Close to cone: ${distance.toFixed(2)}m away, ${heightDiff.toFixed(2)}m height diff`);
+            }
+
+            if (distance < hitDistance && heightDiff < heightTolerance && !cone.hit) {
+                cone.hit = true;
+                cone.rotation.z = Math.PI / 3;
+                cone.position.y -= 0.2; // Lower the cone when hit
+
+                // Award points for hitting cone
+                if (this.onConeHit) {
+                    this.onConeHit(25); // 25 points for cone hit
+                    console.log('Cone hit! +25 points - callback executed');
+                } else {
+                    console.log('Cone hit! +25 points - no callback available');
                 }
             }
         }
@@ -156,7 +208,23 @@ class Cones {
     reset() {
         this.cones.forEach(cone => {
             cone.rotation.z = 0;
-            cone.position.y = 0.4;
+            // Restore original Y position (road elevation + 0.4)
+            let roadY = 0;
+            if (this.environment && this.environment.roadPath) {
+                let minDist = Infinity;
+                for (const roadPoint of this.environment.roadPath) {
+                    const dist = Math.sqrt(
+                        Math.pow(cone.position.x - roadPoint.x, 2) +
+                        Math.pow(cone.position.z - roadPoint.z, 2)
+                    );
+                    if (dist < minDist) {
+                        minDist = dist;
+                        roadY = roadPoint.y || 0;
+                    }
+                }
+            }
+            cone.position.y = roadY + 0.4;
+            cone.hit = false;
         });
     }
 }

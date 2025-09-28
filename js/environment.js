@@ -1924,8 +1924,16 @@ class Environment {
         if (hasRamp && zoneType === 'major') {
             const midSegment = Math.floor((startSegment + endSegment) / 2);
             const rampPoint = this.roadPath[midSegment];
-            
-            this.createDirtRamp(rampPoint, midSegment);
+
+            // Move ramp to the left-hand lane (opposite side from barriers)
+            const offsetPoint = {
+                x: rampPoint.x - Math.cos(rampPoint.heading) * 3, // Offset to left side
+                z: rampPoint.z + Math.sin(rampPoint.heading) * 3,
+                y: rampPoint.y,
+                heading: rampPoint.heading
+            };
+
+            this.createDirtRamp(offsetPoint, midSegment);
             
             // Add construction equipment (static bulldozer)
             this.createBulldozer(
@@ -1979,36 +1987,49 @@ class Environment {
     }
     
     createDirtRamp(point, segmentIndex) {
-        // Create custom dirt pile geometry
-        const rampWidth = 6;
-        const rampLength = 12;
-        const rampHeight = 2.5;
-        
+        // Create dirt pile geometry - more irregular and mound-like
+        const pileWidth = 5;  // Narrower dirt pile
+        const pileLength = 10; // Shorter than ramp
+        const pileHeight = 3.0; // Taller peak
+
         const geometry = new THREE.BufferGeometry();
         const vertices = [];
         const indices = [];
         const uvs = [];
-        
-        // Create ramp shape with smooth incline
-        const segments = 10;
+
+        // Create irregular dirt pile shape
+        const segments = 12;
         for (let i = 0; i <= segments; i++) {
             const t = i / segments;
-            const z = -rampLength/2 + rampLength * t;
-            
-            // Height profile - smooth ramp up then down
-            let y;
-            if (t < 0.6) {
-                // Ramp up
-                y = (t / 0.6) * rampHeight;
+            const z = -pileLength/2 + pileLength * t;
+
+            // Create mound-like height profile with irregularities
+            let baseHeight;
+            if (t < 0.3) {
+                // Gentle rise at start
+                baseHeight = (t / 0.3) * pileHeight * 0.4;
+            } else if (t < 0.7) {
+                // Peak in middle with some variation
+                const peakProgress = (t - 0.3) / 0.4;
+                baseHeight = pileHeight * (0.4 + 0.6 * Math.sin(peakProgress * Math.PI));
             } else {
-                // Ramp down
-                y = rampHeight * (1 - (t - 0.6) / 0.4);
+                // Fall off at end
+                const fallProgress = (t - 0.7) / 0.3;
+                baseHeight = pileHeight * Math.cos(fallProgress * Math.PI / 2) * 0.8;
             }
-            
-            // Add width vertices
-            vertices.push(-rampWidth/2, y, z);
-            vertices.push(rampWidth/2, y, z);
-            
+
+            // Add random height variations to make it look like piled dirt
+            const heightVariation = (Math.sin(t * 15) + Math.cos(t * 8)) * 0.3;
+            const y = Math.max(0, baseHeight + heightVariation);
+
+            // Vary width to make it look less uniform
+            const widthVariation = Math.sin(t * 6) * 0.5;
+            const currentWidth = pileWidth + widthVariation;
+
+            // Add width vertices with some asymmetry
+            vertices.push(-currentWidth/2, y, z);
+            vertices.push(currentWidth/2, y, z);
+
             uvs.push(0, t);
             uvs.push(1, t);
         }
@@ -2024,43 +2045,45 @@ class Environment {
             indices.push(b, c, d);
         }
         
-        // Add sides
+        // Add sides with irregular dirt pile profile
         const sideStart = vertices.length / 3;
-        
+
         // Left side
         for (let i = 0; i <= segments; i++) {
             const t = i / segments;
-            const z = -rampLength/2 + rampLength * t;
-            
-            let y;
-            if (t < 0.6) {
-                y = (t / 0.6) * rampHeight;
-            } else {
-                y = rampHeight * (1 - (t - 0.6) / 0.4);
-            }
-            
-            vertices.push(-rampWidth/2, 0, z);
-            vertices.push(-rampWidth/2, y, z);
-            
+            const z = -pileLength/2 + pileLength * t;
+
+            // Get the corresponding top vertex height
+            const topVertexIndex = i * 2;
+            const topY = vertices[topVertexIndex * 3 + 1]; // Y coordinate of left top vertex
+
+            // Add some base variation
+            const baseVariation = Math.sin(t * 8) * 0.2;
+            const baseY = Math.max(0, baseVariation);
+
+            vertices.push(-pileWidth/2 - Math.sin(t * 4) * 0.3, baseY, z);
+            vertices.push(-pileWidth/2 - Math.sin(t * 4) * 0.3, topY, z);
+
             uvs.push(0, t);
             uvs.push(0.2, t);
         }
-        
+
         // Right side
         for (let i = 0; i <= segments; i++) {
             const t = i / segments;
-            const z = -rampLength/2 + rampLength * t;
-            
-            let y;
-            if (t < 0.6) {
-                y = (t / 0.6) * rampHeight;
-            } else {
-                y = rampHeight * (1 - (t - 0.6) / 0.4);
-            }
-            
-            vertices.push(rampWidth/2, 0, z);
-            vertices.push(rampWidth/2, y, z);
-            
+            const z = -pileLength/2 + pileLength * t;
+
+            // Get the corresponding top vertex height
+            const topVertexIndex = i * 2 + 1;
+            const topY = vertices[topVertexIndex * 3 + 1]; // Y coordinate of right top vertex
+
+            // Add some base variation
+            const baseVariation = Math.cos(t * 6) * 0.2;
+            const baseY = Math.max(0, baseVariation);
+
+            vertices.push(pileWidth/2 + Math.cos(t * 5) * 0.3, baseY, z);
+            vertices.push(pileWidth/2 + Math.cos(t * 5) * 0.3, topY, z);
+
             uvs.push(0.8, t);
             uvs.push(1, t);
         }
@@ -2088,8 +2111,8 @@ class Environment {
         const dirtTexture = this.createDirtTexture();
         const dirtMaterial = new THREE.MeshStandardMaterial({
             map: dirtTexture,
-            color: 0x8B4513,
-            roughness: 0.95,
+            color: 0xFFFFFF, // White base to let texture colors show through
+            roughness: 0.98,
             metalness: 0.0
         });
         
@@ -2104,9 +2127,9 @@ class Environment {
         this.jumpRamps.push({
             position: new THREE.Vector3(point.x, point.y, point.z),
             rotation: point.heading,
-            width: rampWidth,
-            length: rampLength,
-            height: rampHeight,
+            width: pileWidth,
+            length: pileLength,
+            height: pileHeight,
             segmentIndex: segmentIndex
         });
     }
@@ -2116,36 +2139,83 @@ class Environment {
         canvas.width = 256;
         canvas.height = 256;
         const ctx = canvas.getContext('2d');
-        
-        // Base dirt color
-        ctx.fillStyle = '#8B4513';
+
+        // Base dirt color - more varied brown tones
+        ctx.fillStyle = '#6B4423';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Add texture variation
-        for (let i = 0; i < 100; i++) {
+
+        // Add large dirt clumps and variations
+        for (let i = 0; i < 150; i++) {
             const x = Math.random() * canvas.width;
             const y = Math.random() * canvas.height;
-            const radius = Math.random() * 3 + 1;
-            const brightness = Math.random() * 40 - 20;
-            
-            ctx.fillStyle = `rgba(${139 + brightness}, ${69 + brightness}, ${19 + brightness}, 0.5)`;
+            const radius = Math.random() * 4 + 1;
+            const brightness = Math.random() * 60 - 30;
+
+            // Vary between different dirt tones
+            const r = Math.max(0, Math.min(255, 107 + brightness + Math.random() * 20));
+            const g = Math.max(0, Math.min(255, 68 + brightness + Math.random() * 15));
+            const b = Math.max(0, Math.min(255, 35 + brightness + Math.random() * 10));
+
+            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.6)`;
             ctx.beginPath();
             ctx.arc(x, y, radius, 0, Math.PI * 2);
             ctx.fill();
         }
-        
-        // Add some darker patches
-        ctx.globalAlpha = 0.3;
-        for (let i = 0; i < 20; i++) {
+
+        // Add darker soil patches
+        ctx.globalAlpha = 0.4;
+        for (let i = 0; i < 25; i++) {
             const x = Math.random() * canvas.width;
             const y = Math.random() * canvas.height;
-            const width = Math.random() * 30 + 10;
-            const height = Math.random() * 30 + 10;
-            
-            ctx.fillStyle = '#654321';
+            const width = Math.random() * 25 + 8;
+            const height = Math.random() * 25 + 8;
+
+            ctx.fillStyle = '#4A2C1A';
             ctx.fillRect(x, y, width, height);
         }
-        
+
+        // Add some small rocks/pebbles
+        ctx.globalAlpha = 0.7;
+        for (let i = 0; i < 40; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const size = Math.random() * 2 + 1;
+
+            ctx.fillStyle = '#666666';
+            ctx.fillRect(x, y, size, size);
+        }
+
+        // Add sparse grass patches on top
+        ctx.globalAlpha = 0.3;
+        for (let i = 0; i < 15; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const width = Math.random() * 20 + 5;
+            const height = Math.random() * 15 + 3;
+
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(x, y, width, height);
+        }
+
+        // Add tire tracks or disturbance marks
+        ctx.globalAlpha = 0.2;
+        ctx.strokeStyle = '#2F1B14';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 8; i++) {
+            ctx.beginPath();
+            const startX = Math.random() * canvas.width;
+            const startY = Math.random() * canvas.height;
+            ctx.moveTo(startX, startY);
+
+            // Create irregular track marks
+            for (let j = 0; j < 5; j++) {
+                const nextX = startX + (Math.random() - 0.5) * 30;
+                const nextY = startY + Math.random() * 20;
+                ctx.lineTo(nextX, nextY);
+            }
+            ctx.stroke();
+        }
+
         const texture = new THREE.CanvasTexture(canvas);
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
@@ -2631,10 +2701,13 @@ class Environment {
     createCheckpoints() {
         // Place checkpoints evenly throughout the track
         const totalSegments = this.roadPath.length;
-        const checkpointInterval = Math.floor(totalSegments / 10); // 10 checkpoints
-        
-        for (let i = 0; i < 10; i++) {
-            const segmentIndex = (i * checkpointInterval) % totalSegments;
+        const checkpointInterval = Math.floor(totalSegments / 5); // 5 checkpoints
+
+        // Start checkpoints after the first quarter of the track to avoid immediate scoring
+        const startOffset = Math.floor(totalSegments / 4);
+
+        for (let i = 0; i < 5; i++) {
+            const segmentIndex = (startOffset + i * checkpointInterval) % totalSegments;
             const point = this.roadPath[segmentIndex];
             const nextPoint = this.roadPath[(segmentIndex + 1) % totalSegments];
             
@@ -2704,7 +2777,6 @@ class Environment {
                 position: new THREE.Vector3(point.x, point.y, point.z),
                 heading: point.heading,
                 passed: false,
-                points: 100 + (i * 50), // Progressive point values
                 width: 16, // Width of checkpoint gate
                 segmentIndex: segmentIndex
             });
