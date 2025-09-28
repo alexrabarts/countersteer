@@ -417,7 +417,8 @@ class Environment {
                         const currentHeight = height * verticalProgress;
                         
                         // Calculate base perpendicular distance with slope for walls
-                        let baseDistance = 8;
+                        // Start closer to account for displacement pushing wall outward
+                        let baseDistance = 6.5; // Reduced from 8 to eliminate gap
                         
                         if (side > 0 && isDropOff) {
                             // Right wall (drop-off) - add dramatic outward slope
@@ -438,14 +439,17 @@ class Environment {
                         // Multi-layer displacement for natural rock face
                         const idx = i * horizontalSubdivisions + h;
                         
+                        // Reduce displacement at base to prevent gaps
+                        const heightFactor = Math.min(verticalProgress * 2, 1); // Ramps up from 0 at base to 1
+                        
                         // Layer 1: Large rock formations (3-6 unit scale)
-                        const primary = Math.sin(idx * 0.15 + j * 0.2) * Math.cos(j * 0.1) * 5.0;
+                        const primary = Math.sin(idx * 0.15 + j * 0.2) * Math.cos(j * 0.1) * 5.0 * heightFactor;
                         
                         // Layer 2: Medium rock faces (2-3 unit scale)
-                        const secondary = Math.sin(idx * 0.4 + j * 0.5) * Math.cos(idx * 0.3) * 2.5;
+                        const secondary = Math.sin(idx * 0.4 + j * 0.5) * Math.cos(idx * 0.3) * 2.5 * heightFactor;
                         
                         // Layer 3: Small surface details (0.5-1 unit scale)
-                        const tertiary = Math.sin(idx * 0.9 + j * 1.2) * 0.8;
+                        const tertiary = Math.sin(idx * 0.9 + j * 1.2) * 0.8 * heightFactor;
                         
                         // Combine displacements with height-based variation
                         const totalDisplacement = primary + secondary + tertiary;
@@ -455,7 +459,9 @@ class Environment {
                         const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
                         
                         // Final distance from road
-                        const finalDistance = baseDistance + facetedDisplacement * 0.5;
+                        // Ensure minimum distance to prevent gaps at road edge (8 units from center)
+                        const displacementScale = verticalProgress === 0 ? 0.1 : 0.3; // Less displacement at base
+                        const finalDistance = Math.max(baseDistance + facetedDisplacement * displacementScale, 7.5);
                         
                         // Calculate position
                         const perpX = Math.cos(interpHeading) * finalDistance * side;
@@ -802,6 +808,75 @@ class Environment {
             
             return group;
         };
+        
+        // Create ground strips to fill gaps between road and cliff bases
+        const createGroundStrip = (side, width) => {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const indices = [];
+            const colors = [];
+            
+            for (let i = 0; i < this.roadPath.length - 1; i++) {
+                const point = this.roadPath[i];
+                const nextPoint = this.roadPath[i + 1];
+                
+                // Road edge position (8 units from center)
+                const roadEdgeDistance = 8;
+                const cliffBaseDistance = 7.5; // Matches minimum cliff distance
+                
+                // Calculate perpendicular offsets for this segment
+                const perpX1 = Math.cos(point.heading) * roadEdgeDistance * side;
+                const perpZ1 = -Math.sin(point.heading) * roadEdgeDistance * side;
+                const perpX2 = Math.cos(point.heading) * (cliffBaseDistance + width) * side;
+                const perpZ2 = -Math.sin(point.heading) * (cliffBaseDistance + width) * side;
+                
+                const nextPerpX1 = Math.cos(nextPoint.heading) * roadEdgeDistance * side;
+                const nextPerpZ1 = -Math.sin(nextPoint.heading) * roadEdgeDistance * side;
+                const nextPerpX2 = Math.cos(nextPoint.heading) * (cliffBaseDistance + width) * side;
+                const nextPerpZ2 = -Math.sin(nextPoint.heading) * (cliffBaseDistance + width) * side;
+                
+                // Add vertices for this segment
+                const baseIndex = i * 4;
+                vertices.push(
+                    point.x + perpX1, point.y - 0.05, point.z + perpZ1,
+                    point.x + perpX2, point.y - 0.05, point.z + perpZ2,
+                    nextPoint.x + nextPerpX1, nextPoint.y - 0.05, nextPoint.z + nextPerpZ1,
+                    nextPoint.x + nextPerpX2, nextPoint.y - 0.05, nextPoint.z + nextPerpZ2
+                );
+                
+                // Add color (dark rock/dirt color)
+                for (let j = 0; j < 4; j++) {
+                    colors.push(0.25, 0.2, 0.18);
+                }
+                
+                // Create triangles
+                indices.push(
+                    baseIndex, baseIndex + 2, baseIndex + 1,
+                    baseIndex + 1, baseIndex + 2, baseIndex + 3
+                );
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+            
+            const material = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                roughness: 0.95,
+                metalness: 0.0
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.receiveShadow = true;
+            return mesh;
+        };
+        
+        // Add ground strips to fill gaps
+        const leftStrip = createGroundStrip(-1, 2);
+        this.scene.add(leftStrip);
+        const rightStrip = createGroundStrip(1, 2);
+        this.scene.add(rightStrip);
         
         // Left cliff wall (mountain face rising above)
         const leftCliff = createFacetedCliff(-1, 40, false);  // Taller mountain wall
