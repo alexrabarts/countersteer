@@ -10,6 +10,7 @@ class Environment {
         this.createRoadMarkings();
         this.addEnvironmentalDetails();
         this.createRoadworks(); // Add construction zones
+        this.addHairpinWarnings(); // Add hairpin bend warnings
     }
     
     createRoad() {
@@ -40,8 +41,9 @@ class Environment {
             { segments: 3, turnRate: 0 },         // Very short straight
             { segments: 10, turnRate: 0.11 },     // Right turn 3 - long sharp
             { segments: 5, turnRate: 0 },         // Straight
-            { segments: 6, turnRate: 0.13 },      // Right turn 4 - hairpin
-            { segments: 4, turnRate: 0 },         // Short straight
+            { segments: 2, turnRate: 0 },         // Short approach to hairpin
+            { segments: 7, turnRate: 0.25 },      // EXTREME HAIRPIN - almost 180 degrees
+            { segments: 2, turnRate: 0 },         // Short exit from hairpin
             { segments: 5, turnRate: 0.15 },      // Right turn 5 - switchback
             { segments: 6, turnRate: 0 },         // Straight
             { segments: 6, turnRate: -0.16 },     // Left turn 1 - extreme switchback
@@ -1757,9 +1759,10 @@ class Environment {
     
     createRoadworks() {
         // Define construction zones with variety - some with ramps, some without
+        // Adjusted for new track layout with hairpin
         const roadworksLocations = [
-            { startSegment: 25, endSegment: 27, hasRamp: true, type: 'major' },  // Mid-course major construction with jump
-            { startSegment: 45, endSegment: 46, hasRamp: false, type: 'minor' }  // Near end minor repairs
+            { startSegment: 27, endSegment: 29, hasRamp: true, type: 'major' },  // After hairpin major construction with jump
+            { startSegment: 48, endSegment: 49, hasRamp: false, type: 'minor' }  // Near end minor repairs
         ];
         
         roadworksLocations.forEach(zone => {
@@ -2387,5 +2390,200 @@ class Environment {
         });
         
         this.scene.add(lightGroup);
+    }
+    
+    addHairpinWarnings() {
+        // Find the extreme hairpin segment (around segment 34 based on our layout)
+        let hairpinStartSegment = 0;
+        let segmentCount = 0;
+        
+        // Calculate where the hairpin is
+        const layout = [
+            { segments: 10 }, { segments: 6 }, { segments: 4 }, { segments: 8 },
+            { segments: 3 }, { segments: 10 }, { segments: 5 }, { segments: 2 },
+            { segments: 7 }, // This is the hairpin
+        ];
+        
+        for (let i = 0; i < 8; i++) {
+            segmentCount += layout[i].segments;
+        }
+        hairpinStartSegment = segmentCount;
+        
+        // Add chevron warning signs before the hairpin
+        this.createHairpinSign(
+            this.roadPath[Math.max(0, hairpinStartSegment - 5)],
+            'EXTREME HAIRPIN'
+        );
+        
+        this.createHairpinSign(
+            this.roadPath[Math.max(0, hairpinStartSegment - 3)],
+            'SLOW DOWN!'
+        );
+        
+        // Add chevron markers through the turn
+        for (let i = 0; i < 7; i++) {
+            if (hairpinStartSegment + i >= this.roadPath.length) break;
+            const point = this.roadPath[hairpinStartSegment + i];
+            this.createChevronMarker(point, 'right');
+        }
+        
+        // Add safety barriers on the outside of the hairpin
+        for (let i = -1; i < 8; i++) {
+            const segmentIndex = hairpinStartSegment + i;
+            if (segmentIndex < 0 || segmentIndex >= this.roadPath.length) continue;
+            
+            const point = this.roadPath[segmentIndex];
+            
+            // Place barrier on outside of turn (left side since it's a right turn)
+            const barrierDistance = 9;
+            const barrierX = point.x - Math.cos(point.heading) * barrierDistance;
+            const barrierZ = point.z + Math.sin(point.heading) * barrierDistance;
+            
+            // Create red and white striped barrier
+            const barrierGeometry = new THREE.BoxGeometry(3, 1.2, 0.5);
+            const barrierMaterial = new THREE.MeshStandardMaterial({
+                color: 0xff0000,
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            
+            const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
+            barrier.position.set(barrierX, point.y + 0.6, barrierZ);
+            barrier.rotation.y = point.heading;
+            barrier.castShadow = true;
+            barrier.receiveShadow = true;
+            this.scene.add(barrier);
+            
+            // Add white stripes
+            const stripeGeometry = new THREE.BoxGeometry(0.5, 1.2, 0.51);
+            const stripeMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                roughness: 0.8,
+                metalness: 0.1
+            });
+            
+            for (let s = -1; s <= 1; s++) {
+                const stripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+                stripe.position.copy(barrier.position);
+                stripe.position.x += Math.sin(point.heading) * s * 0.8;
+                stripe.position.z += Math.cos(point.heading) * s * 0.8;
+                stripe.position.z += 0.01; // Slightly in front
+                this.scene.add(stripe);
+            }
+        }
+    }
+    
+    createHairpinSign(point, text) {
+        const signGroup = new THREE.Group();
+        
+        // Sign post
+        const postGeometry = new THREE.CylinderGeometry(0.1, 0.1, 3);
+        const postMaterial = new THREE.MeshStandardMaterial({
+            color: 0x666666,
+            roughness: 0.8,
+            metalness: 0.5
+        });
+        const post = new THREE.Mesh(postGeometry, postMaterial);
+        post.position.set(0, 1.5, 0);
+        signGroup.add(post);
+        
+        // Warning sign board - yellow with black text
+        const boardGeometry = new THREE.BoxGeometry(4, 1.5, 0.1);
+        const boardMaterial = new THREE.MeshStandardMaterial({
+            color: 0xFFDD00,
+            roughness: 0.9,
+            metalness: 0.1,
+            emissive: 0xFFDD00,
+            emissiveIntensity: 0.2
+        });
+        const board = new THREE.Mesh(boardGeometry, boardMaterial);
+        board.position.set(0, 3, 0);
+        signGroup.add(board);
+        
+        // Position sign beside road
+        const signX = point.x - Math.cos(point.heading) * 10;
+        const signZ = point.z + Math.sin(point.heading) * 10;
+        
+        signGroup.position.set(signX, point.y, signZ);
+        signGroup.rotation.y = point.heading;
+        
+        signGroup.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+        
+        this.scene.add(signGroup);
+    }
+    
+    createChevronMarker(point, direction) {
+        // Create chevron arrow marker pointing the direction of the turn
+        const chevronGroup = new THREE.Group();
+        
+        // Post
+        const postGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1.5);
+        const postMaterial = new THREE.MeshStandardMaterial({
+            color: 0x333333,
+            roughness: 0.8,
+            metalness: 0.5
+        });
+        const post = new THREE.Mesh(postGeometry, postMaterial);
+        post.position.set(0, 0.75, 0);
+        chevronGroup.add(post);
+        
+        // Chevron shape (arrow)
+        const chevronGeometry = new THREE.BufferGeometry();
+        const vertices = new Float32Array([
+            -0.5, 0, 0,
+            0, 0, -0.3,
+            0.5, 0, 0,
+            0.5, 0.3, 0,
+            0, 0.3, -0.3,
+            -0.5, 0.3, 0
+        ]);
+        const indices = [0, 1, 4, 0, 4, 5, 1, 2, 3, 1, 3, 4];
+        chevronGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        chevronGeometry.setIndex(indices);
+        chevronGeometry.computeVertexNormals();
+        
+        const chevronMaterial = new THREE.MeshStandardMaterial({
+            color: 0xFF0000,
+            emissive: 0xFF0000,
+            emissiveIntensity: 0.3,
+            roughness: 0.9,
+            metalness: 0.1,
+            side: THREE.DoubleSide
+        });
+        
+        const chevron = new THREE.Mesh(chevronGeometry, chevronMaterial);
+        chevron.position.set(0, 1.8, 0);
+        chevron.scale.set(1.5, 1.5, 1.5);
+        
+        // Rotate chevron to point right for right turn
+        if (direction === 'right') {
+            chevron.rotation.y = Math.PI / 2;
+        } else {
+            chevron.rotation.y = -Math.PI / 2;
+        }
+        
+        chevronGroup.add(chevron);
+        
+        // Position on outside of turn
+        const markerDistance = 8;
+        const markerX = point.x - Math.cos(point.heading) * markerDistance;
+        const markerZ = point.z + Math.sin(point.heading) * markerDistance;
+        
+        chevronGroup.position.set(markerX, point.y, markerZ);
+        chevronGroup.rotation.y = point.heading;
+        
+        chevronGroup.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+        
+        this.scene.add(chevronGroup);
     }
 }
