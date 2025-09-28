@@ -49,22 +49,22 @@ class Game {
     init() {
         this.scene = new THREE.Scene();
         
-        // Add fog for mountainside atmosphere
-        this.scene.fog = new THREE.Fog(0x8090a0, 100, 800);
-        
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 0.8;
         document.body.appendChild(this.renderer.domElement);
         
         window.addEventListener('resize', () => this.onWindowResize());
     }
 
     setupScene() {
-        // Misty mountain atmosphere
-        this.scene.background = new THREE.Color(0x8090a0);
-        this.scene.fog = new THREE.Fog(0x8090a0, 150, 600);
+        // Misty mountain atmosphere with layered fog effect
+        this.scene.background = new THREE.Color(0x9db4c8);
+        // Use exponential fog for more realistic mountain haze
+        this.scene.fog = new THREE.FogExp2(0x9db4c8, 0.004);
     }
 
     setupLighting() {

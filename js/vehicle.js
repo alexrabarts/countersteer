@@ -141,6 +141,9 @@ class Vehicle {
     }
 
     update(deltaTime, steeringInput, throttleInput, brakeInput) {
+        // Store brake input for use in updateMesh
+        this.currentBrakeInput = brakeInput;
+        
         // Track distance traveled (only when not crashed)
         if (!this.crashed && this.lastPosition) {
             const distanceDelta = this.position.distanceTo(this.lastPosition);
@@ -359,8 +362,14 @@ class Vehicle {
         
         // 1. STEERING TORQUE: Counter-steering effect (speed-dependent)
         // Higher speed = more gyroscopic stability = harder to lean
-        // Higher lean = harder to lean further
+        // Increase torque when trying to return to upright from a lean
         let steeringTorque = -steeringInput * this.steeringForce * speedFactor;
+        
+        // Boost steering torque when steering against current lean (returning to upright)
+        if (Math.sign(steeringInput) !== Math.sign(this.leanAngle) && Math.abs(this.leanAngle) > 0.1) {
+            steeringTorque *= 1.5; // 50% more responsive when counter-steering to upright
+        }
+        
         steeringTorque *= (1 - Math.abs(this.leanAngle) / this.maxLeanAngle);
         
         // 2. GRAVITY TORQUE: Always tries to increase lean (destabilizing)
@@ -385,14 +394,20 @@ class Vehicle {
         const gyroResistance = this.leanVelocity * this.speed * 0.02;
 
         // 5. SELF-RIGHTING TORQUE: Bike naturally tries to return upright
-        const selfRightingTorque = -this.leanAngle * 2.5;
+        const selfRightingTorque = -this.leanAngle * 3.5;
 
         // Total torque is sum of all forces
         const totalTorque = steeringTorque + gravityTorque + centripetalTorque - gyroResistance + selfRightingTorque;
         
         // Update lean velocity with small damping to prevent oscillation
         this.leanVelocity += totalTorque * deltaTime;
-        this.leanVelocity *= 0.99;
+        
+        // Apply stronger damping when returning to upright to reduce oscillation
+        if (Math.abs(this.leanAngle) < 0.2 && Math.sign(this.leanVelocity) !== Math.sign(this.leanAngle)) {
+            this.leanVelocity *= 0.95; // Stronger damping near center
+        } else {
+            this.leanVelocity *= 0.99;
+        }
         
         // Update lean angle
         this.leanAngle += this.leanVelocity * deltaTime;
@@ -445,12 +460,10 @@ class Vehicle {
         // Rotate front wheel for steering visualization
         this.frontWheel.rotation.y = this.steeringAngle * 0.5;
 
-        // Brake light glow
-        // Note: brakeInput not passed to updateMesh, so assume from speed decrease or add parameter
-        // For simplicity, glow when speed decreasing
-        if (this.speed < this.previousSpeed) {
-            this.brakeLight.material.emissive.setHex(0x440000);
-            this.brakeLight.material.emissiveIntensity = 0.5;
+        // Brake light glow - light up when brake is pressed
+        if (this.currentBrakeInput > 0) {
+            this.brakeLight.material.emissive.setHex(0xff0000);
+            this.brakeLight.material.emissiveIntensity = 1.0;
         } else {
             this.brakeLight.material.emissive.setHex(0x000000);
             this.brakeLight.material.emissiveIntensity = 0.0;
