@@ -377,8 +377,12 @@ class Environment {
         const createFacetedCliff = (side, height, isDropOff) => {
             const group = new THREE.Group();
             
+            // Create rock texture
+            const rockTexture = this.createRockTexture();
+            
             // Rock material with flat shading for faceted appearance
             const cliffMaterial = new THREE.MeshStandardMaterial({ 
+                map: rockTexture,
                 color: 0xffffff, // White base to let vertex colors show through
                 vertexColors: true,
                 roughness: 0.98, 
@@ -487,6 +491,11 @@ class Environment {
                         // Base grey colors ranging from light to dark
                         const greyBase = 0.35 + Math.random() * 0.25; // 0.35 to 0.6
                         
+                        // Add geological stratification layers
+                        const stratumHeight = 8; // Height of each stratum in units
+                        const stratumIndex = Math.floor((interpY + currentHeight) / stratumHeight);
+                        const stratumVariation = (stratumIndex % 3) * 0.08; // Alternate between 3 rock layer types
+                        
                         // Add variation based on height - darker at base, lighter up high
                         const heightVariation = verticalProgress * 0.15;
                         
@@ -498,6 +507,10 @@ class Environment {
                         
                         // Weather staining - darker patches
                         const weathering = (Math.cos(idx * 0.5 - j * 0.3) > 0.6) ? -0.1 : 0;
+                        
+                        // Water staining - vertical dark streaks
+                        const waterStainX = idx * 0.2;
+                        const waterStain = (Math.sin(waterStainX) > 0.7 && verticalProgress < 0.8) ? -0.15 : 0;
                         
                         // Vegetation patches - sparse moss and lichen on less steep areas
                         let isVegetated = false;
@@ -539,7 +552,7 @@ class Environment {
                         } else {
                         // Regular rock colors with green tinting for horizontal facets
                         const finalGrey = Math.max(0.2, Math.min(0.8,
-                            greyBase + heightVariation - depthVariation + weathering));
+                            greyBase + heightVariation - depthVariation + weathering + stratumVariation + waterStain));
 
                         // Add green tinting for horizontal areas (higher displacement creates flatter surfaces)
                         const horizontalFactor = Math.min(1, Math.abs(facetedDisplacement) / 6); // 0-1, higher for more displaced (horizontal) areas
@@ -715,6 +728,85 @@ class Environment {
                 }
             }
             
+            // Add crack systems to cliff face
+            const crackMaterial = new THREE.MeshStandardMaterial({
+                color: 0x1a1a1a,
+                roughness: 1.0,
+                metalness: 0.0,
+                side: THREE.DoubleSide
+            });
+            
+            // Create major vertical cracks
+            for (let i = 0; i < this.roadPath.length; i += 25) {
+                if (Math.random() > 0.5) {
+                    const point = this.roadPath[i];
+                    
+                    // Create crack geometry as thin box
+                    const crackHeight = Math.abs(height) * (0.4 + Math.random() * 0.4);
+                    const crackWidth = 0.1 + Math.random() * 0.15;
+                    const crackDepth = 0.5 + Math.random() * 0.5;
+                    
+                    const crackGeometry = new THREE.BoxGeometry(crackWidth, crackHeight, crackDepth);
+                    const crack = new THREE.Mesh(crackGeometry, crackMaterial);
+                    
+                    // Position crack on cliff face
+                    let distance = 7.8 + Math.random() * 2;
+                    const verticalOffset = Math.random() * Math.abs(height) * 0.3;
+                    
+                    if (side > 0 && isDropOff) {
+                        distance += (verticalOffset / Math.abs(height)) * 30;
+                    } else if (side < 0 && !isDropOff) {
+                        distance += (verticalOffset / Math.abs(height)) * 15;
+                    }
+                    
+                    const perpX = Math.cos(point.heading) * distance * side;
+                    const perpZ = -Math.sin(point.heading) * distance * side;
+                    
+                    if (height > 0) {
+                        crack.position.set(
+                            point.x + perpX,
+                            (point.y || 0) + crackHeight/2 + verticalOffset,
+                            point.z + perpZ
+                        );
+                    } else {
+                        crack.position.set(
+                            point.x + perpX,
+                            (point.y || 0) - crackHeight/2 - verticalOffset,
+                            point.z + perpZ
+                        );
+                    }
+                    
+                    // Rotate crack to align with cliff face
+                    crack.rotation.y = point.heading + (side > 0 ? Math.PI/2 : -Math.PI/2);
+                    crack.rotation.z = (Math.random() - 0.5) * 0.3; // Slight tilt
+                    
+                    crack.castShadow = true;
+                    crack.receiveShadow = true;
+                    group.add(crack);
+                    
+                    // Add smaller branching cracks
+                    const numBranches = 1 + Math.floor(Math.random() * 2);
+                    for (let b = 0; b < numBranches; b++) {
+                        const branchHeight = crackHeight * (0.3 + Math.random() * 0.3);
+                        const branchGeometry = new THREE.BoxGeometry(crackWidth * 0.6, branchHeight, crackDepth * 0.7);
+                        const branch = new THREE.Mesh(branchGeometry, crackMaterial);
+                        
+                        // Position relative to main crack
+                        branch.position.copy(crack.position);
+                        branch.position.x += (Math.random() - 0.5) * 2;
+                        branch.position.y += (Math.random() - 0.5) * crackHeight * 0.5;
+                        branch.position.z += (Math.random() - 0.5) * 2;
+                        
+                        branch.rotation.y = crack.rotation.y + (Math.random() - 0.5) * 0.5;
+                        branch.rotation.z = (Math.random() - 0.5) * 0.4;
+                        
+                        branch.castShadow = true;
+                        branch.receiveShadow = true;
+                        group.add(branch);
+                    }
+                }
+            }
+            
             // Base boulders already handled above - no need for dense boulder field
             
             // Add vegetation patches on the cliff face - muted colors
@@ -729,6 +821,135 @@ class Environment {
                 roughness: 0.95,
                 metalness: 0.0
             });
+            
+            // Add water seepage patches - dark wet areas on cliff
+            const seepageMaterial = new THREE.MeshStandardMaterial({
+                color: 0x1a1a1a,
+                roughness: 0.3,  // Wet surfaces are less rough
+                metalness: 0.1,  // Slight metalness for wet look
+                transparent: true,
+                opacity: 0.7,
+                side: THREE.DoubleSide
+            });
+            
+            // Create water seepage patches
+            for (let i = 0; i < this.roadPath.length; i += 30) {
+                if (Math.random() > 0.5) {
+                    const point = this.roadPath[i];
+                    
+                    // Create irregular seepage patch
+                    const seepageGeometry = new THREE.PlaneGeometry(
+                        1.5 + Math.random() * 2,
+                        3 + Math.random() * 4,
+                        4, 6
+                    );
+                    
+                    // Distort vertices for irregular shape
+                    const positions = seepageGeometry.attributes.position;
+                    for (let v = 0; v < positions.count; v++) {
+                        const x = positions.getX(v);
+                        const y = positions.getY(v);
+                        positions.setZ(v, (Math.random() - 0.5) * 0.2);
+                        positions.setX(v, x * (0.8 + Math.random() * 0.4));
+                    }
+                    
+                    const seepage = new THREE.Mesh(seepageGeometry, seepageMaterial);
+                    
+                    // Position on cliff face
+                    const seepageHeight = Math.abs(height) * (0.2 + Math.random() * 0.5);
+                    let distance = 7.6 + Math.random() * 0.5;
+                    
+                    if (side > 0 && isDropOff) {
+                        distance += (seepageHeight / Math.abs(height)) * 30;
+                    } else if (side < 0 && !isDropOff) {
+                        distance += (seepageHeight / Math.abs(height)) * 15;
+                    }
+                    
+                    const perpX = Math.cos(point.heading) * distance * side;
+                    const perpZ = -Math.sin(point.heading) * distance * side;
+                    
+                    if (height > 0) {
+                        seepage.position.set(
+                            point.x + perpX,
+                            (point.y || 0) + seepageHeight,
+                            point.z + perpZ
+                        );
+                    } else {
+                        seepage.position.set(
+                            point.x + perpX,
+                            (point.y || 0) - seepageHeight,
+                            point.z + perpZ
+                        );
+                    }
+                    
+                    seepage.rotation.y = point.heading + (side > 0 ? Math.PI/2 : -Math.PI/2);
+                    seepage.receiveShadow = true;
+                    group.add(seepage);
+                }
+            }
+            
+            // Add hanging vines and climbing plants
+            const vineMaterial = new THREE.MeshStandardMaterial({
+                color: 0x2a3d2a,
+                roughness: 0.95,
+                metalness: 0.0,
+                side: THREE.DoubleSide
+            });
+            
+            // Create hanging vines from cliff ledges
+            for (let i = 0; i < this.roadPath.length; i += 20) {
+                if (Math.random() > 0.6) {
+                    const point = this.roadPath[i];
+                    
+                    // Create vine as elongated curved mesh
+                    const vineLength = 3 + Math.random() * 5;
+                    const vineGeometry = new THREE.PlaneGeometry(0.3 + Math.random() * 0.2, vineLength, 1, 8);
+                    
+                    // Modify vertices to create curved hanging effect
+                    const positions = vineGeometry.attributes.position;
+                    for (let v = 0; v < positions.count; v++) {
+                        const y = positions.getY(v);
+                        const curve = Math.sin((y + vineLength/2) / vineLength * Math.PI) * 0.5;
+                        positions.setZ(v, curve);
+                    }
+                    
+                    const vine = new THREE.Mesh(vineGeometry, vineMaterial);
+                    
+                    // Position vine hanging from cliff face
+                    const vineHeight = Math.abs(height) * (0.3 + Math.random() * 0.4);
+                    let distance = 7.5 + Math.random() * 1;
+                    
+                    if (side > 0 && isDropOff) {
+                        distance += (vineHeight / Math.abs(height)) * 30;
+                    } else if (side < 0 && !isDropOff) {
+                        distance += (vineHeight / Math.abs(height)) * 15;
+                    }
+                    
+                    const perpX = Math.cos(point.heading) * distance * side;
+                    const perpZ = -Math.sin(point.heading) * distance * side;
+                    
+                    if (height > 0) {
+                        vine.position.set(
+                            point.x + perpX,
+                            (point.y || 0) + vineHeight - vineLength/2,
+                            point.z + perpZ
+                        );
+                    } else {
+                        vine.position.set(
+                            point.x + perpX,
+                            (point.y || 0) - vineHeight - vineLength/2,
+                            point.z + perpZ
+                        );
+                    }
+                    
+                    vine.rotation.y = point.heading + (side > 0 ? Math.PI/2 : -Math.PI/2);
+                    vine.rotation.x = (Math.random() - 0.5) * 0.2;
+                    
+                    vine.castShadow = true;
+                    vine.receiveShadow = true;
+                    group.add(vine);
+                }
+            }
             
             // Add moss and small vegetation patches
             for (let i = 0; i < this.roadPath.length; i += 12) {
@@ -971,6 +1192,92 @@ class Environment {
         // Right cliff wall (drop-off) - extremely tall mountainside cliff
         const rightCliff = createFacetedCliff(1, -200, true);  // Doubled height from -100 to -200
         this.scene.add(rightCliff);
+    }
+    
+    createRockTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        
+        // Base rock color
+        ctx.fillStyle = '#656565';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Add noise for rough surface
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        
+        for (let i = 0; i < data.length; i += 4) {
+            const noise = (Math.random() - 0.5) * 30;
+            data[i] += noise;     // Red
+            data[i + 1] += noise; // Green
+            data[i + 2] += noise; // Blue
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+        
+        // Add stratification lines
+        ctx.strokeStyle = '#4a4a4a';
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.3;
+        
+        for (let y = 0; y < canvas.height; y += 15 + Math.random() * 10) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            for (let x = 0; x < canvas.width; x += 20) {
+                ctx.lineTo(x, y + (Math.random() - 0.5) * 3);
+            }
+            ctx.stroke();
+        }
+        
+        // Add cracks
+        ctx.strokeStyle = '#2a2a2a';
+        ctx.lineWidth = 0.5;
+        ctx.globalAlpha = 0.4;
+        
+        for (let i = 0; i < 15; i++) {
+            const startX = Math.random() * canvas.width;
+            const startY = Math.random() * canvas.height;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            
+            let x = startX;
+            let y = startY;
+            const steps = 5 + Math.random() * 10;
+            
+            for (let j = 0; j < steps; j++) {
+                x += (Math.random() - 0.5) * 30;
+                y += Math.random() * 20;
+                ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+        
+        // Add mineral veins
+        ctx.strokeStyle = '#7a7570';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.2;
+        
+        for (let i = 0; i < 5; i++) {
+            const startX = Math.random() * canvas.width;
+            const startY = Math.random() * canvas.height;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.quadraticCurveTo(
+                startX + Math.random() * 100, 
+                startY + Math.random() * 100,
+                startX + Math.random() * 200,
+                startY + Math.random() * 200
+            );
+            ctx.stroke();
+        }
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(0.5, 0.5);
+        return texture;
     }
     
     createRoadTexture() {
