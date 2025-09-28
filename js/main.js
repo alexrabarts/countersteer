@@ -78,7 +78,7 @@ class Game {
 
         // Directional light (sun)
         this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        this.directionalLight.position.set(50, 50, 0);
+        this.directionalLight.position.set(50, 80, 0);
         this.directionalLight.castShadow = true;
         this.directionalLight.shadow.mapSize.width = 2048;
         this.directionalLight.shadow.mapSize.height = 2048;
@@ -350,16 +350,16 @@ class Game {
                     
                     // Combine vehicle and car speeds for impact force
                     const relativeSpeed = this.vehicle.speed + car.currentSpeed * 0.5;
-                    const impactForce = Math.min(relativeSpeed * 0.8, 30);
+                    const impactForce = Math.min(relativeSpeed * 0.3, 8);
                     
                     this.vehicle.velocity = impactDir.multiplyScalar(impactForce);
                     this.vehicle.velocity.y = 4; // Upward force from impact
                 } else {
                     // Fallback if car data not available
-                    const impactForce = this.vehicle.speed * 0.7;
+                    const impactForce = Math.min(this.vehicle.speed * 0.3, 6);
                     this.vehicle.velocity = new THREE.Vector3(
                         Math.random() - 0.5,
-                        3,
+                        2,
                         Math.random() - 0.5
                     ).normalize().multiplyScalar(impactForce);
                 }

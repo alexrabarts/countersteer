@@ -433,8 +433,8 @@ class Vehicle {
         if (this.crashed) {
             // Fall over animation
             this.group.rotation.z = this.crashAngle > 0 ? Math.PI/2 : -Math.PI/2;
-            // Don't lower the vehicle below ground - it's already at the correct position
-            // The rotation itself will make it appear fallen over
+            // Adjust bike position so it sits properly on the ground when rotated
+            this.group.position.y = this.position.y + 0.3;
             this.rider.rotation.z = 0; // Rider doesn't lean when crashed
         } else {
             // Normal lean
