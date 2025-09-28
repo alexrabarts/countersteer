@@ -3,8 +3,8 @@ class Traffic {
         this.scene = scene;
         this.environment = environment;
         this.cars = [];
-        this.maxCars = 12;
-        this.carSpacing = 150; // Minimum distance between cars
+        this.maxCars = 6; // Reduced from 12
+        this.carSpacing = 200; // Increased spacing between cars
         
         this.initializeCars();
     }
@@ -75,7 +75,7 @@ class Traffic {
             return collisionResult;
         }
         
-        // Check spacing between cars and avoid collisions
+        // Check spacing between cars going same direction
         for (let i = 0; i < this.cars.length; i++) {
             for (let j = i + 1; j < this.cars.length; j++) {
                 const car1 = this.cars[i];
@@ -86,10 +86,23 @@ class Traffic {
                     const distance = car1.getDistanceToOtherCar(car2);
                     if (distance < this.carSpacing && distance > 0) {
                         // Slow down the car behind
-                        if (car1.currentSegment < car2.currentSegment) {
-                            car1.temporarySlowdown();
+                        const car1Progress = car1.currentSegment + car1.segmentProgress;
+                        const car2Progress = car2.currentSegment + car2.segmentProgress;
+                        
+                        if (car1.direction === 1) {
+                            // Forward direction
+                            if (car1Progress < car2Progress) {
+                                car1.temporarySlowdown();
+                            } else {
+                                car2.temporarySlowdown();
+                            }
                         } else {
-                            car2.temporarySlowdown();
+                            // Reverse direction
+                            if (car1Progress > car2Progress) {
+                                car1.temporarySlowdown();
+                            } else {
+                                car2.temporarySlowdown();
+                            }
                         }
                     }
                 }
@@ -99,6 +112,7 @@ class Traffic {
         return { hit: false };
     }
     
+
     reset() {
         // Remove all cars and recreate
         this.cars.forEach(car => car.remove());
@@ -375,8 +389,23 @@ class Car {
         const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
         
         // More accurate collision detection considering car size
-        const collisionThreshold = 2.5; // Car is about 2m wide, 4.5m long
+        const collisionThreshold = 3.0; // Slightly larger for better detection
         return distance < collisionThreshold;
+    }
+    
+    onCollision() {
+        // Flash the car body red briefly on collision
+        const originalColor = this.body.material.color.getHex();
+        this.body.material.color.setHex(0xff0000);
+        this.body.material.emissive = new THREE.Color(0xff0000);
+        this.body.material.emissiveIntensity = 0.3;
+        
+        // Reset after a short delay
+        setTimeout(() => {
+            this.body.material.color.setHex(originalColor);
+            this.body.material.emissive = new THREE.Color(0x000000);
+            this.body.material.emissiveIntensity = 0;
+        }, 200);
     }
     
     getDistanceToOtherCar(otherCar) {
