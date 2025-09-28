@@ -145,13 +145,16 @@ class Environment {
             new THREE.MeshStandardMaterial({ color: 0x5c5c5c, roughness: 0.95, metalness: 0.0 })
         ];
         
-        // Large cliff rocks on elevated side
+        // NOTE: Most rock formations are now handled by the faceted cliff walls
+        // Only adding minimal standalone rocks to avoid floating objects
+        
+        // Occasional large rocks near the cliff base
         this.roadPath.forEach((point, index) => {
-            if (index % 7 === 0) { // Every 7th segment for spacing
-                // Left side cliff rocks (elevated side)
-                const cliffX = point.x - (20 + Math.random() * 15) * Math.cos(point.heading);
-                const cliffZ = point.z + (20 + Math.random() * 15) * Math.sin(point.heading);
-                const cliffY = point.y + 2 + Math.random() * 5;  // Closer to ground level
+            if (index % 15 === 0) { // Much less frequent
+                // Left side cliff rocks (elevated side) - properly grounded
+                const cliffX = point.x - (18 + Math.random() * 8) * Math.cos(point.heading);
+                const cliffZ = point.z + (18 + Math.random() * 8) * Math.sin(point.heading);
+                const cliffY = point.y - 1;  // Ground level, partially embedded
                 
                 // Create irregular rock shape using multiple merged geometries
                 const rockGroup = new THREE.Group();
@@ -203,12 +206,12 @@ class Environment {
                 this.scene.add(rockGroup);
             }
             
-            // Smaller rocks and boulders scattered around
-            if (index % 4 === 0 && Math.random() > 0.5) {
+            // Small boulders only near the road edge
+            if (index % 8 === 0 && Math.random() > 0.7) { // Less frequent
                 const side = Math.random() > 0.5 ? 1 : -1;
-                const boulderX = point.x + side * (12 + Math.random() * 8) * Math.cos(point.heading);
-                const boulderZ = point.z - side * (12 + Math.random() * 8) * Math.sin(point.heading);
-                const boulderY = point.y - 0.5 + Math.random();  // Partially embedded in ground
+                const boulderX = point.x + side * (10 + Math.random() * 3) * Math.cos(point.heading);
+                const boulderZ = point.z - side * (10 + Math.random() * 3) * Math.sin(point.heading);
+                const boulderY = point.y - 0.8;  // More deeply embedded
                 
                 const boulderGeometry = new THREE.SphereGeometry(
                     0.5 + Math.random() * 1.5,
@@ -236,44 +239,7 @@ class Environment {
             }
         });
         
-        // Rock face walls for dramatic cliff sections
-        for (let i = 0; i < this.roadPath.length - 10; i += 10) {
-            if (Math.abs(this.roadPath[i].y) > 8) { // Only on high elevation sections
-                const wallLength = 10;
-                const wallGeometry = new THREE.PlaneGeometry(wallLength * 2, 25);
-                
-                // Displace vertices for rough rock face appearance
-                const positions = wallGeometry.attributes.position;
-                for (let j = 0; j < positions.count; j++) {
-                    const x = positions.getX(j);
-                    const y = positions.getY(j);
-                    const z = positions.getZ(j) + Math.random() * 2 - 1;
-                    positions.setZ(j, z);
-                }
-                wallGeometry.computeVertexNormals();
-                
-                const rockWall = new THREE.Mesh(
-                    wallGeometry,
-                    rockMaterials[0]
-                );
-                
-                // Position wall along road
-                const avgX = (this.roadPath[i].x + this.roadPath[i + 5].x) / 2;
-                const avgZ = (this.roadPath[i].z + this.roadPath[i + 5].z) / 2;
-                const avgY = (this.roadPath[i].y + this.roadPath[i + 5].y) / 2;
-                const avgHeading = (this.roadPath[i].heading + this.roadPath[i + 5].heading) / 2;
-                
-                rockWall.position.set(
-                    avgX - 25 * Math.cos(avgHeading),
-                    avgY + 10,
-                    avgZ + 25 * Math.sin(avgHeading)
-                );
-                rockWall.rotation.y = avgHeading + Math.PI / 2;
-                rockWall.castShadow = true;
-                rockWall.receiveShadow = true;
-                this.scene.add(rockWall);
-            }
-        }
+        // Rock face walls removed - now handled by faceted cliff walls in createRoadWalls()
     }
     
     createGuardRails() {
@@ -1150,69 +1116,58 @@ class Environment {
         // Rock formations and cliff details
         this.addRockFormations();
         
-        // Trees along the roadside - more sparse for visibility
+        // Trees along the roadside - only on the mountain side (left)
         const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.6, 4);
         const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9, metalness: 0.0 });
         const foliageGeometry = new THREE.SphereGeometry(3, 6, 5);
         const foliageMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22, roughness: 0.95, metalness: 0.0 });
         
-        // Place trees along road path
+        // Place trees along road path - only on left (mountain) side
         this.roadPath.forEach((point, index) => {
-            if (index % 5 === 0) { // Every 5th segment (100m spacing)
-                // Vary the distance from road
-                const treeDistance = 25 + Math.random() * 15;
+            if (index % 7 === 0) { // Every 7th segment for sparser placement
+                // Only place trees on the left (mountain) side
+                const treeDistance = 20 + Math.random() * 10;
                 
-                // Randomly choose side
-                if (Math.random() > 0.5) {
-                    // Left side tree
-                    const leftX = point.x - treeDistance * Math.sin(point.heading + Math.PI/2);
-                    const leftZ = point.z - treeDistance * Math.cos(point.heading + Math.PI/2);
-                    
-                    const leftTrunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-                    leftTrunk.position.set(leftX, point.y + 2, leftZ);  // Relative to road height
-                    leftTrunk.castShadow = true;
-                    leftTrunk.receiveShadow = true;
-                    this.scene.add(leftTrunk);
+                // Left side tree (mountain side)
+                const leftX = point.x - treeDistance * Math.cos(point.heading);
+                const leftZ = point.z + treeDistance * Math.sin(point.heading);
+                
+                // Ground level for tree base
+                const groundLevel = point.y - 0.5;
+                
+                const leftTrunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                leftTrunk.position.set(leftX, groundLevel + 2, leftZ);
+                leftTrunk.castShadow = true;
+                leftTrunk.receiveShadow = true;
+                this.scene.add(leftTrunk);
 
-                    const leftFoliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
-                    leftFoliage.position.set(leftX, point.y + 5.5, leftZ);  // Relative to road height
-                    leftFoliage.castShadow = true;
-                    leftFoliage.receiveShadow = true;
-                    this.scene.add(leftFoliage);
-                } else {
-                    // Right side tree
-                    const rightX = point.x + treeDistance * Math.sin(point.heading + Math.PI/2);
-                    const rightZ = point.z + treeDistance * Math.cos(point.heading + Math.PI/2);
-                    
-                    const rightTrunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-                    rightTrunk.position.set(rightX, point.y - 30, rightZ);  // Trees down on cliff side
-                    rightTrunk.castShadow = true;
-                    rightTrunk.receiveShadow = true;
-                    this.scene.add(rightTrunk);
-
-                    const rightFoliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
-                    rightFoliage.position.set(rightX, point.y - 26.5, rightZ);  // Trees down on cliff side
-                    rightFoliage.castShadow = true;
-                    rightFoliage.receiveShadow = true;
-                    this.scene.add(rightFoliage);
-                }
+                const leftFoliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+                leftFoliage.position.set(leftX, groundLevel + 5.5, leftZ);
+                leftFoliage.castShadow = true;
+                leftFoliage.receiveShadow = true;
+                this.scene.add(leftFoliage);
+                
+                // No trees on right side (cliff drop-off) to avoid floating trees
             }
         });
 
-        // Bushes along the trackside for detail
+        // Bushes along the mountain side only
         const bushGeometry = new THREE.SphereGeometry(1, 6, 4);
         const bushMaterial = new THREE.MeshStandardMaterial({ color: 0x2d5016, roughness: 0.9, metalness: 0.0 });
         this.roadPath.forEach((point, index) => {
-            if (index % 4 === 0) { // Every 4th segment
-                // Left bush
+            if (index % 6 === 0) { // Less frequent
+                // Only left side bushes (mountain side)
+                const bushDistance = 12 + Math.random() * 5;
+                const bushX = point.x - bushDistance * Math.cos(point.heading);
+                const bushZ = point.z + bushDistance * Math.sin(point.heading);
+                
                 const leftBush = new THREE.Mesh(bushGeometry, bushMaterial);
-                leftBush.position.set(point.x - 35 + Math.random() * 10, point.y + 0.5, point.z + Math.random() * 20 - 10);
+                leftBush.position.set(bushX, point.y - 0.3, bushZ); // Partially embedded
                 leftBush.castShadow = true;
                 leftBush.receiveShadow = true;
                 this.scene.add(leftBush);
-
-                // Right bush - remove bushes on cliff side as they would be floating
-
+                
+                // No bushes on cliff side
             }
         });
 
