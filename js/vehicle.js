@@ -40,7 +40,7 @@ class Vehicle {
         this.isWheelie = false;
         this.wheelieAngle = 0;
         this.wheelieVelocity = 0;
-        this.wheelieDamping = 0.1;
+        this.wheelieDamping = 0.15; // High damping for challenging wheelies
         this.wheelieStartTime = 0;
         this.wheelieScoreAccumulated = 0;
         
@@ -457,6 +457,13 @@ class Vehicle {
     }
 
     updateWheelie(deltaTime, throttleInput, brakeInput, onWheelieScore = null) {
+        // Debug: method is being called
+        if (!this.wheelieCallCounter) this.wheelieCallCounter = 0;
+        this.wheelieCallCounter++;
+        if (this.wheelieCallCounter % 300 === 0) { // Every 5 seconds
+            console.log('Wheelie update method is being called');
+        }
+
         // Only allow wheelies when on ground and not crashed
         if (this.crashed || this.isJumping) {
             this.wheelieAngle = 0;
@@ -466,43 +473,44 @@ class Vehicle {
         }
 
         // Debug: log inputs
-        if (throttleInput > 0.5) {
-            console.log('Wheelie check - Throttle:', throttleInput.toFixed(2), 'Speed:', this.speed.toFixed(1), 'Wheelie active:', this.isWheelie, 'Angle:', (this.wheelieAngle * 180 / Math.PI).toFixed(1) + '°');
+        if (throttleInput > 0.05) {
+            console.log('Wheelie check - Throttle:', throttleInput.toFixed(2), 'Speed:', (this.speed * 2.237).toFixed(1) + ' mph', 'Wheelie active:', this.isWheelie, 'Angle:', (this.wheelieAngle * 180 / Math.PI).toFixed(1) + '°');
         }
 
         // Debug: periodic logging
         if (!this.wheelieDebugCounter) this.wheelieDebugCounter = 0;
         this.wheelieDebugCounter++;
         if (this.wheelieDebugCounter % 120 === 0) { // Every 2 seconds at 60fps
-            console.log('Wheelie status - Throttle:', throttleInput.toFixed(2), 'Speed:', this.speed.toFixed(1), 'Wheelie:', this.isWheelie, 'Angle:', (this.wheelieAngle * 180 / Math.PI).toFixed(1) + '°');
+            console.log('Wheelie status - Throttle:', throttleInput.toFixed(2), 'Speed:', (this.speed * 2.237).toFixed(1) + ' mph', 'Wheelie:', this.isWheelie, 'Angle:', (this.wheelieAngle * 180 / Math.PI).toFixed(1) + '°');
         }
 
-        // Detect wheelie initiation (hard acceleration)
-        const wheelieThreshold = 0.7; // Need 70% throttle to start wheelie
-        const isAccelerating = throttleInput > wheelieThreshold && this.speed > 10;
+        // Detect wheelie initiation - challenging thresholds
+        const wheelieThreshold = 0.5; // Need 50% throttle to start wheelie
+        const minWheelieSpeed = 3.0; // 3.0 m/s (~11 km/h) - higher speed threshold
+        const isAccelerating = throttleInput > wheelieThreshold && this.speed > minWheelieSpeed;
 
         if (isAccelerating && !this.isWheelie) {
             // Start wheelie
             this.isWheelie = true;
-            this.wheelieVelocity = 2.0; // Initial lift velocity
+            this.wheelieVelocity = 1.5; // Low initial lift velocity - requires precise timing
             this.wheelieStartTime = performance.now();
             this.wheelieScoreAccumulated = 0;
-            console.log('Wheelie started! Throttle:', throttleInput.toFixed(2), 'Speed:', this.speed.toFixed(1));
+            console.log('Wheelie started! Throttle:', throttleInput.toFixed(2), 'Speed:', (this.speed * 2.237).toFixed(1) + ' mph');
         }
 
         if (this.isWheelie) {
-            // Apply wheelie physics
+            // Apply wheelie physics - challenging to maintain
             if (isAccelerating) {
-                // Continue lifting front wheel
-                this.wheelieVelocity += throttleInput * 3.0 * deltaTime;
+                // Continue lifting front wheel - low acceleration
+                this.wheelieVelocity += throttleInput * 2.0 * deltaTime;
             } else {
-                // Start coming down
-                this.wheelieVelocity -= 4.0 * deltaTime;
+                // Start coming down quickly
+                this.wheelieVelocity -= 6.0 * deltaTime;
             }
 
-            // Apply braking to end wheelie faster
+            // Apply braking to end wheelie very fast
             if (brakeInput > 0) {
-                this.wheelieVelocity -= brakeInput * 6.0 * deltaTime;
+                this.wheelieVelocity -= brakeInput * 12.0 * deltaTime;
             }
 
             // Update wheelie angle
@@ -526,15 +534,16 @@ class Vehicle {
             }
 
             // Debug logging
-            if (Math.abs(this.wheelieAngle - oldAngle) > 0.1) {
+            if (Math.abs(this.wheelieAngle - oldAngle) > 0.05) {
                 console.log('Wheelie angle:', (this.wheelieAngle * 180 / Math.PI).toFixed(1) + '°', 'Duration:', wheelieDuration.toFixed(1) + 's', 'Total points:', Math.round(this.wheelieScoreAccumulated));
             }
 
-            // End wheelie if angle gets too small
-            if (this.wheelieAngle < 0.1) {
+            // End wheelie if angle gets too small - strict threshold
+            if (this.wheelieAngle < 0.12) {
                 this.isWheelie = false;
                 this.wheelieAngle = 0;
                 this.wheelieVelocity = 0;
+                console.log('Wheelie ended - angle too small');
             }
 
             // Apply damping

@@ -944,6 +944,10 @@ class SoundManager {
         this.vehicle.isJumping = false;
         this.vehicle.isWheelie = false;
         this.vehicle.wheelieAngle = 0;
+        this.vehicle.wheelieVelocity = 0;
+        this.vehicle.jumpRotation = 0;
+        this.vehicle.jumpVelocityY = 0;
+        this.vehicle.wheelieAngle = 0;
 
         // Reset start time for timing
         this.startTime = performance.now();
