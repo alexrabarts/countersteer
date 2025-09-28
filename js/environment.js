@@ -364,13 +364,13 @@ class Environment {
     }
     
     createRoadWalls() {
-        // Rock materials for boulders - lighter greys to blend with cliff
+        // Rock materials for boulders - lighter grey-brown variations matching cliff
         const rockMaterials = [
-            new THREE.MeshStandardMaterial({ color: 0x787878, roughness: 0.98, metalness: 0.0 }), // Light grey
-            new THREE.MeshStandardMaterial({ color: 0x6b6b6b, roughness: 0.97, metalness: 0.0 }), // Medium grey
-            new THREE.MeshStandardMaterial({ color: 0x858585, roughness: 0.96, metalness: 0.0 }), // Lighter grey
-            new THREE.MeshStandardMaterial({ color: 0x707070, roughness: 0.98, metalness: 0.0 }), // Medium-light grey
-            new THREE.MeshStandardMaterial({ color: 0x7a7262, roughness: 0.97, metalness: 0.0 })  // Light grey-brown
+            new THREE.MeshStandardMaterial({ color: 0xa0a0a0, roughness: 0.98, metalness: 0.0 }), // Very light grey
+            new THREE.MeshStandardMaterial({ color: 0x959595, roughness: 0.97, metalness: 0.0 }), // Light grey
+            new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.96, metalness: 0.0 }), // Pale grey
+            new THREE.MeshStandardMaterial({ color: 0x9a9a9a, roughness: 0.98, metalness: 0.0 }), // Light-medium grey
+            new THREE.MeshStandardMaterial({ color: 0xa09282, roughness: 0.97, metalness: 0.0 })  // Light grey-brown
         ];
         
         // Create continuous faceted rock walls with integrated slope
