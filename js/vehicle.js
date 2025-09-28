@@ -201,23 +201,41 @@ class Vehicle {
             for (const ramp of this.environment.jumpRamps) {
                 const dx = this.position.x - ramp.position.x;
                 const dz = this.position.z - ramp.position.z;
-                const distance = Math.sqrt(dx * dx + dz * dz);
                 
-                // Check if we're on the ramp and moving fast enough
-                if (distance < ramp.length / 2 && this.speed > 15) {
-                    // Calculate position along ramp
-                    const rampForward = new THREE.Vector3(
-                        Math.sin(ramp.rotation),
-                        0,
-                        Math.cos(ramp.rotation)
-                    );
-                    const toVehicle = new THREE.Vector3(dx, 0, dz);
-                    const alongRamp = toVehicle.dot(rampForward);
+                // Rotate to ramp's local space
+                const cos = Math.cos(-ramp.rotation);
+                const sin = Math.sin(-ramp.rotation);
+                const localX = dx * cos - dz * sin;
+                const localZ = dx * sin + dz * cos;
+                
+                // Check if we're within ramp bounds
+                const onRamp = Math.abs(localX) < ramp.width / 2 && 
+                              localZ > -ramp.length / 2 && 
+                              localZ < ramp.length / 2;
+                
+                if (onRamp && this.speed > 15) {
+                    // Calculate height on ramp based on position
+                    const rampProgress = (localZ + ramp.length / 2) / ramp.length;
+                    let expectedHeight;
                     
-                    // If we're on the up-ramp portion
-                    if (alongRamp > -ramp.length/2 && alongRamp < ramp.length * 0.2) {
+                    if (rampProgress < 0.6) {
+                        // Going up the ramp
+                        expectedHeight = (rampProgress / 0.6) * ramp.height;
+                    } else {
+                        // Going down the ramp
+                        expectedHeight = ramp.height * (1 - (rampProgress - 0.6) / 0.4);
+                    }
+                    
+                    // Adjust bike height to follow ramp
+                    const targetY = ramp.position.y + expectedHeight;
+                    
+                    // If we're on the upward part and high enough, initiate jump
+                    if (rampProgress > 0.4 && rampProgress < 0.7 && expectedHeight > ramp.height * 0.7) {
                         this.initiateJump(ramp);
                         break;
+                    } else if (!this.isJumping) {
+                        // Smoothly follow ramp surface
+                        this.position.y = this.position.y * 0.7 + targetY * 0.3;
                     }
                 }
             }
@@ -225,7 +243,7 @@ class Vehicle {
         
         // Handle jump physics
         if (this.isJumping) {
-            this.updateJump(deltaTime);
+            this.updateJump(deltaTime, throttleInput, brakeInput);
         }
         
         // Check for low-speed fall (but not while jumping)
@@ -560,6 +578,33 @@ class Vehicle {
     }
     
     updateElevation() {
+        // Skip elevation update when jumping
+        if (this.isJumping) return;
+        
+        // Check if we're on a ramp before adjusting to road height
+        if (this.environment && this.environment.jumpRamps) {
+            for (const ramp of this.environment.jumpRamps) {
+                const dx = this.position.x - ramp.position.x;
+                const dz = this.position.z - ramp.position.z;
+                
+                // Rotate to ramp's local space
+                const cos = Math.cos(-ramp.rotation);
+                const sin = Math.sin(-ramp.rotation);
+                const localX = dx * cos - dz * sin;
+                const localZ = dx * sin + dz * cos;
+                
+                // Check if we're within ramp bounds
+                const onRamp = Math.abs(localX) < ramp.width / 2 && 
+                              localZ > -ramp.length / 2 && 
+                              localZ < ramp.length / 2;
+                
+                if (onRamp) {
+                    // Don't update elevation when on ramp - let the ramp detection handle it
+                    return;
+                }
+            }
+        }
+        
         // Find nearest road segments and interpolate between them
         if (this.environment && this.environment.roadPath) {
             // Find closest segment
@@ -690,7 +735,10 @@ class Vehicle {
         
         // Calculate jump velocity based on speed and ramp angle
         const jumpAngle = Math.atan2(ramp.height, ramp.length * 0.6); // Approximate ramp angle
-        this.jumpVelocityY = Math.sin(jumpAngle) * this.speed * 0.7;
+        this.jumpVelocityY = Math.sin(jumpAngle) * this.speed * 0.8; // Increased jump force
+        
+        // Give a bit of extra lift for fun
+        this.jumpVelocityY += 3;
         
         // Add some forward rotation for style
         this.jumpRotation = 0;
@@ -698,15 +746,17 @@ class Vehicle {
         console.log('JUMPING! Speed:', (this.speed * 2.237).toFixed(1) + ' mph, Launch velocity:', this.jumpVelocityY.toFixed(1));
     }
     
-    updateJump(deltaTime) {
+    updateJump(deltaTime, throttleInput, brakeInput) {
         // Apply gravity
         this.jumpVelocityY -= 9.81 * deltaTime * 2; // Double gravity for arcade feel
         
         // Update vertical position
         this.position.y += this.jumpVelocityY * deltaTime;
         
-        // Add rotation for visual effect
-        this.jumpRotation += deltaTime * 2;
+        // Control rotation with throttle/brake for skill-based landing
+        // Throttle pitches forward (nose down), brake pitches backward (nose up)
+        const rotationControl = (throttleInput - brakeInput) * deltaTime * 3;
+        this.jumpRotation += rotationControl;
         
         // Check for landing
         if (this.environment && this.environment.roadPath) {
@@ -746,17 +796,29 @@ class Vehicle {
         this.position.y = groundHeight;
         this.jumpVelocityY = 0;
         
-        // Check landing quality
+        // Normalize rotation to -PI to PI range
+        while (this.jumpRotation > Math.PI) this.jumpRotation -= Math.PI * 2;
+        while (this.jumpRotation < -Math.PI) this.jumpRotation += Math.PI * 2;
+        
+        // Check landing quality based on rotation angle
+        const landingAngle = Math.abs(this.jumpRotation);
         const landingSpeed = Math.abs(this.jumpVelocityY);
-        if (landingSpeed > 15 || Math.abs(this.jumpRotation) > Math.PI * 2) {
-            // Hard landing - crash
-            this.crashed = true;
-            this.crashAngle = (Math.random() - 0.5) * Math.PI/2;
-            console.log('CRASHED! Hard landing at', landingSpeed.toFixed(1) + ' m/s');
-        } else {
-            console.log('Successful landing!');
-            // Reset rotation smoothly
+        
+        // Good landing if bike is mostly level (within 45 degrees)
+        if (landingAngle < Math.PI / 4) {
+            console.log('Perfect landing! Angle:', (landingAngle * 180 / Math.PI).toFixed(0) + '°');
             this.jumpRotation = 0;
+        } else if (landingAngle < Math.PI / 2) {
+            // Rough but recoverable landing
+            console.log('Rough landing! Angle:', (landingAngle * 180 / Math.PI).toFixed(0) + '°');
+            this.jumpRotation = 0;
+            // Slow down a bit from the hard landing
+            this.speed *= 0.7;
+        } else {
+            // Bad angle - crash
+            this.crashed = true;
+            this.crashAngle = this.jumpRotation > 0 ? Math.PI/2 : -Math.PI/2;
+            console.log('CRASHED! Bad landing angle:', (landingAngle * 180 / Math.PI).toFixed(0) + '°');
         }
     }
 }

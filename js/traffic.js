@@ -599,3 +599,4 @@ class Car {
             this.detourSide = null;
         }
     }
+}
