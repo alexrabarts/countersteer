@@ -2,6 +2,7 @@ class Environment {
     constructor(scene) {
         this.scene = scene;
         this.roadPath = []; // Store the path for other uses
+        this.finishLinePosition = null; // Store finish line position for detection
         this.createRoad();
         this.createGrass();
         this.createRoadMarkings();
@@ -363,13 +364,13 @@ class Environment {
     }
     
     createRoadWalls() {
-        // Rock materials for boulders - various greys to match cliff
+        // Rock materials for boulders - lighter greys to blend with cliff
         const rockMaterials = [
-            new THREE.MeshStandardMaterial({ color: 0x606060, roughness: 0.98, metalness: 0.0 }), // Medium grey
-            new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.97, metalness: 0.0 }), // Dark grey
-            new THREE.MeshStandardMaterial({ color: 0x707070, roughness: 0.96, metalness: 0.0 }), // Light grey
-            new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.98, metalness: 0.0 }), // Charcoal
-            new THREE.MeshStandardMaterial({ color: 0x6b6355, roughness: 0.97, metalness: 0.0 })  // Grey-brown
+            new THREE.MeshStandardMaterial({ color: 0x787878, roughness: 0.98, metalness: 0.0 }), // Light grey
+            new THREE.MeshStandardMaterial({ color: 0x6b6b6b, roughness: 0.97, metalness: 0.0 }), // Medium grey
+            new THREE.MeshStandardMaterial({ color: 0x858585, roughness: 0.96, metalness: 0.0 }), // Lighter grey
+            new THREE.MeshStandardMaterial({ color: 0x707070, roughness: 0.98, metalness: 0.0 }), // Medium-light grey
+            new THREE.MeshStandardMaterial({ color: 0x7a7262, roughness: 0.97, metalness: 0.0 })  // Light grey-brown
         ];
         
         // Create continuous faceted rock walls with integrated slope
@@ -463,13 +464,13 @@ class Environment {
                         // Combine displacements with height-based variation
                         const totalDisplacement = primary + secondary + tertiary + micro;
                         
-                        // Apply faceting by quantizing displacement - varied facet sizes for more natural look
-                        const facetSize = 1.8 + Math.sin(idx * 0.3) * 0.7; // Variable facet size
+                        // Apply faceting by quantizing displacement - smaller facets for more angular look
+                        const facetSize = 1.2 + Math.sin(idx * 0.3) * 0.4; // Smaller variable facet size for sharper angles
                         const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
-                        
+
                         // Final distance from road
                         // Ensure minimum distance to prevent gaps at road edge (8 units from center)
-                        const displacementScale = verticalProgress === 0 ? 0.15 : 0.45; // Increased displacement scale
+                        const displacementScale = verticalProgress === 0 ? 0.15 : 0.55; // Further increased displacement scale for more pronounced faceting
                         const finalDistance = Math.max(baseDistance + facetedDisplacement * displacementScale, 7.5);
                         
                         // Calculate position
@@ -498,43 +499,62 @@ class Environment {
                         // Weather staining - darker patches
                         const weathering = (Math.cos(idx * 0.5 - j * 0.3) > 0.6) ? -0.1 : 0;
                         
-                        // Vegetation patches - moss and grass on less steep areas
+                        // Vegetation patches - sparse moss and lichen on less steep areas
                         let isVegetated = false;
+                        let isBrown = false;
                         const vegetationNoise = Math.sin(idx * 0.25 + j * 0.35) * Math.cos(idx * 0.4 - j * 0.3);
+                        const brownNoise = Math.cos(idx * 0.18 + j * 0.22) * Math.sin(idx * 0.35 - j * 0.28);
                         
-                        // More vegetation at lower elevations and on less displaced areas
-                        const vegetationChance = (1 - verticalProgress) * 0.5 + 
-                                                (1 - Math.abs(facetedDisplacement) / 10) * 0.3;
+                        // Much less vegetation - only in very specific spots
+                        const vegetationChance = (1 - verticalProgress) * 0.2 + 
+                                                (1 - Math.abs(facetedDisplacement) / 10) * 0.1;
                         
-                        if (vegetationNoise > 0.3 && Math.random() < vegetationChance) {
+                        if (vegetationNoise > 0.6 && Math.random() < vegetationChance) {
                             isVegetated = true;
+                        } else if (brownNoise > 0.5 && Math.random() < 0.15) {
+                            // Occasional brown weathered rock
+                            isBrown = true;
                         }
                         
                         if (isVegetated) {
-                            // Muted green vegetation colors - more natural moss/lichen
-                            const greenBase = 0.28 + Math.random() * 0.1;
-                            const greenAmount = 0.15 + Math.random() * 0.1; // Much less green
+                            // Darker, more muted green - almost grey-green
+                            const greyGreenBase = 0.32 + Math.random() * 0.08;
+                            const greenTint = 0.08 + Math.random() * 0.05; // Very subtle green
                             
                             colors.push(
-                                greenBase * 0.85,  // Slightly less red
-                                greenBase + greenAmount,  // Subtle green tint
-                                greenBase * 0.75   // Less blue
+                                greyGreenBase * 0.9,  // Slightly less red
+                                greyGreenBase + greenTint,  // Very subtle green
+                                greyGreenBase * 0.85   // Slightly less blue
+                            );
+                        } else if (isBrown) {
+                            // Brown weathered rock patches
+                            const brownBase = 0.35 + Math.random() * 0.1;
+                            const brownTint = 0.05 + Math.random() * 0.03;
+                            
+                            colors.push(
+                                brownBase + brownTint * 1.2,  // More red
+                                brownBase,  // Base
+                                brownBase - brownTint * 0.5   // Less blue
                             );
                         } else {
-                            // Regular rock colors
-                            const finalGrey = Math.max(0.2, Math.min(0.8, 
-                                greyBase + heightVariation - depthVariation + weathering));
-                            
-                            // Add slight color tints for realism
-                            const redTint = finalGrey + mineralStreak;
-                            const greenTint = finalGrey - 0.02; // Slight moss/lichen tint
-                            const blueTint = finalGrey + 0.03; // Slight cool tint
-                            
-                            colors.push(
-                                redTint,
-                                greenTint,
-                                blueTint
-                            );
+                        // Regular rock colors with green tinting for horizontal facets
+                        const finalGrey = Math.max(0.2, Math.min(0.8,
+                            greyBase + heightVariation - depthVariation + weathering));
+
+                        // Add green tinting for horizontal areas (higher displacement creates flatter surfaces)
+                        const horizontalFactor = Math.min(1, Math.abs(facetedDisplacement) / 6); // 0-1, higher for more displaced (horizontal) areas
+                        const greenTintStrength = horizontalFactor * 0.12; // Up to 12% green tint for horizontal facets
+
+                        // Add slight color tints for realism
+                        const redTint = finalGrey + mineralStreak - greenTintStrength * 0.3; // Reduce red for green tint
+                        const greenTint = finalGrey - 0.02 + greenTintStrength; // Add green for horizontal areas
+                        const blueTint = finalGrey + 0.03 - greenTintStrength * 0.2; // Slight blue reduction
+
+                        colors.push(
+                            redTint,
+                            greenTint,
+                            blueTint
+                        );
                         }
                         
                         // UV coordinates
@@ -1250,6 +1270,9 @@ class Environment {
             finishLine.position.set(this.roadPath[lastSegments].x, finishY, this.roadPath[lastSegments].z);
             finishLine.receiveShadow = true;
             this.scene.add(finishLine);
+
+            // Store finish line position for detection
+            this.finishLinePosition = new THREE.Vector3(this.roadPath[lastSegments].x, finishY, this.roadPath[lastSegments].z);
         }
     }
     

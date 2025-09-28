@@ -33,9 +33,14 @@ class Game {
         this.frameCount = 0;
         this.lastTime = performance.now();
         
-        // High score tracking
+        // High score tracking (now stores score instead of distance)
         this.highScore = parseFloat(localStorage.getItem('motorcycleHighScore') || '0');
         this.updateHighScoreDisplay();
+
+        // Finish state
+        this.finished = false;
+        this.finishTime = 0;
+        this.startTime = performance.now();
 
         console.log('Starting animation loop...');
         this.animate();
@@ -167,30 +172,108 @@ class Game {
     }
 
     updateUI() {
+        if (this.finished) {
+            // Hide regular UI when finished
+            document.getElementById('speed').style.display = 'none';
+            document.getElementById('lean').style.display = 'none';
+            document.getElementById('leanVel').style.display = 'none';
+            document.getElementById('steering').style.display = 'none';
+            document.getElementById('distance').style.display = 'none';
+            document.getElementById('highScore').style.display = 'none';
+            document.getElementById('fps').style.display = 'none';
+            return;
+        }
+
         document.getElementById('speed').textContent = `Speed: ${this.vehicle.getSpeed().toFixed(0)} mph`;
-        
-        const leanText = this.vehicle.crashed ? 
-            `CRASHED! (Press R to reset)` : 
+
+        const leanText = this.vehicle.crashed ?
+            `CRASHED! (Press R to reset)` :
             `Lean: ${this.vehicle.getLeanAngleDegrees().toFixed(1)}°`;
         document.getElementById('lean').textContent = leanText;
-        
+
         document.getElementById('leanVel').textContent = `Lean Rate: ${(this.vehicle.leanVelocity * 180 / Math.PI).toFixed(1)}°/s`;
         document.getElementById('steering').textContent = `Steering: ${this.vehicle.getSteeringAngleDegrees().toFixed(1)}°`;
-        
+
         // Update distance display
         const distance = this.vehicle.getDistanceTraveled();
         document.getElementById('distance').textContent = `Distance: ${distance.toFixed(0)} m`;
-        
-        // Check and update high score
-        if (this.vehicle.crashed && distance > this.highScore) {
-            this.highScore = distance;
-            localStorage.setItem('motorcycleHighScore', this.highScore.toString());
-            this.updateHighScoreDisplay();
-        }
+
+        // High score is now based on finish score, not crash distance
+        // Only update high score when finishing the course
     }
     
     updateHighScoreDisplay() {
-        document.getElementById('highScore').textContent = `Best: ${this.highScore.toFixed(0)} m`;
+        document.getElementById('highScore').textContent = `Best Score: ${this.highScore.toLocaleString()}`;
+    }
+
+    showFinishScreen() {
+        // Calculate score based on distance and time
+        const distance = this.vehicle.getDistanceTraveled();
+        const timeSeconds = this.finishTime / 1000;
+        const averageSpeed = distance / timeSeconds * 3.6; // km/h
+
+        // Score formula: distance bonus + speed bonus - time penalty
+        const distanceScore = distance * 10;
+        const speedBonus = Math.max(0, averageSpeed - 50) * 5; // Bonus for speeds over 50 km/h
+        const timePenalty = timeSeconds * 2;
+        const totalScore = Math.round(distanceScore + speedBonus - timePenalty);
+
+        // Create finish banner
+        const finishBanner = document.createElement('div');
+        finishBanner.id = 'finishBanner';
+        finishBanner.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            border: 3px solid #f39c12;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            color: white;
+            font-family: Arial, sans-serif;
+            z-index: 1000;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            animation: fadeIn 0.5s ease-out;
+        `;
+
+        finishBanner.innerHTML = `
+            <h1 style="color: #f39c12; margin: 0 0 20px 0; font-size: 48px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
+                COURSE COMPLETE!
+            </h1>
+            <div style="font-size: 24px; margin-bottom: 20px;">
+                <div style="margin-bottom: 10px;">Distance: <span style="color: #3498db;">${distance.toFixed(0)} meters</span></div>
+                <div style="margin-bottom: 10px;">Time: <span style="color: #e74c3c;">${timeSeconds.toFixed(1)} seconds</span></div>
+                <div style="margin-bottom: 10px;">Average Speed: <span style="color: #9b59b6;">${averageSpeed.toFixed(1)} km/h</span></div>
+            </div>
+            <div style="font-size: 36px; font-weight: bold; color: #f39c12; margin-bottom: 20px;">
+                SCORE: ${totalScore.toLocaleString()}
+            </div>
+            <div style="font-size: 18px; color: #bdc3c7;">
+                Press R to play again
+            </div>
+        `;
+
+        // Add CSS animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        document.body.appendChild(finishBanner);
+
+        // Update high score if this score is better
+        if (totalScore > this.highScore) {
+            this.highScore = totalScore;
+            localStorage.setItem('motorcycleHighScore', this.highScore.toString());
+        }
+
+        console.log(`COURSE FINISHED! Distance: ${distance.toFixed(0)}m, Time: ${timeSeconds.toFixed(1)}s, Score: ${totalScore}`);
     }
 
     animate() {
@@ -213,21 +296,41 @@ class Game {
         
         // Check for reset
         if (this.input.checkReset()) {
-            // Save high score before reset if crashed
-            if (this.vehicle.crashed) {
-                const distance = this.vehicle.getDistanceTraveled();
-                if (distance > this.highScore) {
-                    this.highScore = distance;
-                    localStorage.setItem('motorcycleHighScore', this.highScore.toString());
-                    this.updateHighScoreDisplay();
-                }
+            // Remove finish banner if it exists
+            const finishBanner = document.getElementById('finishBanner');
+            if (finishBanner) {
+                finishBanner.remove();
             }
+
+            // High score is updated when finishing the course, not on reset
+
             this.vehicle.reset();
             this.cones.reset();
+            this.finished = false;
+            this.startTime = performance.now();
+
+            // Show UI again
+            document.getElementById('speed').style.display = 'block';
+            document.getElementById('lean').style.display = 'block';
+            document.getElementById('leanVel').style.display = 'block';
+            document.getElementById('steering').style.display = 'block';
+            document.getElementById('distance').style.display = 'block';
+            document.getElementById('highScore').style.display = 'block';
+            document.getElementById('fps').style.display = 'block';
         }
         
         this.vehicle.update(deltaTime, steeringInput, throttleInput, brakeInput);
-        
+
+        // Check for finish line crossing
+        if (!this.finished && !this.vehicle.crashed && this.environment.finishLinePosition) {
+            const distanceToFinish = this.vehicle.position.distanceTo(this.environment.finishLinePosition);
+            if (distanceToFinish < 5) { // Within 5 units of finish line
+                this.finished = true;
+                this.finishTime = performance.now() - this.startTime;
+                this.showFinishScreen();
+            }
+        }
+
         // Update traffic
         if (this.traffic) {
             const collision = this.traffic.update(deltaTime, this.vehicle.position);
