@@ -3,8 +3,8 @@ class Traffic {
         this.scene = scene;
         this.environment = environment;
         this.cars = [];
-        this.maxCars = 6; // Reduced from 12
-        this.carSpacing = 200; // Increased spacing between cars
+        this.maxCars = 4; // Reduced to 4 total cars
+        this.carSpacing = 250; // Increased spacing between cars
         
         this.initializeCars();
     }
