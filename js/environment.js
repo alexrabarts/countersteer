@@ -951,20 +951,20 @@ class Environment {
     }
     
     createGrass() {
-        // Larger grass area for the loop course
-        const grassMaterial = new THREE.MeshStandardMaterial({
-            color: 0x3a5f3a,
+        // Create a lake at the bottom instead of grass
+        const lakeMaterial = new THREE.MeshStandardMaterial({
+            color: 0x2266aa,  // Deep blue lake color
             side: THREE.DoubleSide,
-            roughness: 0.95,
-            metalness: 0.0
+            roughness: 0.1,   // Water is reflective
+            metalness: 0.4    // Some metalness for water shine
         });
         
-        const grassGeometry = new THREE.PlaneGeometry(3000, 3000);
-        const grass = new THREE.Mesh(grassGeometry, grassMaterial);
-        grass.rotation.x = -Math.PI / 2;
-        grass.position.set(0, -80, 0);  // Much lower to emphasize mountain height
-        grass.receiveShadow = true;
-        this.scene.add(grass);
+        const lakeGeometry = new THREE.PlaneGeometry(3000, 3000);
+        const lake = new THREE.Mesh(lakeGeometry, lakeMaterial);
+        lake.rotation.x = -Math.PI / 2;
+        lake.position.set(0, -80, 0);  // Much lower to emphasize mountain height
+        lake.receiveShadow = true;
+        this.scene.add(lake);
 
         // Create continuous terrain strips along the road
         const createTerrainStrip = (side, offset, dropAmount, color) => {
@@ -1044,15 +1044,15 @@ class Environment {
         // Guard rails commented out due to rendering issues
         // this.createGuardRails();
         
-        // Add some texture variation with darker patches
+        // Add some water depth variation patches
         for (let i = 0; i < 20; i++) {
             const patchSize = 50 + Math.random() * 100;
             const patchGeometry = new THREE.PlaneGeometry(patchSize, patchSize);
             const patchMaterial = new THREE.MeshStandardMaterial({
-                color: 0x2a4f2a,
+                color: 0x1a5599,  // Darker blue for deeper water
                 side: THREE.DoubleSide,
-                roughness: 0.95,
-                metalness: 0.0
+                roughness: 0.15,  // Still water-like
+                metalness: 0.35
             });
             const patch = new THREE.Mesh(patchGeometry, patchMaterial);
             patch.rotation.x = -Math.PI / 2;
