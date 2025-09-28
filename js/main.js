@@ -83,11 +83,11 @@ class Game {
         this.directionalLight.shadow.mapSize.width = 2048;
         this.directionalLight.shadow.mapSize.height = 2048;
         this.directionalLight.shadow.camera.near = 0.1;
-        this.directionalLight.shadow.camera.far = 8000;
-        this.directionalLight.shadow.camera.left = -1600;
-        this.directionalLight.shadow.camera.right = 1600;
-        this.directionalLight.shadow.camera.top = 1600;
-        this.directionalLight.shadow.camera.bottom = -1600;
+        this.directionalLight.shadow.camera.far = 500;
+        this.directionalLight.shadow.camera.left = -100;
+        this.directionalLight.shadow.camera.right = 100;
+        this.directionalLight.shadow.camera.top = 100;
+        this.directionalLight.shadow.camera.bottom = -100;
         this.directionalLight.shadow.bias = -0.0001; // Reduce shadow acne
         this.scene.add(this.directionalLight);
 
@@ -337,7 +337,7 @@ class Game {
             if (collision && collision.hit && !this.vehicle.crashed) {
                 this.vehicle.crashed = true;
                 this.vehicle.crashAngle = this.vehicle.leanAngle || 0.5;
-                this.vehicle.mainFrame.material.color.setHex(0xff00ff); // Magenta for traffic collision
+                this.vehicle.frame.material.color.setHex(0xff00ff); // Magenta for traffic collision
                 
                 // Calculate impact direction based on car position
                 const car = collision.car;
