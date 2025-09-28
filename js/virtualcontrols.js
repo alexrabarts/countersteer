@@ -12,26 +12,41 @@ class VirtualControls {
     }
     
     createControls() {
+        // Calculate responsive sizes based on viewport
+        const viewportHeight = window.innerHeight;
+        const viewportWidth = window.innerWidth;
+        const isMobileLandscape = viewportWidth > viewportHeight && viewportHeight < 500;
+        
+        // Adjust button size based on screen size
+        const buttonSize = isMobileLandscape ? 50 : Math.min(70, viewportHeight * 0.08);
+        const gap = 5;
+        const controlsHeight = (buttonSize + gap) * 2;
+        const controlsWidth = (buttonSize + gap) * 3;
+        
+        // Calculate safe bottom position to ensure controls fit in viewport
+        const safeBottomMargin = Math.min(20, viewportHeight * 0.02);
+        const bottomPosition = safeBottomMargin;
+        
         // Create container for controls
         const container = document.createElement('div');
         container.className = 'virtual-controls';
         container.style.cssText = `
             position: fixed;
-            bottom: 20px;
-            left: 20px;
+            bottom: ${bottomPosition}px;
+            left: ${safeBottomMargin}px;
             z-index: 1000;
             touch-action: none;
             user-select: none;
+            height: ${controlsHeight}px;
+            width: ${controlsWidth}px;
         `;
         
-        // WASD layout positions
-        const buttonSize = 70;
-        const gap = 5;
+        // WASD layout positions - Y coordinates inverted (bottom-up positioning)
         const buttons = [
-            { key: 'KeyW', label: 'W', x: buttonSize + gap, y: 0 },
-            { key: 'KeyA', label: 'A', x: 0, y: buttonSize + gap },
-            { key: 'KeyS', label: 'S', x: buttonSize + gap, y: buttonSize + gap },
-            { key: 'KeyD', label: 'D', x: (buttonSize + gap) * 2, y: buttonSize + gap }
+            { key: 'KeyW', label: 'W', x: buttonSize + gap, y: buttonSize + gap },
+            { key: 'KeyA', label: 'A', x: 0, y: 0 },
+            { key: 'KeyS', label: 'S', x: buttonSize + gap, y: 0 },
+            { key: 'KeyD', label: 'D', x: (buttonSize + gap) * 2, y: 0 }
         ];
         
         buttons.forEach(btn => {
@@ -43,7 +58,7 @@ class VirtualControls {
                 width: ${buttonSize}px;
                 height: ${buttonSize}px;
                 left: ${btn.x}px;
-                top: ${btn.y}px;
+                bottom: ${btn.y}px;
                 background: rgba(255, 255, 255, 0.1);
                 border: 2px solid rgba(255, 255, 255, 0.3);
                 border-radius: 10px;
@@ -51,7 +66,7 @@ class VirtualControls {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 24px;
+                font-size: ${Math.floor(buttonSize * 0.35)}px;
                 font-weight: bold;
                 font-family: monospace;
                 cursor: pointer;
@@ -105,15 +120,16 @@ class VirtualControls {
         });
         
         // Reset button on the right
+        const resetButtonSize = isMobileLandscape ? 60 : Math.min(80, viewportHeight * 0.09);
         const resetButton = document.createElement('div');
         resetButton.className = 'virtual-button-reset';
         resetButton.innerHTML = 'R';
         resetButton.style.cssText = `
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 80px;
-            height: 80px;
+            bottom: ${bottomPosition}px;
+            right: ${safeBottomMargin}px;
+            width: ${resetButtonSize}px;
+            height: ${resetButtonSize}px;
             background: rgba(255, 100, 100, 0.2);
             border: 2px solid rgba(255, 100, 100, 0.4);
             border-radius: 50%;
@@ -121,7 +137,7 @@ class VirtualControls {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
+            font-size: ${Math.floor(resetButtonSize * 0.35)}px;
             font-weight: bold;
             font-family: monospace;
             z-index: 1000;
@@ -174,21 +190,40 @@ class VirtualControls {
         document.body.appendChild(container);
         document.body.appendChild(resetButton);
         
-        // Instructions
+        // Instructions - position above controls
+        const instructionsBottom = bottomPosition + controlsHeight + 10;
         const instructions = document.createElement('div');
         instructions.style.cssText = `
             position: fixed;
             left: 50%;
-            bottom: 180px;
+            bottom: ${Math.min(instructionsBottom, viewportHeight - 50)}px;
             transform: translateX(-50%);
             color: rgba(255, 255, 255, 0.6);
-            font-size: 12px;
+            font-size: ${isMobileLandscape ? '10px' : '12px'};
             text-align: center;
             z-index: 999;
             font-family: monospace;
+            pointer-events: none;
         `;
         instructions.innerHTML = 'W: Throttle | S: Brake<br>A/D: Steering | R: Reset';
         document.body.appendChild(instructions);
+        
+        // Handle orientation changes
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                this.destroy();
+                this.createControls();
+            }, 100);
+        });
+        
+        // Handle resize
+        window.addEventListener('resize', () => {
+            clearTimeout(this.resizeTimeout);
+            this.resizeTimeout = setTimeout(() => {
+                this.destroy();
+                this.createControls();
+            }, 250);
+        });
     }
     
     getKey(keyCode) {
@@ -198,7 +233,14 @@ class VirtualControls {
     destroy() {
         const controls = document.querySelector('.virtual-controls');
         const reset = document.querySelector('.virtual-button-reset');
+        const instructions = document.querySelector('[style*="Throttle"]');
         if (controls) controls.remove();
         if (reset) reset.remove();
+        if (instructions) instructions.remove();
+        
+        // Clean up event listeners
+        window.removeEventListener('orientationchange', this.handleOrientationChange);
+        window.removeEventListener('resize', this.handleResize);
+        clearTimeout(this.resizeTimeout);
     }
 }
