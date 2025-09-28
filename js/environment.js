@@ -5,6 +5,7 @@ class Environment {
         this.finishLinePosition = null; // Store finish line position for detection
         this.roadworksZones = []; // Store construction zones
         this.jumpRamps = []; // Store jump ramp objects for collision detection
+        this.roadworkObstacles = []; // Store barriers and equipment for collision detection
         this.createRoad();
         this.createGrass();
         this.createRoadMarkings();
@@ -1893,6 +1894,15 @@ class Environment {
             barrier.receiveShadow = true;
             this.scene.add(barrier);
             
+            // Store barrier for collision detection
+            this.roadworkObstacles.push({
+                type: 'barrier',
+                position: new THREE.Vector3(barrierX, point.y + 0.5, barrierZ),
+                width: 4,
+                height: 1,
+                depth: 0.8
+            });
+            
             // Add orange and white stripes
             const stripeTexture = this.createConstructionStripeTexture();
             const stripePanelGeometry = new THREE.PlaneGeometry(4, 0.3);
@@ -2232,6 +2242,16 @@ class Environment {
         });
         
         this.scene.add(group);
+        
+        // Store bulldozer for collision detection
+        this.roadworkObstacles.push({
+            type: 'bulldozer',
+            position: new THREE.Vector3(x, y, z),
+            width: 4,
+            height: 3,
+            depth: 5,
+            rotation: rotation
+        });
     }
     
     createConstructionSign(point, text) {
@@ -2346,6 +2366,16 @@ class Environment {
         });
         
         this.scene.add(group);
+        
+        // Store work truck for collision detection
+        this.roadworkObstacles.push({
+            type: 'worktruck',
+            position: new THREE.Vector3(x, y, z),
+            width: 2,
+            height: 2.5,
+            depth: 4,
+            rotation: rotation
+        });
     }
     
     createWarningLight(point, side) {
@@ -2453,6 +2483,15 @@ class Environment {
             barrier.castShadow = true;
             barrier.receiveShadow = true;
             this.scene.add(barrier);
+            
+            // Store hairpin barrier for collision detection
+            this.roadworkObstacles.push({
+                type: 'hairpin_barrier',
+                position: new THREE.Vector3(barrierX, point.y + 0.6, barrierZ),
+                width: 3,
+                height: 1.2,
+                depth: 0.5
+            });
             
             // Add white stripes
             const stripeGeometry = new THREE.BoxGeometry(0.5, 1.2, 0.51);

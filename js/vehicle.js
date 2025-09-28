@@ -280,6 +280,43 @@ class Vehicle {
             }
         }
         
+        // Check for roadwork obstacle collisions (barriers, bulldozers, trucks)
+        if (this.environment && this.environment.roadworkObstacles) {
+            for (const obstacle of this.environment.roadworkObstacles) {
+                const dx = this.position.x - obstacle.position.x;
+                const dz = this.position.z - obstacle.position.z;
+                
+                // Simple box collision detection
+                let collisionDistance;
+                if (obstacle.type === 'barrier') {
+                    collisionDistance = 2.5; // Barrier collision radius
+                } else if (obstacle.type === 'bulldozer') {
+                    collisionDistance = 3.5; // Larger collision radius for bulldozer
+                } else if (obstacle.type === 'worktruck') {
+                    collisionDistance = 2.5; // Work truck collision radius
+                } else {
+                    collisionDistance = 2;
+                }
+                
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                if (distance < collisionDistance) {
+                    this.crashed = true;
+                    this.crashAngle = this.leanAngle || 0.5;
+                    this.frame.material.color.setHex(0xFF8C00); // Dark orange for construction crash
+                    
+                    // Set crash velocity based on impact
+                    const impactForce = this.speed * 0.6;
+                    const impactDir = new THREE.Vector3(dx, 0, dz).normalize();
+                    this.velocity = impactDir.multiplyScalar(impactForce);
+                    this.velocity.y = 1.5; // Small upward force
+                    
+                    console.log('CRASHED! Hit construction', obstacle.type, 'at', (this.speed * 2.237).toFixed(1) + ' mph');
+                    break;
+                }
+            }
+        }
+        
         // Check for wall collision (simplified check based on distance from road center)
         if (this.environment && this.environment.roadPath) {
             // Find nearest road segment
