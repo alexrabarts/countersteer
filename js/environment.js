@@ -1881,21 +1881,29 @@ class Environment {
             metalness: 0.05
         });
         
-        // Place barriers along the construction zone
+        // Calculate ramp position to avoid placing barriers there
+        const rampSegment = hasRamp ? Math.floor((startSegment + endSegment) / 2) : null;
+
+        // Place barriers along the construction zone (skip around ramp)
         for (let i = startSegment; i <= endSegment; i += 2) {
+            // Skip placing barriers near the ramp (within 4 segments)
+            if (hasRamp && Math.abs(i - rampSegment) <= 4) {
+                continue;
+            }
+
             const point = this.roadPath[i];
-            
+
             // Place barrier on right side
             const barrierX = point.x + Math.cos(point.heading) * 5;
             const barrierZ = point.z - Math.sin(point.heading) * 5;
-            
+
             const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
             barrier.position.set(barrierX, point.y + 0.5, barrierZ);
             barrier.rotation.y = point.heading;
             barrier.castShadow = true;
             barrier.receiveShadow = true;
             this.scene.add(barrier);
-            
+
             // Store barrier for collision detection
             this.roadworkObstacles.push({
                 type: 'barrier',
@@ -1904,7 +1912,7 @@ class Environment {
                 height: 1,
                 depth: 0.8
             });
-            
+
             // Add orange and white stripes
             const stripeTexture = this.createConstructionStripeTexture();
             const stripePanelGeometry = new THREE.PlaneGeometry(4, 0.3);
@@ -1912,7 +1920,7 @@ class Environment {
                 map: stripeTexture,
                 side: THREE.DoubleSide
             });
-            
+
             const stripePanel = new THREE.Mesh(stripePanelGeometry, stripePanelMaterial);
             stripePanel.position.copy(barrier.position);
             stripePanel.position.y += 0.7;
@@ -1925,10 +1933,10 @@ class Environment {
             const midSegment = Math.floor((startSegment + endSegment) / 2);
             const rampPoint = this.roadPath[midSegment];
 
-            // Move ramp to the left-hand lane (opposite side from barriers)
+            // Move ramp to the right-hand lane
             const offsetPoint = {
-                x: rampPoint.x - Math.cos(rampPoint.heading) * 3, // Offset to left side
-                z: rampPoint.z + Math.sin(rampPoint.heading) * 3,
+                x: rampPoint.x + Math.cos(rampPoint.heading) * 5, // Right lane position
+                z: rampPoint.z - Math.sin(rampPoint.heading) * 5,
                 y: rampPoint.y,
                 heading: rampPoint.heading
             };
@@ -2698,6 +2706,34 @@ class Environment {
         this.scene.add(chevronGroup);
     }
     
+    createRoadworksStripeTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+
+        // Create red and white diagonal stripes
+        const stripeWidth = 8;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#FF0000';
+        for (let i = -canvas.height; i < canvas.width + canvas.height; i += stripeWidth * 2) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i + stripeWidth, 0);
+            ctx.lineTo(i + stripeWidth - canvas.height, canvas.height);
+            ctx.lineTo(i - canvas.height, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        return texture;
+    }
+
     createCheckpoints() {
         // Place checkpoints evenly throughout the track
         const totalSegments = this.roadPath.length;
@@ -2705,6 +2741,9 @@ class Environment {
 
         // Start checkpoints after the first quarter of the track to avoid immediate scoring
         const startOffset = Math.floor(totalSegments / 4);
+
+        // Create roadworks stripe texture
+        const stripeTexture = this.createRoadworksStripeTexture();
 
         for (let i = 0; i < 5; i++) {
             const segmentIndex = (startOffset + i * checkpointInterval) % totalSegments;
@@ -2714,49 +2753,23 @@ class Environment {
             // Create checkpoint gate
             const gateGroup = new THREE.Group();
             
-            // Left pole
-            const poleGeometry = new THREE.CylinderGeometry(0.15, 0.15, 6);
+            // Left pole with red/white stripes (like Swiss roadworks)
+            const poleGeometry = new THREE.CylinderGeometry(0.15, 0.15, 5);
             const poleMaterial = new THREE.MeshStandardMaterial({
-                color: 0x00FF00,
-                emissive: 0x00FF00,
-                emissiveIntensity: 0.2,
+                map: stripeTexture,
+                emissive: 0x330000,
+                emissiveIntensity: 0.1,
                 roughness: 0.5,
                 metalness: 0.5
             });
-            
+
             const leftPole = new THREE.Mesh(poleGeometry, poleMaterial);
-            leftPole.position.set(-8, 3, 0);
+            leftPole.position.set(-6, 2.5, 0); // Closer together, lower height
             gateGroup.add(leftPole);
-            
+
             const rightPole = new THREE.Mesh(poleGeometry, poleMaterial);
-            rightPole.position.set(8, 3, 0);
+            rightPole.position.set(6, 2.5, 0); // Closer together, lower height
             gateGroup.add(rightPole);
-            
-            // Top banner
-            const bannerGeometry = new THREE.BoxGeometry(16, 1, 0.3);
-            const bannerMaterial = new THREE.MeshStandardMaterial({
-                color: 0x00FF00,
-                emissive: 0x00FF00,
-                emissiveIntensity: 0.3,
-                roughness: 0.5,
-                metalness: 0.5
-            });
-            
-            const banner = new THREE.Mesh(bannerGeometry, bannerMaterial);
-            banner.position.set(0, 6, 0);
-            gateGroup.add(banner);
-            
-            // Checkpoint number
-            const numberGeometry = new THREE.BoxGeometry(2, 1.5, 0.1);
-            const numberMaterial = new THREE.MeshStandardMaterial({
-                color: 0xFFFFFF,
-                emissive: 0xFFFFFF,
-                emissiveIntensity: 0.5
-            });
-            
-            const number = new THREE.Mesh(numberGeometry, numberMaterial);
-            number.position.set(0, 6, 0.2);
-            gateGroup.add(number);
             
             // Position and orient the checkpoint
             gateGroup.position.set(point.x, point.y, point.z);

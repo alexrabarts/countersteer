@@ -62,39 +62,68 @@
             100% { transform: scale(1); }
         }
         
-        /* Dashboard at bottom */
-        .dashboard {
+        /* Digital LED Speedometer */
+        .speedometer {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.5));
-            padding: 15px;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 100;
-            border-top: 2px solid #333;
         }
-        
-        .gauge {
-            text-align: center;
-            color: white;
-            min-width: 100px;
+
+        .speedo-ring {
+            width: 200px;
+            height: 80px;
+            background: linear-gradient(135deg, #111 0%, #000 50%, #111 100%);
+            border: 2px solid #333;
+            border-radius: 8px;
+            box-shadow:
+                0 0 20px rgba(0, 255, 0, 0.2),
+                inset 0 0 10px rgba(0, 0, 0, 0.8);
+            position: relative;
+            padding: 10px;
         }
-        
-        .gauge-label {
-            font-size: 10px;
-            color: #888;
-            text-transform: uppercase;
-            margin-bottom: 5px;
+
+        .speedo-face {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 15px;
         }
-        
-        .gauge-value {
-            font-size: 24px;
+
+        .speedo-value {
+            font-size: 42px;
             font-weight: bold;
             color: #00FF00;
-            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            text-shadow:
+                0 0 5px rgba(0, 255, 0, 0.8),
+                0 0 10px rgba(0, 255, 0, 0.6),
+                0 0 15px rgba(0, 255, 0, 0.4);
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            line-height: 1;
+            letter-spacing: 2px;
+        }
+
+        .speedo-unit {
+            font-size: 14px;
+            color: #00AA00;
+            text-shadow: 0 0 8px rgba(0, 170, 0, 0.6);
+            font-weight: bold;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+        }
+
+        .speedo-label {
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .gauge-value.warning {
@@ -203,32 +232,14 @@
         <div id="fps" style="font-size: 10px; color: #666;">FPS: 0</div>
     </div>
     
-    <!-- Dashboard at bottom -->
-    <div class="dashboard">
-        <div class="gauge">
-            <div class="gauge-label">Speed</div>
-            <div id="speed" class="gauge-value">0</div>
-            <div style="font-size: 10px; color: #666;">MPH</div>
-        </div>
-        
-        <div class="gauge">
-            <div class="gauge-label">Lean</div>
-            <div id="lean" class="gauge-value">0°</div>
-        </div>
-        
-        <div class="gauge">
-            <div class="gauge-label">Steering</div>
-            <div id="steering" class="gauge-value">0°</div>
-        </div>
-        
-        <div class="gauge">
-            <div class="gauge-label">Distance</div>
-            <div id="distance" class="gauge-value">0m</div>
-        </div>
-        
-        <div class="gauge">
-            <div class="gauge-label">Combo</div>
-            <div id="comboMultiplier" class="gauge-value">1x</div>
+    <!-- Motorcycle Speedometer -->
+    <div class="speedometer">
+        <div class="speedo-ring">
+            <div class="speedo-face">
+                <div id="speed" class="speedo-value">0</div>
+                <div class="speedo-unit">MPH</div>
+                <div class="speedo-label">SPEED</div>
+            </div>
         </div>
     </div>
 

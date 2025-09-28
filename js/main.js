@@ -245,37 +245,22 @@ class Game {
             return;
         }
 
-        // Update dashboard gauges
+        // Update speedometer
         const speed = this.vehicle.getSpeed().toFixed(0);
         const speedElement = document.getElementById('speed');
         speedElement.textContent = speed;
-        
-        // Color code speed
+
+        // Color code speed for speedometer
         if (speed < 20) {
-            speedElement.className = 'gauge-value danger';
+            speedElement.style.color = '#FF4444'; // Red for too slow
+            speedElement.style.textShadow = '0 0 15px rgba(255, 68, 68, 0.8)';
         } else if (speed < 40) {
-            speedElement.className = 'gauge-value warning';
+            speedElement.style.color = '#FFAA44'; // Orange for slow
+            speedElement.style.textShadow = '0 0 15px rgba(255, 170, 68, 0.8)';
         } else {
-            speedElement.className = 'gauge-value';
+            speedElement.style.color = '#00FF00'; // Green for good speed
+            speedElement.style.textShadow = '0 0 15px rgba(0, 255, 0, 0.8)';
         }
-
-        const leanAngle = this.vehicle.getLeanAngleDegrees();
-        const leanElement = document.getElementById('lean');
-        leanElement.textContent = this.vehicle.crashed ? 'CRASH!' : `${leanAngle.toFixed(0)}°`;
-        
-        // Color code lean
-        if (Math.abs(leanAngle) > 45) {
-            leanElement.className = 'gauge-value danger';
-        } else if (Math.abs(leanAngle) > 30) {
-            leanElement.className = 'gauge-value warning';
-        } else {
-            leanElement.className = 'gauge-value';
-        }
-
-
-        // Update distance display
-        const distance = this.vehicle.getDistanceTraveled();
-        document.getElementById('distance').textContent = `${distance.toFixed(0)}m`;
 
         // Update FPS
         document.getElementById('fps').textContent = `FPS: ${this.fps}`;
@@ -664,8 +649,7 @@ class Game {
     
     updateScoreDisplay() {
         document.getElementById('score').textContent = this.score.toLocaleString();
-        document.getElementById('comboMultiplier').textContent = `${this.comboMultiplier.toFixed(1)}x`;
-        
+
         if (this.combo > 0) {
             const comboDisplay = document.getElementById('comboDisplay');
             comboDisplay.textContent = `COMBO x${this.combo}`;

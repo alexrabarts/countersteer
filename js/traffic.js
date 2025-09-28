@@ -3,7 +3,7 @@ class Traffic {
         this.scene = scene;
         this.environment = environment;
         this.cars = [];
-        this.maxCars = 4; // Reduced to 4 total cars
+        this.maxCars = 3; // Reduced to 3 total cars
         this.carSpacing = 250; // Increased spacing between cars
         
         this.initializeCars();
@@ -14,7 +14,7 @@ class Traffic {
         const totalSegments = this.environment.roadPath.length;
         
         // Cars going forward (same direction as player) - LEFT SIDE for left-hand drive
-        for (let i = 0; i < this.maxCars / 2; i++) {
+        for (let i = 0; i < 1; i++) { // 1 car same direction
             const startSegment = Math.floor(Math.random() * totalSegments);
             const car = new Car(this.scene, this.environment, {
                 direction: 1,
@@ -25,9 +25,9 @@ class Traffic {
             });
             this.cars.push(car);
         }
-        
+
         // Cars going opposite direction - RIGHT SIDE for left-hand drive
-        for (let i = 0; i < this.maxCars / 2; i++) {
+        for (let i = 0; i < 2; i++) { // 2 cars opposite direction
             const startSegment = Math.floor(Math.random() * totalSegments);
             const car = new Car(this.scene, this.environment, {
                 direction: -1,
