@@ -55,8 +55,8 @@ class Environment {
                 const centerX = currentX + (segmentLength/2) * Math.sin(currentHeading);
                 const centerZ = currentZ + (segmentLength/2) * Math.cos(currentHeading);
                 
-                // Calculate elevation with smooth continuous function - dramatic mountain road
-                const elevation = Math.sin(segmentIndex * 0.05) * 15 + Math.cos(segmentIndex * 0.03) * 12 + 25;
+                // Calculate elevation with smooth continuous function - extreme mountain road
+                const elevation = Math.sin(segmentIndex * 0.05) * 35 + Math.cos(segmentIndex * 0.03) * 28 + Math.sin(segmentIndex * 0.08) * 15 + Math.cos(segmentIndex * 0.12) * 10 + 25;
                 
                 // Store path point with elevation
                 this.roadPath.push({
