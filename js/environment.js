@@ -431,8 +431,9 @@ class Environment {
                                 console.log(`Right cliff slope at height ${verticalProgress.toFixed(2)}: base=${baseDistance.toFixed(1)}, slope=${slopeAmount.toFixed(1)}`);
                             }
                         } else if (side < 0 && !isDropOff) {
-                            // Left wall (mountain) - slight inward slope as it goes up
-                            const slopeAmount = verticalProgress * 5; // Linear gentle slope
+                            // Left wall (mountain) - dramatic overhanging slope as it goes up
+                            // Creates an intimidating overhanging cliff face
+                            const slopeAmount = verticalProgress * verticalProgress * 25; // Quadratic slope for overhang
                             baseDistance += slopeAmount;
                         }
                         
