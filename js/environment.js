@@ -363,11 +363,13 @@ class Environment {
     }
     
     createRoadWalls() {
-        // Rock materials for boulders
+        // Rock materials for boulders - various greys to match cliff
         const rockMaterials = [
-            new THREE.MeshStandardMaterial({ color: 0x808080, roughness: 0.95, metalness: 0.0 }),
-            new THREE.MeshStandardMaterial({ color: 0x696969, roughness: 0.95, metalness: 0.0 }),
-            new THREE.MeshStandardMaterial({ color: 0x5c5c5c, roughness: 0.95, metalness: 0.0 })
+            new THREE.MeshStandardMaterial({ color: 0x606060, roughness: 0.98, metalness: 0.0 }), // Medium grey
+            new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.97, metalness: 0.0 }), // Dark grey
+            new THREE.MeshStandardMaterial({ color: 0x707070, roughness: 0.96, metalness: 0.0 }), // Light grey
+            new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.98, metalness: 0.0 }), // Charcoal
+            new THREE.MeshStandardMaterial({ color: 0x6b6355, roughness: 0.97, metalness: 0.0 })  // Grey-brown
         ];
         
         // Create continuous faceted rock walls with integrated slope
@@ -376,9 +378,9 @@ class Environment {
             
             // Rock material with flat shading for faceted appearance
             const cliffMaterial = new THREE.MeshStandardMaterial({ 
-                color: isDropOff ? 0x5a4a3a : 0x6a5a4a,
+                color: 0xffffff, // White base to let vertex colors show through
                 vertexColors: true,
-                roughness: 0.95, 
+                roughness: 0.98, 
                 metalness: 0.0,
                 flatShading: true, // Enable flat shading for faceted look
                 side: THREE.DoubleSide
@@ -443,25 +445,31 @@ class Environment {
                         // Reduce displacement at base to prevent gaps
                         const heightFactor = Math.min(verticalProgress * 2, 1); // Ramps up from 0 at base to 1
                         
-                        // Layer 1: Large rock formations (3-6 unit scale)
-                        const primary = Math.sin(idx * 0.15 + j * 0.2) * Math.cos(j * 0.1) * 5.0 * heightFactor;
+                        // Layer 1: Large rock formations (increased amplitude)
+                        const primary = (Math.sin(idx * 0.12 + j * 0.18) * Math.cos(j * 0.08) + 
+                                       Math.sin(idx * 0.08 - j * 0.15) * 0.7) * 8.0 * heightFactor;
                         
-                        // Layer 2: Medium rock faces (2-3 unit scale)
-                        const secondary = Math.sin(idx * 0.4 + j * 0.5) * Math.cos(idx * 0.3) * 2.5 * heightFactor;
+                        // Layer 2: Medium rock faces (more variation)
+                        const secondary = (Math.sin(idx * 0.35 + j * 0.45) * Math.cos(idx * 0.25) +
+                                         Math.cos(idx * 0.5 - j * 0.3) * 0.8) * 4.0 * heightFactor;
                         
-                        // Layer 3: Small surface details (0.5-1 unit scale)
-                        const tertiary = Math.sin(idx * 0.9 + j * 1.2) * 0.8 * heightFactor;
+                        // Layer 3: Small surface details (increased frequency and amplitude)
+                        const tertiary = (Math.sin(idx * 1.2 + j * 1.5) * 0.6 +
+                                        Math.cos(idx * 1.8 - j * 2.0) * 0.4) * 1.5 * heightFactor;
+                        
+                        // Layer 4: Micro details for texture
+                        const micro = Math.sin(idx * 3.5 + j * 4.0) * 0.5 * heightFactor;
                         
                         // Combine displacements with height-based variation
-                        const totalDisplacement = primary + secondary + tertiary;
+                        const totalDisplacement = primary + secondary + tertiary + micro;
                         
-                        // Apply faceting by quantizing displacement - larger facets for more dramatic look
-                        const facetSize = 2.5;
+                        // Apply faceting by quantizing displacement - varied facet sizes for more natural look
+                        const facetSize = 1.8 + Math.sin(idx * 0.3) * 0.7; // Variable facet size
                         const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
                         
                         // Final distance from road
                         // Ensure minimum distance to prevent gaps at road edge (8 units from center)
-                        const displacementScale = verticalProgress === 0 ? 0.1 : 0.3; // Less displacement at base
+                        const displacementScale = verticalProgress === 0 ? 0.15 : 0.45; // Increased displacement scale
                         const finalDistance = Math.max(baseDistance + facetedDisplacement * displacementScale, 7.5);
                         
                         // Calculate position
@@ -474,17 +482,35 @@ class Environment {
                             interpZ + perpZ
                         );
                         
-                        // Color variation based on height and displacement
-                        const baseColor = 0.3 + Math.abs(facetedDisplacement) * 0.08;
-                        const heightTint = 1.0 - verticalProgress * 0.3;
+                        // More realistic mountain rock colors with grey variations
+                        // Base grey colors ranging from light to dark
+                        const greyBase = 0.35 + Math.random() * 0.25; // 0.35 to 0.6
                         
-                        // Add more color variation for facets
-                        const facetVariation = (Math.sin(idx * 0.7 + j * 0.5) * 0.1 + 0.9);
+                        // Add variation based on height - darker at base, lighter up high
+                        const heightVariation = verticalProgress * 0.15;
+                        
+                        // Add variation based on displacement - deeper crevices are darker
+                        const depthVariation = Math.abs(facetedDisplacement) * 0.02;
+                        
+                        // Occasional brown/tan streaks for mineral deposits
+                        const mineralStreak = (Math.sin(idx * 0.3 + j * 0.4) > 0.7) ? 0.08 : 0;
+                        
+                        // Weather staining - darker patches
+                        const weathering = (Math.cos(idx * 0.5 - j * 0.3) > 0.6) ? -0.1 : 0;
+                        
+                        // Final color calculation
+                        const finalGrey = Math.max(0.2, Math.min(0.8, 
+                            greyBase + heightVariation - depthVariation + weathering));
+                        
+                        // Add slight color tints for realism
+                        const redTint = finalGrey + mineralStreak;
+                        const greenTint = finalGrey - 0.02; // Slight moss/lichen tint
+                        const blueTint = finalGrey + 0.03; // Slight cool tint
                         
                         colors.push(
-                            baseColor * heightTint * facetVariation * 1.15,
-                            baseColor * heightTint * facetVariation,
-                            baseColor * heightTint * facetVariation * 0.85
+                            redTint,
+                            greenTint,
+                            blueTint
                         );
                         
                         // UV coordinates
