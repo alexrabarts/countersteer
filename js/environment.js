@@ -530,49 +530,118 @@ class Environment {
             mainCliff.castShadow = true;
             group.add(mainCliff);
             
-            // Remove most separate rock objects since the faceted cliff provides detail
-            // Only add a few accent boulders at the base for visual interest
+            // Add boulders integrated into the cliff walls for visual interest
+            // These will be positioned to look like they're part of the cliff face
             
-            // Sparse base boulders only on mountain side (left)
-            if (height > 0) {
-                for (let i = 0; i < this.roadPath.length; i += 30) { // Very sparse
-                    if (Math.random() > 0.4) { // 60% chance
-                        const point = this.roadPath[i];
-                        const boulderSize = 1.0 + Math.random() * 1.5;
-                        const boulderGeometry = new THREE.DodecahedronGeometry(boulderSize, 0);
-                        const boulder = new THREE.Mesh(
-                            boulderGeometry,
+            for (let i = 0; i < this.roadPath.length; i += 8) { // Regular spacing
+                const point = this.roadPath[i];
+                
+                // Add rocks at various heights on the cliff
+                if (Math.random() > 0.3) { // 70% chance for variety
+                    
+                    // Calculate how many rocks for this segment (1-3)
+                    const numRocks = 1 + Math.floor(Math.random() * 2);
+                    
+                    for (let r = 0; r < numRocks; r++) {
+                        const rockSize = 0.8 + Math.random() * 2.5;
+                        const rockGeometry = new THREE.DodecahedronGeometry(rockSize, 0);
+                        const rock = new THREE.Mesh(
+                            rockGeometry,
                             rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
                         );
                         
-                        // Position at actual base of cliff wall
-                        const baseDistance = 7.5 + Math.random() * 1.5; // Slightly varying distance
-                        const perpX = Math.cos(point.heading) * baseDistance * side;
-                        const perpZ = -Math.sin(point.heading) * baseDistance * side;
+                        // Height position on cliff (0 = base, 1 = top)
+                        const heightRatio = Math.random() * 0.7; // Don't go too high
+                        const cliffHeight = Math.abs(height) * heightRatio;
                         
-                        // Place on ground, partially embedded
-                        boulder.position.set(
-                            point.x + perpX,
-                            (point.y || 0) - boulderSize * 0.3,
-                            point.z + perpZ
+                        // Calculate base distance accounting for slope
+                        let distance = 7.0; // Start closer than cliff base
+                        if (side > 0 && isDropOff) {
+                            // Right cliff - account for outward slope
+                            distance += heightRatio * heightRatio * 30; // Less than cliff slope
+                        } else if (side < 0 && !isDropOff) {
+                            // Left cliff - account for overhang
+                            distance += heightRatio * heightRatio * 15;
+                        }
+                        
+                        // Add some random variation in distance
+                        distance += (Math.random() - 0.5) * 2;
+                        
+                        const perpX = Math.cos(point.heading) * distance * side;
+                        const perpZ = -Math.sin(point.heading) * distance * side;
+                        
+                        // Position the rock
+                        if (height > 0) {
+                            // Left side - mountain wall going up
+                            rock.position.set(
+                                point.x + perpX,
+                                (point.y || 0) + cliffHeight,
+                                point.z + perpZ
+                            );
+                        } else {
+                            // Right side - cliff going down
+                            rock.position.set(
+                                point.x + perpX,
+                                (point.y || 0) - cliffHeight,
+                                point.z + perpZ
+                            );
+                        }
+                        
+                        // Random rotation for natural look
+                        rock.rotation.set(
+                            Math.random() * Math.PI * 2,
+                            Math.random() * Math.PI * 2,
+                            Math.random() * Math.PI * 2
                         );
                         
-                        boulder.rotation.set(
-                            Math.random() * Math.PI,
-                            Math.random() * Math.PI,
-                            Math.random() * Math.PI
+                        // Varied scaling for natural appearance
+                        rock.scale.set(
+                            1.0 + Math.random() * 0.5,
+                            0.7 + Math.random() * 0.4,
+                            1.0 + Math.random() * 0.5
                         );
                         
-                        boulder.scale.set(
-                            1.2 + Math.random() * 0.4,
-                            0.8 + Math.random() * 0.3,
-                            1.1 + Math.random() * 0.4
-                        );
-                        
-                        boulder.castShadow = true;
-                        boulder.receiveShadow = true;
-                        group.add(boulder);
+                        rock.castShadow = true;
+                        rock.receiveShadow = true;
+                        group.add(rock);
                     }
+                }
+                
+                // Add some larger accent boulders at the base
+                if (i % 15 === 0 && Math.random() > 0.5) {
+                    const baseBoulderSize = 1.5 + Math.random() * 2;
+                    const baseBoulder = new THREE.Mesh(
+                        new THREE.DodecahedronGeometry(baseBoulderSize, 0),
+                        rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
+                    );
+                    
+                    // Position at cliff base
+                    const baseDistance = 7.5 + Math.random() * 1.0;
+                    const perpX = Math.cos(point.heading) * baseDistance * side;
+                    const perpZ = -Math.sin(point.heading) * baseDistance * side;
+                    
+                    // Embed in ground
+                    baseBoulder.position.set(
+                        point.x + perpX,
+                        (point.y || 0) - baseBoulderSize * 0.4,
+                        point.z + perpZ
+                    );
+                    
+                    baseBoulder.rotation.set(
+                        Math.random() * Math.PI,
+                        Math.random() * Math.PI,
+                        Math.random() * Math.PI
+                    );
+                    
+                    baseBoulder.scale.set(
+                        1.3 + Math.random() * 0.4,
+                        0.8 + Math.random() * 0.3,
+                        1.2 + Math.random() * 0.4
+                    );
+                    
+                    baseBoulder.castShadow = true;
+                    baseBoulder.receiveShadow = true;
+                    group.add(baseBoulder);
                 }
             }
             
