@@ -5,8 +5,7 @@ class InputHandler {
         this.throttleInput = 0;
         this.brakeInput = 0;
         this.resetPressed = false;
-        this.joystick = null;
-        this.joystickInput = { x: 0, y: 0 };
+        this.virtualControls = null;
         this.setupEventListeners();
         this.setupMobileControls();
     }
@@ -33,34 +32,24 @@ class InputHandler {
     }
 
     updateInputs() {
+        // Check both keyboard and virtual controls
+        const keyA = this.keys['KeyA'] || (this.virtualControls && this.virtualControls.getKey('KeyA'));
+        const keyD = this.keys['KeyD'] || (this.virtualControls && this.virtualControls.getKey('KeyD'));
+        const keyW = this.keys['KeyW'] || (this.virtualControls && this.virtualControls.getKey('KeyW'));
+        const keyS = this.keys['KeyS'] || (this.virtualControls && this.virtualControls.getKey('KeyS'));
+        
         // Steering (inverted)
         this.steeringInput = 0;
-        if (this.keys['KeyA']) {
+        if (keyA) {
             this.steeringInput = 1;  // A now steers right
         }
-        if (this.keys['KeyD']) {
+        if (keyD) {
             this.steeringInput = -1;  // D now steers left
         }
         
-        // Override with joystick input if available
-        if (this.joystick && Math.abs(this.joystickInput.x) > 0) {
-            this.steeringInput = -this.joystickInput.x;
-        }
-        
         // Throttle and brake
-        this.throttleInput = this.keys['KeyW'] ? 1 : 0;
-        this.brakeInput = this.keys['KeyS'] ? 1 : 0;
-        
-        // Override with joystick input if available
-        if (this.joystick) {
-            if (this.joystickInput.y > 0) {
-                this.throttleInput = this.joystickInput.y;
-                this.brakeInput = 0;
-            } else if (this.joystickInput.y < 0) {
-                this.throttleInput = 0;
-                this.brakeInput = -this.joystickInput.y;
-            }
-        }
+        this.throttleInput = keyW ? 1 : 0;
+        this.brakeInput = keyS ? 1 : 0;
     }
 
     getSteeringInput() {
@@ -76,6 +65,12 @@ class InputHandler {
     }
     
     checkReset() {
+        // Check virtual control reset button
+        if (this.virtualControls && this.virtualControls.getKey('KeyR')) {
+            this.virtualControls.touches['KeyR'] = false; // Clear after use
+            return true;
+        }
+        
         if (this.resetPressed) {
             this.resetPressed = false;
             return true;
@@ -89,70 +84,8 @@ class InputHandler {
                         (navigator.maxTouchPoints > 0);
         
         if (isMobile) {
-            if (typeof VirtualJoystick !== 'undefined') {
-                this.joystick = new VirtualJoystick(document.body, {
-                    size: 150,
-                    stickSize: 60,
-                    position: 'left',
-                    onMove: (value) => {
-                        this.joystickInput = value;
-                        this.updateInputs();
-                    },
-                    onRelease: () => {
-                        this.joystickInput = { x: 0, y: 0 };
-                        this.updateInputs();
-                    }
-                });
-                
-                const resetButton = document.createElement('button');
-                resetButton.className = 'mobile-reset-button';
-                resetButton.innerHTML = 'RESET';
-                resetButton.style.cssText = `
-                    position: absolute;
-                    right: 20px;
-                    bottom: 20px;
-                    width: 80px;
-                    height: 80px;
-                    background: rgba(255, 100, 100, 0.3);
-                    border: 2px solid rgba(255, 100, 100, 0.6);
-                    border-radius: 50%;
-                    color: white;
-                    font-size: 14px;
-                    font-weight: bold;
-                    z-index: 1000;
-                    touch-action: none;
-                `;
-                
-                resetButton.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    this.resetPressed = true;
-                    resetButton.style.background = 'rgba(255, 100, 100, 0.6)';
-                });
-                
-                resetButton.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    setTimeout(() => {
-                        this.resetPressed = false;
-                        resetButton.style.background = 'rgba(255, 100, 100, 0.3)';
-                    }, 100);
-                });
-                
-                document.body.appendChild(resetButton);
-                
-                const instructions = document.createElement('div');
-                instructions.className = 'mobile-instructions';
-                instructions.style.cssText = `
-                    position: absolute;
-                    left: 50%;
-                    bottom: 180px;
-                    transform: translateX(-50%);
-                    color: rgba(255, 255, 255, 0.7);
-                    font-size: 12px;
-                    text-align: center;
-                    z-index: 999;
-                `;
-                instructions.innerHTML = 'Joystick: Up = Throttle, Down = Brake<br>Left/Right = Steering';
-                document.body.appendChild(instructions);
+            if (typeof VirtualControls !== 'undefined') {
+                this.virtualControls = new VirtualControls();
             }
         }
     }
