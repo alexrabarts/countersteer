@@ -29,6 +29,12 @@ class Vehicle {
         this.fallStartY = 0;
         this.groundHitLogged = false;
         
+        // Jump state
+        this.isJumping = false;
+        this.jumpVelocityY = 0;
+        this.jumpStartHeight = 0;
+        this.jumpRotation = 0;
+        
         // Distance tracking
         this.distanceTraveled = 0;
         this.lastPosition = new THREE.Vector3(0, 0, 0);
@@ -190,8 +196,40 @@ class Vehicle {
         // Update speed based on throttle/brake
         this.updateSpeed(deltaTime, throttleInput, brakeInput);
         
-        // Check for low-speed fall
-        if (this.speed < this.minSpeed) {
+        // Check for jump ramps
+        if (!this.isJumping && this.environment && this.environment.jumpRamps) {
+            for (const ramp of this.environment.jumpRamps) {
+                const dx = this.position.x - ramp.position.x;
+                const dz = this.position.z - ramp.position.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                // Check if we're on the ramp and moving fast enough
+                if (distance < ramp.length / 2 && this.speed > 15) {
+                    // Calculate position along ramp
+                    const rampForward = new THREE.Vector3(
+                        Math.sin(ramp.rotation),
+                        0,
+                        Math.cos(ramp.rotation)
+                    );
+                    const toVehicle = new THREE.Vector3(dx, 0, dz);
+                    const alongRamp = toVehicle.dot(rampForward);
+                    
+                    // If we're on the up-ramp portion
+                    if (alongRamp > -ramp.length/2 && alongRamp < ramp.length * 0.2) {
+                        this.initiateJump(ramp);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Handle jump physics
+        if (this.isJumping) {
+            this.updateJump(deltaTime);
+        }
+        
+        // Check for low-speed fall (but not while jumping)
+        if (!this.isJumping && this.speed < this.minSpeed) {
             this.crashed = true;
             this.crashAngle = this.leanAngle || 0.5; // Fall to the side
             this.frame.material.color.setHex(0xff6600); // Orange for low-speed fall
@@ -451,8 +489,14 @@ class Vehicle {
             // Adjust bike position so it sits properly on the ground when rotated
             this.group.position.y = this.position.y + 0.3;
             this.rider.rotation.z = 0; // Rider doesn't lean when crashed
+        } else if (this.isJumping) {
+            // Jumping animation - forward rotation
+            this.group.rotation.x = this.jumpRotation;
+            this.group.rotation.z = this.leanAngle * 0.5; // Reduce lean while jumping
+            this.rider.rotation.z = this.leanAngle * 0.1;
         } else {
             // Normal lean
+            this.group.rotation.x = 0; // Reset pitch
             this.group.rotation.z = this.leanAngle;
             this.rider.rotation.z = this.leanAngle * 0.2; // Rider leans subtly
         }
@@ -637,6 +681,82 @@ class Vehicle {
                     this.velocity.y = -5; // Start falling downward
                 }
             }
+        }
+    }
+    
+    initiateJump(ramp) {
+        this.isJumping = true;
+        this.jumpStartHeight = this.position.y;
+        
+        // Calculate jump velocity based on speed and ramp angle
+        const jumpAngle = Math.atan2(ramp.height, ramp.length * 0.6); // Approximate ramp angle
+        this.jumpVelocityY = Math.sin(jumpAngle) * this.speed * 0.7;
+        
+        // Add some forward rotation for style
+        this.jumpRotation = 0;
+        
+        console.log('JUMPING! Speed:', (this.speed * 2.237).toFixed(1) + ' mph, Launch velocity:', this.jumpVelocityY.toFixed(1));
+    }
+    
+    updateJump(deltaTime) {
+        // Apply gravity
+        this.jumpVelocityY -= 9.81 * deltaTime * 2; // Double gravity for arcade feel
+        
+        // Update vertical position
+        this.position.y += this.jumpVelocityY * deltaTime;
+        
+        // Add rotation for visual effect
+        this.jumpRotation += deltaTime * 2;
+        
+        // Check for landing
+        if (this.environment && this.environment.roadPath) {
+            // Find the road height at current position
+            let targetRoadHeight = 0;
+            let minDistance = Infinity;
+            
+            for (const segment of this.environment.roadPath) {
+                const distance = Math.sqrt(
+                    Math.pow(this.position.x - segment.x, 2) + 
+                    Math.pow(this.position.z - segment.z, 2)
+                );
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    targetRoadHeight = segment.y || 0;
+                }
+            }
+            
+            // Check if we've landed
+            if (this.jumpVelocityY < 0 && this.position.y <= targetRoadHeight + 0.1) {
+                this.land(targetRoadHeight);
+            }
+        }
+        
+        // Safety check - if we've been jumping too long, force landing
+        if (this.position.y < this.jumpStartHeight - 10) {
+            this.crashed = true;
+            this.isJumping = false;
+            this.jumpRotation = 0;
+            console.log('CRASHED! Bad landing from jump');
+        }
+    }
+    
+    land(groundHeight) {
+        this.isJumping = false;
+        this.position.y = groundHeight;
+        this.jumpVelocityY = 0;
+        
+        // Check landing quality
+        const landingSpeed = Math.abs(this.jumpVelocityY);
+        if (landingSpeed > 15 || Math.abs(this.jumpRotation) > Math.PI * 2) {
+            // Hard landing - crash
+            this.crashed = true;
+            this.crashAngle = (Math.random() - 0.5) * Math.PI/2;
+            console.log('CRASHED! Hard landing at', landingSpeed.toFixed(1) + ' m/s');
+        } else {
+            console.log('Successful landing!');
+            // Reset rotation smoothly
+            this.jumpRotation = 0;
         }
     }
 }

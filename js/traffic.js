@@ -130,8 +130,11 @@ class Car {
         this.currentSpeed = this.baseSpeed;
         this.currentSegment = options.startSegment || 0;
         this.lane = options.lane || 'right';
+        this.originalLane = this.lane;
         this.color = options.color || 0xff0000;
         this.segmentProgress = 0;
+        this.inDetour = false;
+        this.detourSide = null;
         
         this.createCarModel();
         
@@ -422,7 +425,14 @@ class Car {
         const interpolatedHeading = currentPoint.heading + headingDiff * t;
         
         // Calculate lane offset based on interpolated heading
-        const laneOffset = this.lane === 'left' ? -3 : 3;
+        let laneOffset;
+        if (this.inDetour) {
+            // Use detour lane with wider offset to avoid construction
+            laneOffset = this.detourSide === 'left' ? -5 : 5;
+        } else {
+            // Normal lane position
+            laneOffset = this.lane === 'left' ? -3 : 3;
+        }
         const perpX = Math.cos(interpolatedHeading) * laneOffset;
         const perpZ = -Math.sin(interpolatedHeading) * laneOffset;
         
@@ -450,6 +460,9 @@ class Car {
     }
     
     update(deltaTime) {
+        // Check for roadworks and adjust lane if needed
+        this.checkForRoadworks();
+        
         // Move along the road
         const segmentLength = 20; // Match environment segment length
         const distanceToMove = this.currentSpeed * deltaTime;
@@ -524,4 +537,65 @@ class Car {
     remove() {
         this.scene.remove(this.carGroup);
     }
-}
+    
+    checkForRoadworks() {
+        if (!this.environment.roadworksZones) return;
+        
+        const currentSegmentIndex = Math.floor(this.currentSegment);
+        let inConstructionZone = false;
+        
+        // Check if we're approaching or in a construction zone
+        for (const zone of this.environment.roadworksZones) {
+            // Check if we're near a construction zone (5 segments before to 2 after)
+            const approachDistance = this.direction === 1 ? 5 : -5;
+            const exitDistance = this.direction === 1 ? 2 : -2;
+            
+            if (this.direction === 1) {
+                // Moving forward
+                if (currentSegmentIndex >= zone.startSegment - 5 && 
+                    currentSegmentIndex <= zone.endSegment + 2) {
+                    inConstructionZone = true;
+                    
+                    // If in right lane and construction blocks right lane, move to left
+                    if (this.lane === 'right' && zone.blockedLane === 'right') {
+                        this.enterDetour('left');
+                    }
+                }
+            } else {
+                // Moving backward
+                if (currentSegmentIndex <= zone.endSegment + 5 && 
+                    currentSegmentIndex >= zone.startSegment - 2) {
+                    inConstructionZone = true;
+                    
+                    // If in lane that's blocked, detour
+                    if (this.lane === zone.blockedLane) {
+                        this.enterDetour(this.lane === 'right' ? 'left' : 'right');
+                    }
+                }
+            }
+        }
+        
+        // Exit detour if we're past the construction zone
+        if (!inConstructionZone && this.inDetour) {
+            this.exitDetour();
+        }
+    }
+    
+    enterDetour(newLane) {
+        if (!this.inDetour) {
+            this.inDetour = true;
+            this.detourSide = newLane;
+            console.log(`Car entering detour, moving from ${this.lane} to ${newLane} lane`);
+            
+            // Slow down when entering construction zone
+            this.currentSpeed = Math.min(this.currentSpeed, this.baseSpeed * 0.6);
+        }
+    }
+    
+    exitDetour() {
+        if (this.inDetour) {
+            console.log(`Car exiting detour, returning to normal lane`);
+            this.inDetour = false;
+            this.detourSide = null;
+        }
+    }

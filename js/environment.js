@@ -3,10 +3,13 @@ class Environment {
         this.scene = scene;
         this.roadPath = []; // Store the path for other uses
         this.finishLinePosition = null; // Store finish line position for detection
+        this.roadworksZones = []; // Store construction zones
+        this.jumpRamps = []; // Store jump ramp objects for collision detection
         this.createRoad();
         this.createGrass();
         this.createRoadMarkings();
         this.addEnvironmentalDetails();
+        this.createRoadworks(); // Add construction zones
     }
     
     createRoad() {
@@ -1750,5 +1753,455 @@ class Environment {
                 }
             }
         });
+    }
+    
+    createRoadworks() {
+        // Define construction zones at strategic points on the track
+        const roadworksLocations = [
+            { startSegment: 8, endSegment: 10 },   // After first turn
+            { startSegment: 25, endSegment: 27 },  // Mid-course straight
+            { startSegment: 45, endSegment: 47 }   // Near end
+        ];
+        
+        roadworksLocations.forEach(zone => {
+            this.createConstructionZone(zone.startSegment, zone.endSegment);
+        });
+    }
+    
+    createConstructionZone(startSegment, endSegment) {
+        // Ensure segments are valid
+        if (startSegment >= this.roadPath.length || endSegment >= this.roadPath.length) {
+            return;
+        }
+        
+        const startPoint = this.roadPath[startSegment];
+        const endPoint = this.roadPath[endSegment];
+        
+        // Create orange traffic cones along the construction zone
+        const coneGeometry = new THREE.ConeGeometry(0.3, 0.8, 6);
+        const coneMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xff6600,
+            roughness: 0.8,
+            metalness: 0.1
+        });
+        
+        // Add white reflective stripes to cones
+        const stripeGeometry = new THREE.RingGeometry(0.28, 0.32, 6);
+        const stripeMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            emissive: 0xffffff,
+            emissiveIntensity: 0.2,
+            roughness: 0.3,
+            metalness: 0.5
+        });
+        
+        // Place cones to block right lane
+        for (let i = startSegment; i <= endSegment; i++) {
+            const point = this.roadPath[i];
+            
+            // Place cones along the center line to block right lane
+            for (let j = 0; j < 3; j++) {
+                const offset = j * 2; // Space cones 2 units apart
+                const coneX = point.x + Math.cos(point.heading) * 1; // Slightly right of center
+                const coneZ = point.z - Math.sin(point.heading) * 1;
+                const progressX = Math.sin(point.heading) * offset;
+                const progressZ = Math.cos(point.heading) * offset;
+                
+                const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+                cone.position.set(
+                    coneX + progressX,
+                    point.y + 0.4,
+                    coneZ + progressZ
+                );
+                cone.castShadow = true;
+                cone.receiveShadow = true;
+                this.scene.add(cone);
+                
+                // Add reflective stripe
+                const stripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+                stripe.position.copy(cone.position);
+                stripe.position.y += 0.2;
+                stripe.rotation.x = -Math.PI / 2;
+                this.scene.add(stripe);
+            }
+        }
+        
+        // Create construction barriers (Jersey barriers)
+        const barrierGeometry = new THREE.BoxGeometry(4, 1, 0.8);
+        const barrierMaterial = new THREE.MeshStandardMaterial({
+            color: 0x888888,
+            roughness: 0.95,
+            metalness: 0.05
+        });
+        
+        // Place barriers along the construction zone
+        for (let i = startSegment; i <= endSegment; i += 2) {
+            const point = this.roadPath[i];
+            
+            // Place barrier on right side
+            const barrierX = point.x + Math.cos(point.heading) * 5;
+            const barrierZ = point.z - Math.sin(point.heading) * 5;
+            
+            const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
+            barrier.position.set(barrierX, point.y + 0.5, barrierZ);
+            barrier.rotation.y = point.heading;
+            barrier.castShadow = true;
+            barrier.receiveShadow = true;
+            this.scene.add(barrier);
+            
+            // Add orange and white stripes
+            const stripeTexture = this.createConstructionStripeTexture();
+            const stripePanelGeometry = new THREE.PlaneGeometry(4, 0.3);
+            const stripePanelMaterial = new THREE.MeshStandardMaterial({
+                map: stripeTexture,
+                side: THREE.DoubleSide
+            });
+            
+            const stripePanel = new THREE.Mesh(stripePanelGeometry, stripePanelMaterial);
+            stripePanel.position.copy(barrier.position);
+            stripePanel.position.y += 0.7;
+            stripePanel.rotation.y = barrier.rotation.y;
+            this.scene.add(stripePanel);
+        }
+        
+        // Create dirt pile jump ramp in the middle of the construction zone
+        const midSegment = Math.floor((startSegment + endSegment) / 2);
+        const rampPoint = this.roadPath[midSegment];
+        
+        this.createDirtRamp(rampPoint, midSegment);
+        
+        // Add construction equipment (static bulldozer)
+        this.createBulldozer(
+            rampPoint.x + Math.cos(rampPoint.heading) * 10,
+            rampPoint.y,
+            rampPoint.z - Math.sin(rampPoint.heading) * 10,
+            rampPoint.heading
+        );
+        
+        // Add warning signs
+        this.createConstructionSign(
+            this.roadPath[Math.max(0, startSegment - 5)],
+            "ROAD WORK AHEAD"
+        );
+        
+        // Store construction zone info for traffic AI
+        this.roadworksZones.push({
+            startSegment: startSegment,
+            endSegment: endSegment,
+            blockedLane: 'right',
+            rampSegment: midSegment
+        });
+    }
+    
+    createDirtRamp(point, segmentIndex) {
+        // Create custom dirt pile geometry
+        const rampWidth = 6;
+        const rampLength = 12;
+        const rampHeight = 2.5;
+        
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [];
+        const indices = [];
+        const uvs = [];
+        
+        // Create ramp shape with smooth incline
+        const segments = 10;
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const z = -rampLength/2 + rampLength * t;
+            
+            // Height profile - smooth ramp up then down
+            let y;
+            if (t < 0.6) {
+                // Ramp up
+                y = (t / 0.6) * rampHeight;
+            } else {
+                // Ramp down
+                y = rampHeight * (1 - (t - 0.6) / 0.4);
+            }
+            
+            // Add width vertices
+            vertices.push(-rampWidth/2, y, z);
+            vertices.push(rampWidth/2, y, z);
+            
+            uvs.push(0, t);
+            uvs.push(1, t);
+        }
+        
+        // Create triangles
+        for (let i = 0; i < segments; i++) {
+            const a = i * 2;
+            const b = i * 2 + 1;
+            const c = (i + 1) * 2;
+            const d = (i + 1) * 2 + 1;
+            
+            indices.push(a, c, b);
+            indices.push(b, c, d);
+        }
+        
+        // Add sides
+        const sideStart = vertices.length / 3;
+        
+        // Left side
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const z = -rampLength/2 + rampLength * t;
+            
+            let y;
+            if (t < 0.6) {
+                y = (t / 0.6) * rampHeight;
+            } else {
+                y = rampHeight * (1 - (t - 0.6) / 0.4);
+            }
+            
+            vertices.push(-rampWidth/2, 0, z);
+            vertices.push(-rampWidth/2, y, z);
+            
+            uvs.push(0, t);
+            uvs.push(0.2, t);
+        }
+        
+        // Right side
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const z = -rampLength/2 + rampLength * t;
+            
+            let y;
+            if (t < 0.6) {
+                y = (t / 0.6) * rampHeight;
+            } else {
+                y = rampHeight * (1 - (t - 0.6) / 0.4);
+            }
+            
+            vertices.push(rampWidth/2, 0, z);
+            vertices.push(rampWidth/2, y, z);
+            
+            uvs.push(0.8, t);
+            uvs.push(1, t);
+        }
+        
+        // Create side triangles
+        for (let s = 0; s < 2; s++) {
+            const offset = sideStart + s * (segments + 1) * 2;
+            for (let i = 0; i < segments; i++) {
+                const a = offset + i * 2;
+                const b = offset + i * 2 + 1;
+                const c = offset + (i + 1) * 2;
+                const d = offset + (i + 1) * 2 + 1;
+                
+                indices.push(a, b, c);
+                indices.push(b, d, c);
+            }
+        }
+        
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+        
+        // Create dirt material with texture
+        const dirtTexture = this.createDirtTexture();
+        const dirtMaterial = new THREE.MeshStandardMaterial({
+            map: dirtTexture,
+            color: 0x8B4513,
+            roughness: 0.95,
+            metalness: 0.0
+        });
+        
+        const ramp = new THREE.Mesh(geometry, dirtMaterial);
+        ramp.position.set(point.x, point.y, point.z);
+        ramp.rotation.y = point.heading;
+        ramp.castShadow = true;
+        ramp.receiveShadow = true;
+        this.scene.add(ramp);
+        
+        // Store ramp info for collision detection
+        this.jumpRamps.push({
+            position: new THREE.Vector3(point.x, point.y, point.z),
+            rotation: point.heading,
+            width: rampWidth,
+            length: rampLength,
+            height: rampHeight,
+            segmentIndex: segmentIndex
+        });
+    }
+    
+    createDirtTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
+        
+        // Base dirt color
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Add texture variation
+        for (let i = 0; i < 100; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const radius = Math.random() * 3 + 1;
+            const brightness = Math.random() * 40 - 20;
+            
+            ctx.fillStyle = `rgba(${139 + brightness}, ${69 + brightness}, ${19 + brightness}, 0.5)`;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Add some darker patches
+        ctx.globalAlpha = 0.3;
+        for (let i = 0; i < 20; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const width = Math.random() * 30 + 10;
+            const height = Math.random() * 30 + 10;
+            
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(x, y, width, height);
+        }
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        return texture;
+    }
+    
+    createConstructionStripeTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+        
+        // Orange and white diagonal stripes
+        const stripeWidth = 32;
+        ctx.fillStyle = '#FF6600';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = '#FFFFFF';
+        for (let i = -canvas.height; i < canvas.width + canvas.height; i += stripeWidth * 2) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i + stripeWidth, 0);
+            ctx.lineTo(i + stripeWidth + canvas.height, canvas.height);
+            ctx.lineTo(i + canvas.height, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        return texture;
+    }
+    
+    createBulldozer(x, y, z, rotation) {
+        const group = new THREE.Group();
+        
+        // Main body
+        const bodyGeometry = new THREE.BoxGeometry(3, 2, 4);
+        const bodyMaterial = new THREE.MeshStandardMaterial({
+            color: 0xFFD700,
+            roughness: 0.7,
+            metalness: 0.3
+        });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.position.set(0, 1, 0);
+        group.add(body);
+        
+        // Cabin
+        const cabinGeometry = new THREE.BoxGeometry(2, 2, 2);
+        const cabinMaterial = new THREE.MeshStandardMaterial({
+            color: 0xFFD700,
+            roughness: 0.7,
+            metalness: 0.3
+        });
+        const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
+        cabin.position.set(0, 2.5, -1);
+        group.add(cabin);
+        
+        // Blade
+        const bladeGeometry = new THREE.BoxGeometry(4, 1.5, 0.3);
+        const bladeMaterial = new THREE.MeshStandardMaterial({
+            color: 0x666666,
+            roughness: 0.9,
+            metalness: 0.8
+        });
+        const blade = new THREE.Mesh(bladeGeometry, bladeMaterial);
+        blade.position.set(0, 0.75, 2.5);
+        blade.rotation.x = -0.2;
+        group.add(blade);
+        
+        // Tracks
+        const trackGeometry = new THREE.BoxGeometry(1, 1, 4.5);
+        const trackMaterial = new THREE.MeshStandardMaterial({
+            color: 0x333333,
+            roughness: 0.95,
+            metalness: 0.1
+        });
+        
+        const leftTrack = new THREE.Mesh(trackGeometry, trackMaterial);
+        leftTrack.position.set(-1.8, 0.5, 0);
+        group.add(leftTrack);
+        
+        const rightTrack = new THREE.Mesh(trackGeometry, trackMaterial);
+        rightTrack.position.set(1.8, 0.5, 0);
+        group.add(rightTrack);
+        
+        group.position.set(x, y, z);
+        group.rotation.y = rotation;
+        group.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+        
+        this.scene.add(group);
+    }
+    
+    createConstructionSign(point, text) {
+        const signGroup = new THREE.Group();
+        
+        // Sign post
+        const postGeometry = new THREE.CylinderGeometry(0.1, 0.1, 3);
+        const postMaterial = new THREE.MeshStandardMaterial({
+            color: 0x666666,
+            roughness: 0.8,
+            metalness: 0.5
+        });
+        const post = new THREE.Mesh(postGeometry, postMaterial);
+        post.position.set(0, 1.5, 0);
+        signGroup.add(post);
+        
+        // Sign board
+        const boardGeometry = new THREE.BoxGeometry(4, 1.5, 0.1);
+        const boardMaterial = new THREE.MeshStandardMaterial({
+            color: 0xFF6600,
+            roughness: 0.9,
+            metalness: 0.1,
+            emissive: 0xFF6600,
+            emissiveIntensity: 0.1
+        });
+        const board = new THREE.Mesh(boardGeometry, boardMaterial);
+        board.position.set(0, 3, 0);
+        signGroup.add(board);
+        
+        // Position sign beside road
+        const signX = point.x - Math.cos(point.heading) * 10;
+        const signZ = point.z + Math.sin(point.heading) * 10;
+        
+        signGroup.position.set(signX, point.y, signZ);
+        signGroup.rotation.y = point.heading;
+        
+        signGroup.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+        
+        this.scene.add(signGroup);
     }
 }
