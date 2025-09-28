@@ -6,12 +6,14 @@ class Environment {
         this.roadworksZones = []; // Store construction zones
         this.jumpRamps = []; // Store jump ramp objects for collision detection
         this.roadworkObstacles = []; // Store barriers and equipment for collision detection
+        this.checkpoints = []; // Store checkpoint positions for scoring
         this.createRoad();
         this.createGrass();
         this.createRoadMarkings();
         this.addEnvironmentalDetails();
         this.createRoadworks(); // Add construction zones
         this.addHairpinWarnings(); // Add hairpin bend warnings
+        this.createCheckpoints(); // Add scoring checkpoints
     }
     
     createRoad() {
@@ -2624,5 +2626,88 @@ class Environment {
         });
         
         this.scene.add(chevronGroup);
+    }
+    
+    createCheckpoints() {
+        // Place checkpoints evenly throughout the track
+        const totalSegments = this.roadPath.length;
+        const checkpointInterval = Math.floor(totalSegments / 10); // 10 checkpoints
+        
+        for (let i = 0; i < 10; i++) {
+            const segmentIndex = (i * checkpointInterval) % totalSegments;
+            const point = this.roadPath[segmentIndex];
+            const nextPoint = this.roadPath[(segmentIndex + 1) % totalSegments];
+            
+            // Create checkpoint gate
+            const gateGroup = new THREE.Group();
+            
+            // Left pole
+            const poleGeometry = new THREE.CylinderGeometry(0.15, 0.15, 6);
+            const poleMaterial = new THREE.MeshStandardMaterial({
+                color: 0x00FF00,
+                emissive: 0x00FF00,
+                emissiveIntensity: 0.2,
+                roughness: 0.5,
+                metalness: 0.5
+            });
+            
+            const leftPole = new THREE.Mesh(poleGeometry, poleMaterial);
+            leftPole.position.set(-8, 3, 0);
+            gateGroup.add(leftPole);
+            
+            const rightPole = new THREE.Mesh(poleGeometry, poleMaterial);
+            rightPole.position.set(8, 3, 0);
+            gateGroup.add(rightPole);
+            
+            // Top banner
+            const bannerGeometry = new THREE.BoxGeometry(16, 1, 0.3);
+            const bannerMaterial = new THREE.MeshStandardMaterial({
+                color: 0x00FF00,
+                emissive: 0x00FF00,
+                emissiveIntensity: 0.3,
+                roughness: 0.5,
+                metalness: 0.5
+            });
+            
+            const banner = new THREE.Mesh(bannerGeometry, bannerMaterial);
+            banner.position.set(0, 6, 0);
+            gateGroup.add(banner);
+            
+            // Checkpoint number
+            const numberGeometry = new THREE.BoxGeometry(2, 1.5, 0.1);
+            const numberMaterial = new THREE.MeshStandardMaterial({
+                color: 0xFFFFFF,
+                emissive: 0xFFFFFF,
+                emissiveIntensity: 0.5
+            });
+            
+            const number = new THREE.Mesh(numberGeometry, numberMaterial);
+            number.position.set(0, 6, 0.2);
+            gateGroup.add(number);
+            
+            // Position and orient the checkpoint
+            gateGroup.position.set(point.x, point.y, point.z);
+            gateGroup.rotation.y = point.heading;
+            
+            gateGroup.traverse(child => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            
+            this.scene.add(gateGroup);
+            
+            // Store checkpoint info
+            this.checkpoints.push({
+                index: i,
+                position: new THREE.Vector3(point.x, point.y, point.z),
+                heading: point.heading,
+                passed: false,
+                points: 100 + (i * 50), // Progressive point values
+                width: 16, // Width of checkpoint gate
+                segmentIndex: segmentIndex
+            });
+        }
     }
 }

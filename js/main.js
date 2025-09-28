@@ -33,8 +33,15 @@ class Game {
         this.frameCount = 0;
         this.lastTime = performance.now();
         
-        // High score tracking (now stores score instead of distance)
-        this.highScore = parseFloat(localStorage.getItem('motorcycleHighScore') || '0');
+        // Scoring system
+        this.score = 0;
+        this.combo = 0;
+        this.comboMultiplier = 1;
+        this.checkpointsPassed = 0;
+        this.lastCheckpointIndex = -1;
+        
+        // High score tracking
+        this.highScore = parseInt(localStorage.getItem('motorcycleHighScore') || '0');
         this.updateHighScoreDisplay();
 
         // Finish state
@@ -222,50 +229,69 @@ class Game {
 
     updateUI() {
         if (this.finished) {
-            // Hide regular UI when finished
-            document.getElementById('speed').style.display = 'none';
-            document.getElementById('lean').style.display = 'none';
-            document.getElementById('leanVel').style.display = 'none';
-            document.getElementById('steering').style.display = 'none';
-            document.getElementById('distance').style.display = 'none';
-            document.getElementById('highScore').style.display = 'none';
-            document.getElementById('fps').style.display = 'none';
+            // Dashboard remains visible but update for finish state
+            const dashboard = document.querySelector('.dashboard');
+            if (dashboard) {
+                dashboard.style.opacity = '0.5';
+            }
             return;
         }
 
-        document.getElementById('speed').textContent = `Speed: ${this.vehicle.getSpeed().toFixed(0)} mph`;
+        // Update dashboard gauges
+        const speed = this.vehicle.getSpeed().toFixed(0);
+        const speedElement = document.getElementById('speed');
+        speedElement.textContent = speed;
+        
+        // Color code speed
+        if (speed < 20) {
+            speedElement.className = 'gauge-value danger';
+        } else if (speed < 40) {
+            speedElement.className = 'gauge-value warning';
+        } else {
+            speedElement.className = 'gauge-value';
+        }
 
-        const leanText = this.vehicle.crashed ?
-            `CRASHED! (Press R to reset)` :
-            `Lean: ${this.vehicle.getLeanAngleDegrees().toFixed(1)}°`;
-        document.getElementById('lean').textContent = leanText;
+        const leanAngle = this.vehicle.getLeanAngleDegrees();
+        const leanElement = document.getElementById('lean');
+        leanElement.textContent = this.vehicle.crashed ? 'CRASH!' : `${leanAngle.toFixed(0)}°`;
+        
+        // Color code lean
+        if (Math.abs(leanAngle) > 45) {
+            leanElement.className = 'gauge-value danger';
+        } else if (Math.abs(leanAngle) > 30) {
+            leanElement.className = 'gauge-value warning';
+        } else {
+            leanElement.className = 'gauge-value';
+        }
 
-        document.getElementById('leanVel').textContent = `Lean Rate: ${(this.vehicle.leanVelocity * 180 / Math.PI).toFixed(1)}°/s`;
-        document.getElementById('steering').textContent = `Steering: ${this.vehicle.getSteeringAngleDegrees().toFixed(1)}°`;
-
+        document.getElementById('steering').textContent = `${this.vehicle.getSteeringAngleDegrees().toFixed(0)}°`;
+        
         // Update distance display
         const distance = this.vehicle.getDistanceTraveled();
-        document.getElementById('distance').textContent = `Distance: ${distance.toFixed(0)} m`;
+        document.getElementById('distance').textContent = `${distance.toFixed(0)}m`;
 
-        // High score is now based on finish score, not crash distance
-        // Only update high score when finishing the course
+        // Update FPS
+        document.getElementById('fps').textContent = `FPS: ${this.fps}`;
+        
+        // Update score display
+        this.updateScoreDisplay();
     }
     
     updateHighScoreDisplay() {
-        document.getElementById('highScore').textContent = `Best Score: ${this.highScore.toLocaleString()}`;
+        document.getElementById('highScore').textContent = `Best: ${this.highScore.toLocaleString()}`;
     }
 
     showFinishScreen() {
-        // Calculate score based on distance and time
+        // Calculate final score with finish bonus
         const distance = this.vehicle.getDistanceTraveled();
         const timeSeconds = this.finishTime / 1000;
         const averageSpeed = distance / timeSeconds * 3.6; // km/h
-
-        // Score formula: distance bonus + speed bonus - time penalty
-        const distanceScore = distance * 10;
-        const speedBonus = Math.max(0, averageSpeed - 50) * 5; // Bonus for speeds over 50 km/h
-        const timePenalty = timeSeconds * 2;
-        const totalScore = Math.round(distanceScore + speedBonus - timePenalty);
+        
+        // Add finish bonus to current score
+        const finishBonus = 1000 * this.comboMultiplier;
+        this.addScore(finishBonus);
+        
+        const totalScore = this.score;
 
         // Create finish banner
         const finishBanner = document.createElement('div');
@@ -357,18 +383,37 @@ class Game {
             this.cones.reset();
             this.finished = false;
             this.startTime = performance.now();
-
-            // Show UI again
-            document.getElementById('speed').style.display = 'block';
-            document.getElementById('lean').style.display = 'block';
-            document.getElementById('leanVel').style.display = 'block';
-            document.getElementById('steering').style.display = 'block';
-            document.getElementById('distance').style.display = 'block';
-            document.getElementById('highScore').style.display = 'block';
-            document.getElementById('fps').style.display = 'block';
+            
+            // Reset scoring
+            this.score = 0;
+            this.combo = 0;
+            this.comboMultiplier = 1;
+            this.checkpointsPassed = 0;
+            this.lastCheckpointIndex = -1;
+            
+            // Reset checkpoints
+            if (this.environment && this.environment.checkpoints) {
+                this.environment.checkpoints.forEach(cp => cp.passed = false);
+            }
+            
+            // Reset UI
+            this.updateScoreDisplay();
+            document.getElementById('checkpointCount').textContent = 'Checkpoints: 0/10';
+            
+            // Show dashboard again
+            const dashboard = document.querySelector('.dashboard');
+            if (dashboard) {
+                dashboard.style.opacity = '1';
+            }
         }
         
         this.vehicle.update(deltaTime, steeringInput, throttleInput, brakeInput);
+        
+        // Check for checkpoint passes and jump scoring
+        if (!this.vehicle.crashed && !this.finished) {
+            this.checkCheckpoints();
+            this.checkJumpScoring();
+        }
 
         // Check for finish line crossing
         if (!this.finished && !this.vehicle.crashed && this.environment.finishLinePosition) {
@@ -457,6 +502,134 @@ class Game {
         this.renderer.render(this.scene, this.camera);
     }
 
+    checkCheckpoints() {
+        if (!this.environment || !this.environment.checkpoints) return;
+        
+        for (let checkpoint of this.environment.checkpoints) {
+            if (!checkpoint.passed) {
+                const dx = this.vehicle.position.x - checkpoint.position.x;
+                const dz = this.vehicle.position.z - checkpoint.position.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                // Check if within checkpoint gate (16 units wide)
+                if (distance < checkpoint.width) {
+                    // Check if this is the next expected checkpoint (in order)
+                    if (checkpoint.index === this.lastCheckpointIndex + 1 || 
+                        (this.lastCheckpointIndex === 9 && checkpoint.index === 0)) {
+                        
+                        checkpoint.passed = true;
+                        this.lastCheckpointIndex = checkpoint.index;
+                        this.checkpointsPassed++;
+                        
+                        // Award points
+                        const points = checkpoint.points * this.comboMultiplier;
+                        this.addScore(points);
+                        
+                        // Increase combo
+                        this.combo++;
+                        if (this.combo >= 3) {
+                            this.comboMultiplier = Math.min(this.combo / 2, 5); // Max 5x multiplier
+                        }
+                        
+                        // Show checkpoint notification
+                        this.showCheckpointNotification(checkpoint.index + 1, points);
+                        
+                        console.log(`Checkpoint ${checkpoint.index + 1} passed! +${points} points`);
+                    }
+                }
+            }
+        }
+    }
+    
+    checkJumpScoring() {
+        if (!this.vehicle.isJumping) {
+            // Check if we just landed
+            if (this.wasJumping) {
+                this.wasJumping = false;
+                
+                // Calculate jump score based on air time and rotation
+                const jumpRotation = Math.abs(this.vehicle.jumpRotation);
+                let jumpScore = 50; // Base jump score
+                
+                // Bonus for flips
+                if (jumpRotation > Math.PI * 1.5) {
+                    // More than 1.5 rotations
+                    jumpScore += 500;
+                    this.showJumpBonus("DOUBLE FLIP! +500");
+                } else if (jumpRotation > Math.PI * 0.8) {
+                    // Nearly full rotation
+                    jumpScore += 200;
+                    this.showJumpBonus("FLIP! +200");
+                } else if (jumpRotation > Math.PI * 0.4) {
+                    // Half rotation
+                    jumpScore += 100;
+                    this.showJumpBonus("HALF FLIP! +100");
+                }
+                
+                jumpScore *= this.comboMultiplier;
+                this.addScore(jumpScore);
+                
+                // Increase combo for successful jump
+                this.combo++;
+                if (this.combo >= 3) {
+                    this.comboMultiplier = Math.min(this.combo / 2, 5);
+                }
+            }
+        } else {
+            this.wasJumping = true;
+        }
+    }
+    
+    addScore(points) {
+        this.score += Math.round(points);
+        this.updateScoreDisplay();
+        
+        // Update high score if needed
+        if (this.score > this.highScore) {
+            this.highScore = this.score;
+            localStorage.setItem('motorcycleHighScore', this.highScore.toString());
+            this.updateHighScoreDisplay();
+        }
+    }
+    
+    updateScoreDisplay() {
+        document.getElementById('score').textContent = this.score.toLocaleString();
+        document.getElementById('comboMultiplier').textContent = `${this.comboMultiplier.toFixed(1)}x`;
+        
+        if (this.combo > 0) {
+            const comboDisplay = document.getElementById('comboDisplay');
+            comboDisplay.textContent = `COMBO x${this.combo}`;
+            comboDisplay.style.animation = 'none';
+            setTimeout(() => { comboDisplay.style.animation = 'pulse 0.5s ease-in-out'; }, 10);
+        }
+    }
+    
+    showCheckpointNotification(checkpointNum, points) {
+        const notification = document.createElement('div');
+        notification.className = 'checkpoint-notification';
+        notification.textContent = `CHECKPOINT ${checkpointNum}/10! +${points}`;
+        document.body.appendChild(notification);
+        
+        // Update checkpoint counter
+        document.getElementById('checkpointCount').textContent = `Checkpoints: ${this.checkpointsPassed}/10`;
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 1000);
+    }
+    
+    showJumpBonus(text) {
+        const notification = document.createElement('div');
+        notification.className = 'checkpoint-notification';
+        notification.style.color = '#FF69B4';
+        notification.textContent = text;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 1000);
+    }
+    
     onWindowResize() {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();

@@ -23,6 +23,118 @@
             font-size: 14px;
             z-index: 100;
         }
+        
+        /* Score display - prominent at top */
+        .score-display {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            text-align: center;
+            z-index: 100;
+        }
+        
+        #score {
+            font-size: 48px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            margin: 0;
+        }
+        
+        #scoreLabel {
+            font-size: 16px;
+            color: #FFD700;
+            margin: 0;
+        }
+        
+        #comboDisplay {
+            font-size: 20px;
+            color: #FF69B4;
+            margin-top: 5px;
+            animation: pulse 0.5s ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Dashboard at bottom */
+        .dashboard {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.5));
+            padding: 15px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+            border-top: 2px solid #333;
+        }
+        
+        .gauge {
+            text-align: center;
+            color: white;
+            min-width: 100px;
+        }
+        
+        .gauge-label {
+            font-size: 10px;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .gauge-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00FF00;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+        
+        .gauge-value.warning {
+            color: #FFD700;
+        }
+        
+        .gauge-value.danger {
+            color: #FF0000;
+        }
+        
+        /* Checkpoint notification */
+        .checkpoint-notification {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36px;
+            font-weight: bold;
+            color: #00FF00;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            z-index: 101;
+            animation: checkpointPulse 1s ease-out;
+            pointer-events: none;
+        }
+        
+        @keyframes checkpointPulse {
+            0% { 
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0;
+            }
+            50% { 
+                transform: translate(-50%, -50%) scale(1.2);
+                opacity: 1;
+            }
+            100% { 
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0;
+            }
+        }
+        
         .info {
             position: absolute;
             top: 20px;
@@ -77,14 +189,47 @@
         <p style="color: #ff9999; font-size: 11px;">Max lean: 60° before crash!</p>
     </div>
     
+    <!-- Score Display -->
+    <div class="score-display">
+        <p id="scoreLabel">SCORE</p>
+        <p id="score">0</p>
+        <div id="comboDisplay"></div>
+    </div>
+    
+    <!-- Top right info -->
     <div class="info">
-        <div id="speed">Speed: 0 km/h</div>
-        <div id="lean">Lean: 0°</div>
-        <div id="leanVel">Lean Rate: 0°/s</div>
-        <div id="steering">Steering: 0°</div>
-        <div id="distance" style="font-size: 16px; color: #ffff00; margin-top: 10px;">Distance: 0 m</div>
-        <div id="highScore" style="font-size: 14px; color: #00ff00;">Best Score: 0</div>
-        <div id="fps">FPS: 0</div>
+        <div id="highScore" style="font-size: 18px; color: #FFD700;">Best: 0</div>
+        <div id="checkpointCount" style="font-size: 14px; color: #00ff00;">Checkpoints: 0/10</div>
+        <div id="fps" style="font-size: 10px; color: #666;">FPS: 0</div>
+    </div>
+    
+    <!-- Dashboard at bottom -->
+    <div class="dashboard">
+        <div class="gauge">
+            <div class="gauge-label">Speed</div>
+            <div id="speed" class="gauge-value">0</div>
+            <div style="font-size: 10px; color: #666;">MPH</div>
+        </div>
+        
+        <div class="gauge">
+            <div class="gauge-label">Lean</div>
+            <div id="lean" class="gauge-value">0°</div>
+        </div>
+        
+        <div class="gauge">
+            <div class="gauge-label">Steering</div>
+            <div id="steering" class="gauge-value">0°</div>
+        </div>
+        
+        <div class="gauge">
+            <div class="gauge-label">Distance</div>
+            <div id="distance" class="gauge-value">0m</div>
+        </div>
+        
+        <div class="gauge">
+            <div class="gauge-label">Combo</div>
+            <div id="comboMultiplier" class="gauge-value">1x</div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
