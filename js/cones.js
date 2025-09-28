@@ -173,8 +173,15 @@ class Cones {
     }
     
     checkCollision(vehiclePosition) {
-        const hitDistance = 1.5; // Slightly larger hit distance
-        const heightTolerance = 2; // Allow hitting cones from different heights
+        const hitDistance = 2.0; // More generous hit distance
+        const heightTolerance = 3; // More generous height tolerance
+
+        // Debug: periodic logging
+        if (!this.collisionDebugCounter) this.collisionDebugCounter = 0;
+        this.collisionDebugCounter++;
+        if (this.collisionDebugCounter % 180 === 0) { // Every 3 seconds at 60fps
+            console.log('Cone collision check - Vehicle at:', vehiclePosition.x.toFixed(1), vehiclePosition.z.toFixed(1), 'Cones:', this.cones.length);
+        }
 
         for (let cone of this.cones) {
             const distance = Math.sqrt(
@@ -185,8 +192,8 @@ class Cones {
             const heightDiff = Math.abs(vehiclePosition.y - cone.position.y);
 
             // Debug: log when close to cones
-            if (distance < 3 && heightDiff < 3 && !cone.hit) {
-                console.log(`Close to cone: ${distance.toFixed(2)}m away, ${heightDiff.toFixed(2)}m height diff`);
+            if (distance < 4 && heightDiff < 4 && !cone.hit) {
+                console.log(`Close to cone: ${distance.toFixed(2)}m away, ${heightDiff.toFixed(2)}m height diff, vehicle Y: ${vehiclePosition.y.toFixed(2)}, cone Y: ${cone.position.y.toFixed(2)}`);
             }
 
             if (distance < hitDistance && heightDiff < heightTolerance && !cone.hit) {
@@ -197,7 +204,7 @@ class Cones {
                 // Award points for hitting cone
                 if (this.onConeHit) {
                     this.onConeHit(25); // 25 points for cone hit
-                    console.log('Cone hit! +25 points - callback executed');
+                    console.log(`Cone hit! +25 points - distance: ${distance.toFixed(2)}, height diff: ${heightDiff.toFixed(2)}`);
                 } else {
                     console.log('Cone hit! +25 points - no callback available');
                 }

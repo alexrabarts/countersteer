@@ -7,6 +7,7 @@ class InputHandler {
         this.brakeInput = 0;
         this.resetPressed = false;
         this.soundTogglePressed = false;
+        this.checkpointRestartPressed = false;
         this.virtualControls = null;
         this.steeringSmoothing = 0.4; // How quickly steering ramps up (0-1, higher = faster)
         this.setupEventListeners();
@@ -27,6 +28,12 @@ class InputHandler {
             if (event.code === 'KeyM') {
                 this.soundTogglePressed = true;
             }
+
+            // Check for checkpoint restart
+            if (event.code === 'KeyC') {
+                this.checkpointRestartPressed = true;
+                console.log('C key pressed - checkpoint restart triggered');
+            }
         });
 
         document.addEventListener('keyup', (event) => {
@@ -39,6 +46,10 @@ class InputHandler {
 
             if (event.code === 'KeyM') {
                 this.soundTogglePressed = false;
+            }
+
+            if (event.code === 'KeyC') {
+                this.checkpointRestartPressed = false;
             }
         });
     }
@@ -114,6 +125,15 @@ class InputHandler {
     checkSoundToggle() {
         if (this.soundTogglePressed) {
             this.soundTogglePressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    checkCheckpointRestart() {
+        if (this.checkpointRestartPressed) {
+            this.checkpointRestartPressed = false;
+            console.log('Checkpoint restart triggered');
             return true;
         }
         return false;

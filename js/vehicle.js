@@ -1,6 +1,7 @@
 class Vehicle {
-    constructor(scene) {
+    constructor(scene, onWheelieScore = null) {
         this.scene = scene;
+        this.onWheelieScore = onWheelieScore;
         
         // Physical properties
         this.position = new THREE.Vector3(0, 0, 0); // Will be adjusted to road height after environment loads
@@ -34,6 +35,14 @@ class Vehicle {
         this.jumpVelocityY = 0;
         this.jumpStartHeight = 0;
         this.jumpRotation = 0;
+
+        // Wheelie state
+        this.isWheelie = false;
+        this.wheelieAngle = 0;
+        this.wheelieVelocity = 0;
+        this.wheelieDamping = 0.1;
+        this.wheelieStartTime = 0;
+        this.wheelieScoreAccumulated = 0;
         
         // Distance tracking
         this.distanceTraveled = 0;
@@ -195,7 +204,10 @@ class Vehicle {
         
         // Update speed based on throttle/brake
         this.updateSpeed(deltaTime, throttleInput, brakeInput);
-        
+
+        // Update wheelie physics
+        this.updateWheelie(deltaTime, throttleInput, brakeInput, this.onWheelieScore);
+
         // Check for jump ramps
         if (!this.isJumping && this.environment && this.environment.jumpRamps) {
             for (const ramp of this.environment.jumpRamps) {
@@ -444,6 +456,95 @@ class Vehicle {
         this.speed = Math.max(0, Math.min(this.maxSpeed, this.speed));
     }
 
+    updateWheelie(deltaTime, throttleInput, brakeInput, onWheelieScore = null) {
+        // Only allow wheelies when on ground and not crashed
+        if (this.crashed || this.isJumping) {
+            this.wheelieAngle = 0;
+            this.wheelieVelocity = 0;
+            this.isWheelie = false;
+            return;
+        }
+
+        // Debug: log inputs
+        if (throttleInput > 0.5) {
+            console.log('Wheelie check - Throttle:', throttleInput.toFixed(2), 'Speed:', this.speed.toFixed(1), 'Wheelie active:', this.isWheelie, 'Angle:', (this.wheelieAngle * 180 / Math.PI).toFixed(1) + '°');
+        }
+
+        // Debug: periodic logging
+        if (!this.wheelieDebugCounter) this.wheelieDebugCounter = 0;
+        this.wheelieDebugCounter++;
+        if (this.wheelieDebugCounter % 120 === 0) { // Every 2 seconds at 60fps
+            console.log('Wheelie status - Throttle:', throttleInput.toFixed(2), 'Speed:', this.speed.toFixed(1), 'Wheelie:', this.isWheelie, 'Angle:', (this.wheelieAngle * 180 / Math.PI).toFixed(1) + '°');
+        }
+
+        // Detect wheelie initiation (hard acceleration)
+        const wheelieThreshold = 0.7; // Need 70% throttle to start wheelie
+        const isAccelerating = throttleInput > wheelieThreshold && this.speed > 10;
+
+        if (isAccelerating && !this.isWheelie) {
+            // Start wheelie
+            this.isWheelie = true;
+            this.wheelieVelocity = 2.0; // Initial lift velocity
+            this.wheelieStartTime = performance.now();
+            this.wheelieScoreAccumulated = 0;
+            console.log('Wheelie started! Throttle:', throttleInput.toFixed(2), 'Speed:', this.speed.toFixed(1));
+        }
+
+        if (this.isWheelie) {
+            // Apply wheelie physics
+            if (isAccelerating) {
+                // Continue lifting front wheel
+                this.wheelieVelocity += throttleInput * 3.0 * deltaTime;
+            } else {
+                // Start coming down
+                this.wheelieVelocity -= 4.0 * deltaTime;
+            }
+
+            // Apply braking to end wheelie faster
+            if (brakeInput > 0) {
+                this.wheelieVelocity -= brakeInput * 6.0 * deltaTime;
+            }
+
+            // Update wheelie angle
+            this.wheelieAngle += this.wheelieVelocity * deltaTime;
+
+            // Clamp wheelie angle (can't go beyond vertical)
+            const maxWheelieAngle = Math.PI / 2; // 90 degrees
+            const oldAngle = this.wheelieAngle;
+            this.wheelieAngle = Math.max(0, Math.min(maxWheelieAngle, this.wheelieAngle));
+
+            // Award points for wheelie duration and angle
+            const wheelieDuration = (performance.now() - this.wheelieStartTime) / 1000; // seconds
+            const angleBonus = Math.sin(this.wheelieAngle) * 2; // More points for steeper wheelies
+            const speedBonus = Math.max(0, this.speed - 20) * 0.1; // Bonus for high speed wheelies
+            const pointsPerSecond = 10 + angleBonus + speedBonus; // Base 10 points/sec + bonuses
+
+            const pointsThisFrame = pointsPerSecond * deltaTime;
+            if (onWheelieScore && pointsThisFrame > 0) {
+                onWheelieScore(Math.round(pointsThisFrame));
+                this.wheelieScoreAccumulated += pointsThisFrame;
+            }
+
+            // Debug logging
+            if (Math.abs(this.wheelieAngle - oldAngle) > 0.1) {
+                console.log('Wheelie angle:', (this.wheelieAngle * 180 / Math.PI).toFixed(1) + '°', 'Duration:', wheelieDuration.toFixed(1) + 's', 'Total points:', Math.round(this.wheelieScoreAccumulated));
+            }
+
+            // End wheelie if angle gets too small
+            if (this.wheelieAngle < 0.1) {
+                this.isWheelie = false;
+                this.wheelieAngle = 0;
+                this.wheelieVelocity = 0;
+            }
+
+            // Apply damping
+            this.wheelieVelocity *= (1 - this.wheelieDamping);
+        } else {
+            // Gradually return to normal
+            this.wheelieAngle *= 0.95;
+        }
+    }
+
     updatePhysics(deltaTime, steeringInput) {
         // Steering visualization
         this.steeringAngle = steeringInput * 0.3;
@@ -549,6 +650,15 @@ class Vehicle {
             this.group.rotation.x = this.jumpRotation;
             this.group.rotation.z = this.leanAngle * 0.5; // Reduce lean while jumping
             this.rider.rotation.z = this.leanAngle * 0.1;
+        } else if (this.isWheelie) {
+            // Wheelie animation - backward rotation
+            this.group.rotation.x = -this.wheelieAngle; // Negative for wheelie (front up)
+            this.group.rotation.z = this.leanAngle * 0.3; // Reduce lean during wheelie
+            this.rider.rotation.z = this.leanAngle * 0.1;
+            // Debug: log when wheelie is active
+            if (this.wheelieAngle > 0.1) {
+                console.log('Applying wheelie rotation:', (this.wheelieAngle * 180 / Math.PI).toFixed(1) + '°');
+            }
         } else {
             // Normal lean
             this.group.rotation.x = 0; // Reset pitch

@@ -21,7 +21,7 @@ class Game {
         this.traffic = new Traffic(this.scene, this.environment);
         
         console.log('Creating vehicle...');
-        this.vehicle = new Vehicle(this.scene);
+        this.vehicle = new Vehicle(this.scene, (points) => this.addScore(points));
         this.vehicle.environment = this.environment; // Pass environment reference for elevation
         
         // Initialize vehicle at proper road height
@@ -47,6 +47,9 @@ class Game {
         this.checkpointsPassed = 0;
         this.lastCheckpointIndex = -1;
         this.checkpointTimes = []; // Track when each checkpoint was passed
+        this.lastCheckpointPosition = null; // Store last checkpoint position for restart
+        this.lastCheckpointHeading = 0;
+        this.checkpointRestartPressed = false;
         
         // High score tracking
         this.highScore = parseInt(localStorage.getItem('motorcycleHighScore') || '0');
@@ -404,6 +407,15 @@ class Game {
         if (this.input.checkSoundToggle()) {
             this.soundManager.toggleSound();
         }
+
+        // Check for checkpoint restart
+        if (this.input.checkCheckpointRestart()) {
+            if (this.lastCheckpointPosition) {
+                this.restartFromCheckpoint();
+            } else {
+                console.log('No checkpoint available for restart');
+            }
+        }
         
         // Check for crash (before updating vehicle)
         const wasCrashed = this.vehicle.crashed;
@@ -534,6 +546,11 @@ class Game {
                         checkpoint.passed = true;
                         this.lastCheckpointIndex = checkpoint.index;
                         this.checkpointsPassed++;
+
+                        // Store checkpoint position for restart
+                        this.lastCheckpointPosition = checkpoint.position.clone();
+                        this.lastCheckpointHeading = checkpoint.heading;
+                        console.log(`Checkpoint ${checkpoint.index + 1} stored for restart at position: ${checkpoint.position.x.toFixed(1)}, ${checkpoint.position.z.toFixed(1)}`);
 
                         // Record checkpoint pass time
                         const currentTime = performance.now();
@@ -904,7 +921,57 @@ class SoundManager {
             notification.remove();
         }, 1000);
     }
+
+    restartFromCheckpoint() {
+        if (!this.lastCheckpointPosition) {
+            console.log('No checkpoint position available for restart');
+            return;
+        }
+
+        console.log('Restarting from checkpoint at:', this.lastCheckpointPosition.x.toFixed(1), this.lastCheckpointPosition.z.toFixed(1));
+
+        // Apply penalty - lose some score
+        const penalty = 500;
+        this.addScore(-penalty);
+
+        // Reset vehicle to checkpoint position
+        this.vehicle.position.copy(this.lastCheckpointPosition);
+        this.vehicle.yawAngle = this.lastCheckpointHeading;
+        this.vehicle.speed = 15; // Reset to moderate speed
+        this.vehicle.leanAngle = 0;
+        this.vehicle.leanVelocity = 0;
+        this.vehicle.crashed = false;
+        this.vehicle.isJumping = false;
+        this.vehicle.isWheelie = false;
+        this.vehicle.wheelieAngle = 0;
+
+        // Reset start time for timing
+        this.startTime = performance.now();
+
+        // Reset cones
+        this.cones.reset();
+
+        // Show notification
+        const notification = document.createElement('div');
+        notification.className = 'checkpoint-notification';
+        notification.style.color = '#ff6600';
+        notification.textContent = `RESTARTED FROM CHECKPOINT (-${penalty} points)`;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.remove();
+        }, 2000);
+
+        console.log('Restarted from checkpoint with penalty');
+    }
 }
+
+// Debug key events
+document.addEventListener('keydown', (event) => {
+    if (event.code === 'KeyC') {
+        console.log('Global C key detected');
+    }
+});
 
 // Start the game when page loads
 window.addEventListener('load', () => {
