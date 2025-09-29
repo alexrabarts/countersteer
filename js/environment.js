@@ -494,10 +494,11 @@ class Environment {
                          const displacementScale = verticalProgress === 0 ? 0.15 : 0.55; // Further increased displacement scale for more pronounced faceting
                          let finalDistance = baseDistance + facetedDisplacement * displacementScale;
 
-                         // Apply slope for overhang
-                         if (side > 0 && isDropOff) {
-                             finalDistance -= slopeAmount;
-                         }
+                          // Apply slope for overhang
+                          if (side > 0 && isDropOff) {
+                              const slopeAmount = verticalProgress * verticalProgress * 50;
+                              finalDistance -= slopeAmount;
+                          }
 
                          // Ensure minimum distance to prevent gaps at road edge (8 units from center)
                          finalDistance = Math.max(finalDistance, 5);
