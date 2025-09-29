@@ -292,23 +292,49 @@ class Game {
         const indicator = document.getElementById('wheelieIndicator');
         const zoneText = document.getElementById('wheelieZone');
         const comboText = document.getElementById('wheelieCombo');
-        
+
         if (this.vehicle.isWheelie) {
             const angleDegrees = this.vehicle.wheelieAngle * 180 / Math.PI;
-            
+            const maxAngleDegrees = this.vehicle.wheelieCrashAngle * 180 / Math.PI; // 81 degrees
+            const angleRatio = Math.min(1, angleDegrees / maxAngleDegrees); // 0 to 1 as we approach crash
+
             indicator.classList.add('active');
-            
-            // Simple display - just show WHEELIE and angle
+
+            // Remove all color classes to prevent position shifts
             indicator.classList.remove('perfect', 'good', 'danger', 'low');
-            indicator.classList.add('good'); // Just use one consistent style
-            
+
+            // Continuous color transition from green to orange to red
+            let r, g, b;
+            if (angleRatio < 0.5) {
+                // Green to orange (0 to 0.5 ratio)
+                const transition = angleRatio * 2; // 0 to 1
+                r = Math.round(0 + transition * 255); // 0 to 255
+                g = Math.round(255 - transition * 0); // 255 to 255
+                b = 0;
+            } else {
+                // Orange to red (0.5 to 1.0 ratio)
+                const transition = (angleRatio - 0.5) * 2; // 0 to 1
+                r = Math.round(255 - transition * 0); // 255 to 255
+                g = Math.round(165 - transition * 165); // 165 to 0
+                b = 0;
+            }
+
+            // Apply the color continuously
+            indicator.style.color = `rgb(${r}, ${g}, ${b})`;
+            indicator.style.background = `rgba(${r}, ${g}, ${b}, 0.2)`;
+            indicator.style.textShadow = `0 0 20px rgba(${r}, ${g}, ${b}, 0.8)`;
+
             // Show wheelie text with angle
             zoneText.textContent = `WHEELIE ${angleDegrees.toFixed(0)}°`;
-            
+
             // Clear combo text (no longer using combo system)
             comboText.textContent = '';
         } else {
             indicator.classList.remove('active');
+            // Reset styles when not active
+            indicator.style.color = '';
+            indicator.style.background = '';
+            indicator.style.textShadow = '';
         }
     }
 

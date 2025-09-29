@@ -984,8 +984,8 @@ class Vehicle {
                 // Improved road boundary logic with hysteresis
                 const roadEdge = 8.0; // Edge of the road (matches actual road width)
                 const safetyZone = 10.0; // Safety zone - slow down but don't crash
-                const cliffEdge = 12.0; // Cliff edge - fall past this
-                const wallBuffer = 12.0; // Wall crash buffer
+                const cliffEdge = 8.0; // Cliff edge - fall past this
+                const wallBuffer = 8.0; // Wall crash buffer
 
                 // Dot product gives signed distance (positive = right of road, negative = left of road)
                 const perpDistance = toVehicleX * perpX + toVehicleZ * perpZ;
@@ -1015,7 +1015,7 @@ class Vehicle {
                 
                 // Check if we've hit the left mountain wall (negative perpDistance)
                 if (perpDistance < -wallBuffer && !this.crashed) {
-                    // Hit the mountain wall on the left - crash into it, don't fall
+                    // Hit the mountain wall on the left - crash into it
                     this.crashed = true;
                     this.fallingOffCliff = false; // Not falling, we hit a wall
                     this.crashAngle = -Math.PI/6; // Crash leaning left into the wall
@@ -1032,24 +1032,26 @@ class Vehicle {
 
 
 
-                // Check if we've gone off the right cliff edge (positive perpDistance)
-                // Must go past the safety zone to actually fall
-                if (perpDistance > effectiveCliffEdge && !this.crashed) {
-                    console.log('=== FALLING OFF CLIFF TRIGGERED! ===');
-                    console.log('perpDistance:', perpDistance, 'effectiveCliffEdge:', effectiveCliffEdge, 'cliffEdge:', cliffEdge);
-                    console.log('Vehicle position:', this.position.x.toFixed(1), this.position.z.toFixed(1), 'Y:', this.position.y.toFixed(1));
-                    console.log('Segment used:', this.currentRoadSegment, 'heading:', currentSegment.heading.toFixed(3));
-                    console.log('Segment position:', currentSegment.x.toFixed(1), currentSegment.z.toFixed(1), 'Y:', currentSegment.y.toFixed(1));
-                    console.log('CRASHED! Fell off the right cliff edge at', (this.speed * 2.237).toFixed(1) + ' mph');
+                // Check if we've hit the right cliff wall (positive perpDistance)
+                if (perpDistance > wallBuffer && !this.crashed) {
+                    // Hit the cliff wall on the right - bounce and crash
                     this.crashed = true;
-                    this.fallingOffCliff = true; // Fall off the right cliff edge
-                    this.fallStartY = this.position.y;
-                    this.groundHitLogged = false;
-                    this.crashAngle = -Math.PI/4; // Fall to the left after going off right edge
-                    this.frame.material.color.setHex(0x8B0000); // Dark red for falling
+                    this.fallingOffCliff = false; // Not falling, we hit a wall
+                    this.crashAngle = Math.PI/6; // Crash leaning right into the wall
+                    this.frame.material.color.setHex(0x8B0000); // Dark red for crash
+                    console.log('CRASHED! Hit the right cliff wall at', (this.speed * 2.237).toFixed(1) + ' mph');
+                    console.log('Right wall hit at distance:', perpDistance);
 
-                    // Continue forward momentum but start falling
-                    this.velocity.y = -10; // Start falling downward with more force
+                    // Move bike back to wall position and apply bounce
+                    const targetPerpDistance = wallBuffer;
+                    const adjustment = (targetPerpDistance - perpDistance);
+                    this.position.x += perpX * adjustment;
+                    this.position.z += perpZ * adjustment;
+
+                    // Bounce off the wall - reverse lateral direction
+                    const bounceDir = new THREE.Vector3(-perpX, 0, -perpZ); // Bounce back toward road center
+                    this.velocity = bounceDir.multiplyScalar(this.speed * 0.3);
+                    this.velocity.y = 1; // Small upward bounce
                 }
             }
         }
