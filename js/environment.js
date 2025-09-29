@@ -1334,13 +1334,14 @@ class Environment {
         // Create mid-distance mountains with more detail
         const group = new THREE.Group();
         
-        // Create several individual peaks - positioned well beyond road area
+        // Create several individual peaks - closer but still clear of road
+        // Road max Z is about 488, so keep peaks beyond 600
         const peaks = [
-            { x: -800, z: 1000, height: 250, width: 300 },  // Far left back
-            { x: -400, z: 1100, height: 200, width: 280 },  // Left back
-            { x: 200, z: 1200, height: 280, width: 350 },   // Center back (well beyond road)
-            { x: 1000, z: 1100, height: 230, width: 290 },  // Right back
-            { x: 1500, z: 1000, height: 260, width: 310 }   // Far right back
+            { x: -600, z: 700, height: 250, width: 300 },   // Left back
+            { x: -200, z: 750, height: 200, width: 280 },   // Left-center back
+            { x: 300, z: 800, height: 280, width: 350 },    // Center back (safely beyond road)
+            { x: 800, z: 750, height: 230, width: 290 },    // Right back (just beyond road X:700)
+            { x: 1200, z: 700, height: 260, width: 310 }    // Far right back
         ];
         
         peaks.forEach(peak => {
@@ -1361,26 +1362,84 @@ class Environment {
         // Create near hills with vegetation and detail
         const group = new THREE.Group();
         
-        // Near hills positioned well clear of the road
-        // Road goes from X:0-700, Z:-187 to 488, so we position hills outside this area
-        const hills = [
-            { x: -600, z: 600, height: 120, width: 200 },  // Far left
-            { x: -300, z: 700, height: 100, width: 180 },  // Left side, far back
-            { x: 900, z: 600, height: 140, width: 220 },   // Far right (beyond road)
-            { x: 1200, z: 500, height: 110, width: 190 }   // Far right back
-        ];
-        
-        hills.forEach(hill => {
-            const hillMesh = this.createDetailedHill(
-                hill.x,
-                hill.z,
-                hill.height,
-                hill.width
-            );
-            group.add(hillMesh);
-        });
+        // Only add the central mountain/island in the lake area
+        // This creates a dramatic centerpiece visible from the mountain road
+        const centralMountain = this.createLakeIslandMountain();
+        group.add(centralMountain);
         
         this.scene.add(group);
+    }
+    
+    createLakeIslandMountain() {
+        // Create a dramatic mountain rising from the lake in the center of the map
+        const group = new THREE.Group();
+        
+        // Main mountain peak rising from the lake - make it more prominent
+        const mainPeak = this.createMountainPeak(
+            350,   // Center of the map area
+            100,   // Slightly forward from true center
+            250,   // Taller for more drama
+            350,   // Wider base for island effect
+            0x3a4540 // Darker grey-green for contrast with lake
+        );
+        group.add(mainPeak);
+        
+        // Add a secondary smaller peak for visual interest
+        const secondaryPeak = this.createMountainPeak(
+            250,   // Offset to the left
+            20,    // Closer to viewer
+            150,   // Medium height
+            200,   // Medium width
+            0x424845 // Similar but slightly different color
+        );
+        group.add(secondaryPeak);
+        
+        // Add a third small peak to create an island chain effect
+        const thirdPeak = this.createMountainPeak(
+            450,   // To the right
+            150,   // Further back
+            100,   // Shorter
+            140,   // Narrower
+            0x3d4743 // Similar color family
+        );
+        group.add(thirdPeak);
+        
+        // Add some rocky outcrops around the base
+        const rockMaterial = new THREE.MeshStandardMaterial({
+            color: 0x5a5a5a,
+            roughness: 0.95,
+            metalness: 0.0
+        });
+        
+        // Create rocky base formations
+        for (let i = 0; i < 5; i++) {
+            const angle = (Math.PI * 2 / 5) * i;
+            const distance = 100 + Math.random() * 40;
+            const rockX = 350 + Math.cos(angle) * distance;
+            const rockZ = 100 + Math.sin(angle) * distance;
+            
+            const rockGeometry = new THREE.DodecahedronGeometry(15 + Math.random() * 10, 0);
+            const rock = new THREE.Mesh(rockGeometry, rockMaterial);
+            rock.position.set(rockX, -70, rockZ); // Just above water level
+            rock.rotation.set(
+                Math.random() * Math.PI,
+                Math.random() * Math.PI,
+                Math.random() * Math.PI
+            );
+            rock.scale.set(
+                1 + Math.random() * 0.5,
+                0.6 + Math.random() * 0.3,
+                1 + Math.random() * 0.5
+            );
+            rock.castShadow = true;
+            rock.receiveShadow = true;
+            group.add(rock);
+        }
+        
+        // Add some mist/fog sprites around the base for atmosphere (optional visual effect)
+        // This would need sprite textures to implement fully
+        
+        return group;
     }
     
     createMountainPeak(x, z, height, width, color) {
