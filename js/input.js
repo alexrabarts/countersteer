@@ -158,14 +158,9 @@ class InputHandler {
     }
     
     setupMobileControls() {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                        ('ontouchstart' in window) || 
-                        (navigator.maxTouchPoints > 0);
-        
-        if (isMobile) {
-            if (typeof VirtualControls !== 'undefined') {
-                this.virtualControls = new VirtualControls();
-            }
+        // Always create virtual controls for WASD-style on-screen buttons
+        if (typeof VirtualControls !== 'undefined') {
+            this.virtualControls = new VirtualControls();
         }
     }
 }

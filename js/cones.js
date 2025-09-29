@@ -51,8 +51,8 @@ class Cones {
 
                 if (headingChange < 0.02) {
                     // Straight section - place slalom cones every 4 segments on alternating sides on grass
-                    // Start after first checkpoint (segment 18) to avoid double alerts
-                    if (index % 4 === 0 && index > 25 && index < this.environment.roadPath.length - 10 && !isNearCheckpoint) {
+                    // Start well after first checkpoint (segment 18) to avoid double alerts
+                    if (index % 4 === 0 && index > 30 && index < this.environment.roadPath.length - 10 && !isNearCheckpoint) {
                         const sideOffset = (Math.floor(index / 4) % 2 === 0) ? 10 : -10;
                         conePositions.push({
                             x: point.x + sideOffset,
