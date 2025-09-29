@@ -1013,37 +1013,14 @@ class Vehicle {
                     // console.log('NEAR EDGE: Slowing down at distance', perpDistance.toFixed(1));
                 }
                 
-                // Check if we've hit the left mountain wall (negative perpDistance)
+                // Check if we've hit the left cliff wall (negative perpDistance)
                 if (perpDistance < -wallBuffer && !this.crashed) {
-                    // Hit the mountain wall on the left - crash into it
-                    this.crashed = true;
-                    this.fallingOffCliff = false; // Not falling, we hit a wall
-                    this.crashAngle = -Math.PI/6; // Crash leaning left into the wall
-                    this.frame.material.color.setHex(0x8B0000); // Dark red for crash
-                    console.log('CRASHED! Hit the left mountain wall at', (this.speed * 2.237).toFixed(1) + ' mph');
+                    // Hit the cliff wall on the left - bounce back
+                    console.log('BOUNCED! Hit the left cliff wall at', (this.speed * 2.237).toFixed(1) + ' mph');
                     console.log('Left wall hit at distance:', perpDistance);
-                    console.log('Crash position:', this.position.x.toFixed(1), this.position.z.toFixed(1), 'segment:', this.currentRoadSegment);
 
-                    // Stop horizontal movement, we hit a solid wall
-                    this.velocity.x *= 0.1;
-                    this.velocity.z *= 0.1;
-                    this.speed = 0;
-                }
-
-
-
-                // Check if we've hit the right cliff wall (positive perpDistance)
-                if (perpDistance > wallBuffer && !this.crashed) {
-                    // Hit the cliff wall on the right - bounce and crash
-                    this.crashed = true;
-                    this.fallingOffCliff = false; // Not falling, we hit a wall
-                    this.crashAngle = Math.PI/6; // Crash leaning right into the wall
-                    this.frame.material.color.setHex(0x8B0000); // Dark red for crash
-                    console.log('CRASHED! Hit the right cliff wall at', (this.speed * 2.237).toFixed(1) + ' mph');
-                    console.log('Right wall hit at distance:', perpDistance);
-
-                    // Move bike back to wall position and apply bounce
-                    const targetPerpDistance = wallBuffer;
+                    // Move bike back to wall position
+                    const targetPerpDistance = -wallBuffer;
                     const adjustment = (targetPerpDistance - perpDistance);
                     this.position.x += perpX * adjustment;
                     this.position.z += perpZ * adjustment;
@@ -1052,6 +1029,27 @@ class Vehicle {
                     const bounceDir = new THREE.Vector3(-perpX, 0, -perpZ); // Bounce back toward road center
                     this.velocity = bounceDir.multiplyScalar(this.speed * 0.3);
                     this.velocity.y = 1; // Small upward bounce
+
+                    // Don't crash - allow recovery from bounce
+                }
+
+
+
+                // Check if we've gone off the right cliff edge (positive perpDistance)
+                if (perpDistance > effectiveCliffEdge && !this.crashed) {
+                    console.log('=== FALLING OFF RIGHT CLIFF! ===');
+                    console.log('perpDistance:', perpDistance, 'effectiveCliffEdge:', effectiveCliffEdge, 'cliffEdge:', cliffEdge);
+                    console.log('Vehicle position:', this.position.x.toFixed(1), this.position.z.toFixed(1), 'Y:', this.position.y.toFixed(1));
+                    console.log('CRASHED! Fell off the right cliff edge at', (this.speed * 2.237).toFixed(1) + ' mph');
+                    this.crashed = true;
+                    this.fallingOffCliff = true; // Fall off the right cliff edge
+                    this.fallStartY = this.position.y;
+                    this.groundHitLogged = false;
+                    this.crashAngle = -Math.PI/4; // Fall to the left after going off right edge
+                    this.frame.material.color.setHex(0x8B0000); // Dark red for falling
+
+                    // Continue forward momentum but start falling
+                    this.velocity.y = -8; // Start falling downward
                 }
             }
         }
