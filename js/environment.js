@@ -506,8 +506,8 @@ class Environment {
                          // Combine displacements with height-based variation
                          const totalDisplacement = primary + secondary + tertiary + micro;
 
-                         // Apply faceting by quantizing displacement - even smaller facets for maximum detail
-                         const facetSize = 0.3 + Math.sin(idx * 0.3) * 0.1; // Very small facet size (0.3-0.4 units) for sharp angular detail
+                         // Apply faceting by quantizing displacement - extremely small facets for maximum detail
+                         const facetSize = 0.15 + Math.sin(idx * 0.3) * 0.05; // Extremely small facet size (0.15-0.2 units) for very sharp angular detail
                          const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
 
                          // Calculate base final distance
@@ -685,11 +685,14 @@ class Environment {
                 
                 // Test 3: Boulder bottom should be at or below expected ground
                 const boulderBottom = y - boulderRadius;
-                const tolerance = 0.5; // Small tolerance for variations
+                // Stricter tolerance for small boulders
+                const tolerance = boulderRadius < 1.5 ? 0.1 : 0.5;
                 
                 if (boulderBottom > expectedGroundY + tolerance) {
-                    console.warn(`Boulder FLOATING: Bottom at ${boulderBottom.toFixed(1)}, expected ground at ${expectedGroundY.toFixed(1)}`);
-                    return { valid: false, correctY: expectedGroundY - boulderRadius * 0.3 }; // Return corrected position
+                    console.warn(`Boulder FLOATING (size ${boulderRadius.toFixed(1)}): Bottom at ${boulderBottom.toFixed(1)}, expected ground at ${expectedGroundY.toFixed(1)}`);
+                    // Deeper embedding for small boulders
+                    const embedDepth = boulderRadius < 1.5 ? 0.6 : 0.3;
+                    return { valid: false, correctY: expectedGroundY - boulderRadius * embedDepth };
                 }
                 
                 // Test 4: Boulder shouldn't be too deep (more than 60% embedded)
@@ -728,8 +731,8 @@ class Environment {
                             rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
                         );
                         
-                        // Height position on cliff (0 = base, 1 = top) - keep rocks lower to prevent floating
-                        const heightRatio = Math.random() * 0.4; // Maximum 40% up the cliff
+                        // Height position on cliff (0 = base, 1 = top) - keep rocks very low to prevent floating
+                        const heightRatio = Math.random() * 0.25; // Maximum 25% up the cliff
                         const cliffHeight = Math.abs(height) * heightRatio;
                         
                         // Calculate base distance accounting for slope - ensure rocks are ON the cliff face
@@ -787,13 +790,13 @@ class Environment {
                     }  // Close the if statement from line 700
                 }  // Close the for loop from line 699
                 
-                // Add MANY more boulders at the base - increased frequency
-                if (i % 4 === 0 || Math.random() > 0.3) {  // Much more frequent
-                    // Create 1-3 boulders per position
-                    const numBoulders = 1 + Math.floor(Math.random() * 3);
+                // Add EVEN MORE boulders at the base - maximum density
+                if (i % 2 === 0 || Math.random() > 0.2) {  // Every 2 segments or 80% chance
+                    // Create 2-5 boulders per position
+                    const numBoulders = 2 + Math.floor(Math.random() * 4);
                     
                     for (let b = 0; b < numBoulders; b++) {
-                        const baseBoulderSize = 1.0 + Math.random() * 2.5; // Varied sizes
+                        const baseBoulderSize = 0.8 + Math.random() * 3.0; // More varied sizes (0.8-3.8)
                         const baseBoulder = new THREE.Mesh(
                             new THREE.DodecahedronGeometry(baseBoulderSize, 0),
                             rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
@@ -813,10 +816,26 @@ class Environment {
                             // Right side - properly calculate drop-off position
                             const dropDistance = baseDistance - 8; // Distance beyond road edge
                             const dropAmount = Math.min(dropDistance * 2, 45); // Progressive drop
-                            boulderY = (point.y || 0) - dropAmount - baseBoulderSize * 0.5;
+                            // Embed smaller boulders deeper to prevent floating
+                            const embedRatio = baseBoulderSize < 1.5 ? 0.6 : 0.5;
+                            boulderY = (point.y || 0) - dropAmount - baseBoulderSize * embedRatio;
                         } else {
                             // Left side - at road level, properly embedded
-                            boulderY = (point.y || 0) - baseBoulderSize * 0.5;
+                            // Small boulders need deeper embedding to look grounded
+                            const embedRatio = baseBoulderSize < 1.5 ? 0.6 : 0.5;
+                            boulderY = (point.y || 0) - baseBoulderSize * embedRatio;
+                        }
+                        
+                        // Special handling for very small boulders
+                        if (baseBoulderSize < 1.2) {
+                            // Force small boulders to be deeply embedded
+                            if (side > 0) {
+                                const dropDistance = baseDistance - 8;
+                                const dropAmount = Math.min(dropDistance * 2, 45);
+                                boulderY = (point.y || 0) - dropAmount - baseBoulderSize * 0.7; // 70% embedded
+                            } else {
+                                boulderY = (point.y || 0) - baseBoulderSize * 0.7;
+                            }
                         }
                         
                         // Run comprehensive position tests
@@ -829,7 +848,7 @@ class Environment {
                             if (testResult && testResult.correctY !== undefined) {
                                 // Use corrected Y position
                                 boulderY = testResult.correctY;
-                                console.log(`Boulder position corrected to Y=${boulderY.toFixed(1)}`);
+                                console.log(`Boulder size ${baseBoulderSize.toFixed(1)} corrected to Y=${boulderY.toFixed(1)}`);
                             } else {
                                 // Skip this boulder entirely
                                 continue;
