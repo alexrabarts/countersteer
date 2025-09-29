@@ -439,7 +439,18 @@ class Environment {
                     // Create vertical segments
                     for (let j = 0; j <= verticalSegments; j++) {
                         const verticalProgress = j / verticalSegments;
-                        const currentHeight = height * verticalProgress;
+                        
+                        // Variable height along the cliff length
+                        // Use sine waves and noise for natural variation
+                        const lengthProgress = i / this.roadPath.length;
+                        const cliffHeightMultiplier = 1.0 + 
+                            Math.sin(lengthProgress * Math.PI * 3) * 0.3 +  // Large undulations
+                            Math.sin(lengthProgress * Math.PI * 7) * 0.15 +  // Medium variation
+                            Math.sin(lengthProgress * Math.PI * 13) * 0.1 +  // Small detail
+                            (Math.random() - 0.5) * 0.1;  // Random noise
+                        
+                        const variableHeight = height * cliffHeightMultiplier;
+                        const currentHeight = variableHeight * verticalProgress;
                         
                         // Calculate base perpendicular distance with slope for walls
                         // Start closer to account for displacement pushing wall outward
