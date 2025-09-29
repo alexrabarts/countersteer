@@ -1677,7 +1677,7 @@ class Environment {
         const coneGeometry = new THREE.ConeGeometry(0.15, 0.5, 8);
         const coneMaterial = new THREE.MeshStandardMaterial({ color: 0xff4500, roughness: 0.8, metalness: 0.0 });
         this.roadPath.forEach((point, index) => {
-            if (index % 8 === 0 && index > 5 && index < this.roadPath.length - 5) { // Sparse placement
+            if (index % 8 === 0 && index > 30 && index < this.roadPath.length - 5) { // Sparse placement
                 const coneY = point.y !== undefined ? point.y + 0.25 : 0.25;
                 
                 // Only on straights
@@ -1787,7 +1787,6 @@ class Environment {
         // Define construction zones with variety - some with ramps, some without
         // Adjusted for new track layout with hairpin
         const roadworksLocations = [
-            { startSegment: 15, endSegment: 17, hasRamp: false, type: 'minor' },  // Early minor construction
             { startSegment: 27, endSegment: 29, hasRamp: true, type: 'major' },  // After hairpin major construction with jump
             { startSegment: 48, endSegment: 49, hasRamp: false, type: 'minor' }  // Near end minor repairs
         ];

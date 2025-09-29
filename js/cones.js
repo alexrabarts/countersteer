@@ -49,17 +49,17 @@ class Cones {
                 const checkpointSegments = [18, 32, 46, 60, 2];
                 const isNearCheckpoint = checkpointSegments.some(cp => Math.abs(index - cp) < 5);
 
-                if (headingChange < 0.02) {
-                    // Straight section - place slalom cones every 4 segments on alternating sides on grass
-                    // Start well after first checkpoint (segment 18) to avoid double alerts
-                    if (index % 4 === 0 && index > 30 && index < this.environment.roadPath.length - 10 && !isNearCheckpoint) {
+                 if (headingChange < 0.02) {
+                     // Straight section - place slalom cones every 4 segments on alternating sides on grass
+                     // Start well after first checkpoint (segment 18) to avoid double alerts
+                     if (index % 4 === 0 && index > 50 && index < this.environment.roadPath.length - 10 && !isNearCheckpoint) {
                         const sideOffset = (Math.floor(index / 4) % 2 === 0) ? 10 : -10;
                         conePositions.push({
                             x: point.x + sideOffset,
                             z: point.z
                         });
                     }
-                } else if (index % 6 === 0 && index > 30 && !isNearCheckpoint) {
+                 } else if (index % 6 === 0 && index > 50 && !isNearCheckpoint) {
                     // Corner section - place cones at apex, offset to the inside on grass (less frequent)
                     const turnDirection = signedHeadingChange > 0 ? 1 : -1;
                     const offset = turnDirection * 10;
