@@ -16,13 +16,13 @@ class VirtualControls {
         const viewportHeight = window.innerHeight;
         const viewportWidth = window.innerWidth;
         const isMobileLandscape = viewportWidth > viewportHeight && viewportHeight < 500;
-        
-        // Adjust button size based on screen size
-        const buttonSize = isMobileLandscape ? 50 : Math.min(70, viewportHeight * 0.08);
+
+        // Adjust button size based on screen size - smaller for desktop
+        const buttonSize = isMobileLandscape ? 50 : Math.min(50, viewportHeight * 0.06);
         const gap = 5;
         const controlsHeight = (buttonSize + gap) * 2;
         const controlsWidth = (buttonSize + gap) * 3;
-        
+
         // Calculate safe bottom position to ensure controls fit in viewport
         const safeBottomMargin = Math.min(20, viewportHeight * 0.02);
         const bottomPosition = safeBottomMargin;

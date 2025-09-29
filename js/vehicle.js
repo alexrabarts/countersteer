@@ -404,9 +404,41 @@ class Vehicle {
                 }
             }
         }
-        
+
+        // Check if bike has fallen through the road surface (especially when crashed on side)
+        if (this.environment && this.environment.roadPath && !this.fallingOffCliff) {
+            // Find closest road segment
+            let closestSegment = null;
+            let minDistance = Infinity;
+            this.environment.roadPath.forEach(segment => {
+                const distance = Math.sqrt(
+                    Math.pow(this.position.x - segment.x, 2) +
+                    Math.pow(this.position.z - segment.z, 2)
+                );
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestSegment = segment;
+                }
+            });
+
+            if (closestSegment && this.position.y < closestSegment.y - 2.0) {
+                // Bike is significantly below road surface - correct position
+                console.log('CORRECTING! Bike below road surface at', this.position.x.toFixed(1), this.position.z.toFixed(1), 'Y:', this.position.y.toFixed(1), 'road Y:', closestSegment.y.toFixed(1));
+                this.position.y = closestSegment.y;
+                this.velocity.y = Math.max(0, this.velocity.y); // Prevent downward velocity
+
+                // If not already crashed, crash it now
+                if (!this.crashed) {
+                    this.crashed = true;
+                    this.crashAngle = this.leanAngle || 0.5;
+                    this.frame.material.color.setHex(0x8b4513); // Brown for ground collision
+                    console.log('CRASHED! Hit the ground (fell through road)');
+                }
+            }
+        }
+
         // Wall collision is now handled in checkWallCollision() - removed duplicate check
-        
+
         // Update physics
         this.updatePhysics(deltaTime, steeringInput);
         
@@ -555,8 +587,8 @@ class Vehicle {
             
             const angleDegrees = this.wheelieAngle * 180 / Math.PI;
             
-            // Natural gravity - wheelie wants to fall back down (slower than before)
-            const gravityPull = 2.5 + (angleDegrees / 45) * 2.0; // 2.5-4.5 based on angle
+            // Natural gravity - wheelie wants to fall back down (slightly harder)
+            const gravityPull = 2.5 + (angleDegrees / 45) * 1.8; // 2.5-4.1 based on angle
             this.wheelieVelocity -= gravityPull * deltaTime;
             
             // Throttle control - main way to control wheelie after initiation
@@ -1063,10 +1095,10 @@ class Vehicle {
         
         // Calculate jump velocity based on speed and ramp angle
         const jumpAngle = Math.atan2(ramp.height, ramp.length * 0.6); // Approximate ramp angle
-        this.jumpVelocityY = Math.sin(jumpAngle) * this.speed * 0.8; // Increased jump force
-        
-        // Give a bit of extra lift for fun
-        this.jumpVelocityY += 3;
+        this.jumpVelocityY = Math.sin(jumpAngle) * this.speed * 0.6; // Even higher jump force
+
+        // Better extra lift
+        this.jumpVelocityY += 2.5;
         
         // Add some forward rotation for style
         this.jumpRotation = 0;

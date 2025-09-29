@@ -1893,9 +1893,9 @@ class Environment {
 
             const point = this.roadPath[i];
 
-            // Place barrier on right side (moved far out to avoid any collision issues)
-            const barrierX = point.x + Math.cos(point.heading) * 25;
-            const barrierZ = point.z - Math.sin(point.heading) * 25;
+            // Place barrier on left side (mountain side) to avoid floating over cliff
+            const barrierX = point.x - Math.cos(point.heading) * 25;
+            const barrierZ = point.z + Math.sin(point.heading) * 25;
 
             const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
             barrier.position.set(barrierX, point.y + 0.5, barrierZ);
@@ -1945,22 +1945,37 @@ class Environment {
 
             this.createDirtRamp(offsetPoint, midSegment);
             
-            // Add construction equipment (static bulldozer) - moved far from road
+            // Add construction equipment (static bulldozer) - moved far from road on mountain side
             this.createBulldozer(
-                rampPoint.x + Math.cos(rampPoint.heading) * 30,
+                rampPoint.x - Math.cos(rampPoint.heading) * 30,
                 rampPoint.y,
-                rampPoint.z - Math.sin(rampPoint.heading) * 30,
+                rampPoint.z + Math.sin(rampPoint.heading) * 30,
                 rampPoint.heading
+            );
+
+            // Add shipping containers for collision on mountain side
+            this.createShippingContainer(
+                rampPoint.x - Math.cos(rampPoint.heading) * 20,
+                rampPoint.y,
+                rampPoint.z + Math.sin(rampPoint.heading) * 20,
+                rampPoint.heading
+            );
+
+            this.createShippingContainer(
+                rampPoint.x - Math.cos(rampPoint.heading) * 15,
+                rampPoint.y,
+                rampPoint.z + Math.sin(rampPoint.heading) * 15,
+                rampPoint.heading + Math.PI/2
             );
         } else if (zoneType === 'minor') {
             // For minor zones, just add some work equipment
             const workPoint = this.roadPath[startSegment];
             
-            // Add a simple work truck instead of bulldozer (moved far from road)
+            // Add a simple work truck instead of bulldozer (moved far from road on mountain side)
             this.createWorkTruck(
-                workPoint.x + Math.cos(workPoint.heading) * 25,
+                workPoint.x - Math.cos(workPoint.heading) * 25,
                 workPoint.y,
-                workPoint.z - Math.sin(workPoint.heading) * 25,
+                workPoint.z + Math.sin(workPoint.heading) * 25,
                 workPoint.heading
             );
         }
@@ -1972,11 +1987,11 @@ class Environment {
                 "ROAD WORK AHEAD"
             );
             
-            // Add warning lights for major zones
-            this.createWarningLight(
-                this.roadPath[Math.max(0, startSegment - 1)],
-                'right'
-            );
+            // Add warning lights for major zones - REMOVED
+            // this.createWarningLight(
+            //     this.roadPath[Math.max(0, startSegment - 1)],
+            //     'right'
+            // );
         } else {
             // Minor zones just get a simple sign
             this.createConstructionSign(
@@ -2000,7 +2015,7 @@ class Environment {
         // Create dirt pile geometry - more irregular and mound-like
         const pileWidth = 5;  // Narrower dirt pile
         const pileLength = 10; // Shorter than ramp
-        const pileHeight = 3.0; // Taller peak
+        const pileHeight = 1.5; // Half height
 
         const geometry = new THREE.BufferGeometry();
         const vertices = [];
@@ -2459,7 +2474,60 @@ class Environment {
             rotation: rotation
         });
     }
-    
+
+    createShippingContainer(x, y, z, rotation) {
+        // Create shipping container geometry
+        const containerGeometry = new THREE.BoxGeometry(2.5, 2.5, 6);
+        const containerMaterial = new THREE.MeshStandardMaterial({
+            color: 0x8B4513, // Brown/rust color
+            roughness: 0.9,
+            metalness: 0.1
+        });
+
+        const container = new THREE.Mesh(containerGeometry, containerMaterial);
+
+        // Add rust details with darker patches
+        const rustGeometry = new THREE.PlaneGeometry(2, 1.5);
+        const rustMaterial = new THREE.MeshStandardMaterial({
+            color: 0x654321,
+            roughness: 0.95,
+            metalness: 0.05,
+            side: THREE.DoubleSide
+        });
+
+        // Add rust patches on sides
+        const rustPatches = [
+            { position: [0, 0, 3.01], rotation: [0, 0, 0] },
+            { position: [0, 0, -3.01], rotation: [0, Math.PI, 0] },
+            { position: [1.26, 0, 0], rotation: [0, Math.PI/2, 0] },
+            { position: [-1.26, 0, 0], rotation: [0, -Math.PI/2, 0] }
+        ];
+
+        rustPatches.forEach(patch => {
+            const rust = new THREE.Mesh(rustGeometry, rustMaterial);
+            rust.position.set(...patch.position);
+            rust.rotation.set(...patch.rotation);
+            container.add(rust);
+        });
+
+        container.position.set(x, y + 1.25, z); // Center at ground level + half height
+        container.rotation.y = rotation;
+
+        container.castShadow = true;
+        container.receiveShadow = true;
+        this.scene.add(container);
+
+        // Store container for collision detection
+        this.roadworkObstacles.push({
+            type: 'container',
+            position: new THREE.Vector3(x, y + 1.25, z),
+            width: 2.5,
+            height: 2.5,
+            depth: 6,
+            rotation: rotation
+        });
+    }
+
     createWarningLight(point, side) {
         const lightGroup = new THREE.Group();
         
