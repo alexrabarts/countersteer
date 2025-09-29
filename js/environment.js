@@ -1461,43 +1461,54 @@ class Environment {
         const peak2Height = 450;
         const peak2Width = 380;
         
-        // Create the first peak
-        const mountain1Geometry = new THREE.ConeGeometry(peak1Width/2, peak1Height, 16, 8);
+        // Create the first peak using a sphere for more rounded shape
+        const mountain1Geometry = new THREE.SphereGeometry(peak1Width/2, 16, 12);
         
-        // Deform the first peak to make it more mountain-like
+        // Deform the sphere to create a rounded mountain shape
         const positions1 = mountain1Geometry.attributes.position;
         for (let i = 0; i < positions1.count; i++) {
             const px = positions1.getX(i);
             const py = positions1.getY(i);
             const pz = positions1.getZ(i);
             
-            // Get normalized height (0 at base, 1 at peak)
-            const normalizedHeight = (py + peak1Height/2) / peak1Height;
+            // Normalize position for sphere
+            const sphereRadius = peak1Width/2;
+            const normalizedY = py / sphereRadius;
+            
+            // Stretch vertically to create mountain height
+            if (py > 0) {
+                // Upper hemisphere - stretch to create peak
+                const stretchFactor = (peak1Height / sphereRadius) * (0.7 + normalizedY * 0.3);
+                positions1.setY(i, py * stretchFactor);
+            } else {
+                // Lower hemisphere - flatten to create base
+                positions1.setY(i, py * 0.05);
+                // Widen the base
+                const widenFactor = 1.5 - normalizedY * 0.5;
+                positions1.setX(i, px * widenFactor);
+                positions1.setZ(i, pz * widenFactor);
+            }
+            
+            // Get new normalized height after stretching
+            const newY = positions1.getY(i);
+            const normalizedHeight = Math.max(0, (newY + peak1Height * 0.05) / (peak1Height * 1.05));
             
             // Add ridges and variation
             const ridgeAngle = Math.atan2(pz, px);
             const ridgeEffect = Math.sin(ridgeAngle * 4) * (1 - normalizedHeight) * 30;
             const noiseEffect = Math.sin(i * 0.3) * 20 * (1 - normalizedHeight);
             
-            // Apply deformation
-            const distance = Math.sqrt(px * px + pz * pz);
-            const newDistance = distance + ridgeEffect + noiseEffect;
-            const scale = newDistance / (distance || 1);
-            
-            positions1.setX(i, px * scale);
-            positions1.setZ(i, pz * scale);
-            
-            // Make the peak slightly asymmetric
-            if (normalizedHeight > 0.7) {
-                positions1.setX(i, px * (1 + Math.sin(py * 0.1) * 0.1));
-                positions1.setY(i, py + Math.cos(px * 0.05) * 10);
-            }
-            
-            // Widen the base significantly
-            if (normalizedHeight < 0.3) {
-                const baseWidening = 1 + (0.3 - normalizedHeight) * 2;
-                positions1.setX(i, px * baseWidening);
-                positions1.setZ(i, pz * baseWidening);
+            // Apply natural deformation
+            if (normalizedHeight > 0.3) {
+                // Add gentle ridges
+                const currentX = positions1.getX(i);
+                const currentZ = positions1.getZ(i);
+                const angle = Math.atan2(currentZ, currentX);
+                const ridgeEffect = Math.sin(angle * 5) * 15 * (1 - normalizedHeight);
+                const noiseEffect = Math.sin(i * 0.3) * 10 * (1 - normalizedHeight);
+                
+                positions1.setX(i, currentX + Math.cos(angle) * (ridgeEffect + noiseEffect) * 0.5);
+                positions1.setZ(i, currentZ + Math.sin(angle) * (ridgeEffect + noiseEffect) * 0.5);
             }
         }
         
@@ -1564,39 +1575,46 @@ class Environment {
     }
     
     createSecondPeak(x, z, height, width) {
-        // Create the second peak with similar structure but slightly different
-        const mountainGeometry = new THREE.ConeGeometry(width/2, height, 16, 8);
+        // Create the second peak using sphere for rounded shape
+        const mountainGeometry = new THREE.SphereGeometry(width/2, 16, 12);
         
-        // Deform to make it natural
+        // Deform sphere to create rounded mountain
         const positions = mountainGeometry.attributes.position;
         for (let i = 0; i < positions.count; i++) {
             const px = positions.getX(i);
             const py = positions.getY(i);
             const pz = positions.getZ(i);
             
-            const normalizedHeight = (py + height/2) / height;
+            const sphereRadius = width/2;
+            const normalizedY = py / sphereRadius;
             
-            // Different ridge pattern for variety
-            const ridgeAngle = Math.atan2(pz, px);
-            const ridgeEffect = Math.sin(ridgeAngle * 5) * (1 - normalizedHeight) * 25;
-            const noiseEffect = Math.sin(i * 0.4) * 15 * (1 - normalizedHeight);
-            
-            const distance = Math.sqrt(px * px + pz * pz);
-            const newDistance = distance + ridgeEffect + noiseEffect;
-            const scale = newDistance / (distance || 1);
-            
-            positions.setX(i, px * scale);
-            positions.setZ(i, pz * scale);
-            
-            if (normalizedHeight > 0.7) {
-                positions.setX(i, px * (1 + Math.cos(py * 0.12) * 0.08));
-                positions.setY(i, py + Math.sin(px * 0.06) * 8);
+            // Stretch vertically for mountain shape
+            if (py > 0) {
+                // Upper hemisphere - gentler stretch for rounder peak
+                const stretchFactor = (height / sphereRadius) * (0.6 + normalizedY * 0.4);
+                positions.setY(i, py * stretchFactor);
+            } else {
+                // Lower hemisphere - flatten
+                positions.setY(i, py * 0.05);
+                // Widen base
+                const widenFactor = 1.4 - normalizedY * 0.4;
+                positions.setX(i, px * widenFactor);
+                positions.setZ(i, pz * widenFactor);
             }
             
-            if (normalizedHeight < 0.3) {
-                const baseWidening = 1 + (0.3 - normalizedHeight) * 1.8;
-                positions.setX(i, px * baseWidening);
-                positions.setZ(i, pz * baseWidening);
+            const newY = positions.getY(i);
+            const normalizedHeight = Math.max(0, (newY + height * 0.05) / (height * 1.05));
+            
+            // Add variation
+            if (normalizedHeight > 0.3) {
+                const currentX = positions.getX(i);
+                const currentZ = positions.getZ(i);
+                const angle = Math.atan2(currentZ, currentX);
+                const ridgeEffect = Math.sin(angle * 6) * 12 * (1 - normalizedHeight);
+                const noiseEffect = Math.sin(i * 0.4) * 8 * (1 - normalizedHeight);
+                
+                positions.setX(i, currentX + Math.cos(angle) * (ridgeEffect + noiseEffect) * 0.5);
+                positions.setZ(i, currentZ + Math.sin(angle) * (ridgeEffect + noiseEffect) * 0.5);
             }
         }
         
