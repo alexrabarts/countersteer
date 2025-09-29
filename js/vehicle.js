@@ -802,17 +802,37 @@ class Vehicle {
             this.group.rotation.z = this.leanAngle * 0.5; // Reduce lean while jumping
             this.rider.rotation.z = this.leanAngle * 0.1;
         } else if (this.isWheelie) {
-            // Wheelie animation - pivot around bottom of back wheel
-            const backWheelOffset = this.wheelbase / 2; // 0.7m behind center
-            const cosTheta = Math.cos(this.wheelieAngle);
-            const sinTheta = Math.sin(this.wheelieAngle);
-
-            // Calculate center position after rotation around back wheel contact point
-            this.group.position.y = this.position.y + this.cgHeight * cosTheta - backWheelOffset * sinTheta;
-            this.group.position.z = this.position.z + this.cgHeight * sinTheta + backWheelOffset * (cosTheta - 1);
-
-            // Apply rotation
+            // Wheelie animation - pivot around center of rear wheel
+            // Rear wheel center is at (0, 0.3, -0.7) in local space
+            // Bike origin is at CG height (0.6m) above ground
+            
+            // Apply the rotation first
             this.group.rotation.x = -this.wheelieAngle; // Negative for wheelie (front up)
+            
+            // Calculate translation needed to keep rear wheel center fixed
+            // Vector from bike origin to rear wheel center
+            // Rear wheel center Y: 0.3 (above ground)
+            // Bike origin Y: 0.6 (CG height above ground)
+            // So offset from bike origin to wheel center: 0.3 - 0.6 = -0.3
+            
+            const angle = -this.wheelieAngle;
+            const cosTheta = Math.cos(angle);
+            const sinTheta = Math.sin(angle);
+            
+            // Original vector from origin to pivot point (rear wheel center)
+            const pivotX = 0;
+            const pivotY = 0.3 - this.cgHeight; // wheel center height - CG height = 0.3 - 0.6 = -0.3
+            const pivotZ = -0.7; // rear wheel is 0.7m behind center
+            
+            // After rotation, this vector becomes:
+            const rotatedY = pivotY * cosTheta - pivotZ * sinTheta;
+            const rotatedZ = pivotY * sinTheta + pivotZ * cosTheta;
+            
+            // Translation needed to keep pivot point fixed
+            this.group.position.y = this.position.y + (pivotY - rotatedY);
+            this.group.position.z = this.position.z + (pivotZ - rotatedZ);
+            
+            // Apply lean (reduced during wheelie)
             this.group.rotation.z = this.leanAngle * 0.3; // Reduce lean during wheelie
             this.rider.rotation.z = this.leanAngle * 0.1;
             
