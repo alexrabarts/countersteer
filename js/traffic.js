@@ -488,9 +488,27 @@ class Car {
             this.currentSegment -= 1;
         }
         
-        // Wrap around properly
+        // Check if car needs to wrap around
         const totalSegments = this.environment.roadPath.length;
-        this.currentSegment = ((this.currentSegment % totalSegments) + totalSegments) % totalSegments;
+        const previousSegment = this.currentSegment;
+        
+        // Hide car during wrap-around transition
+        if (this.currentSegment >= totalSegments || this.currentSegment < 0) {
+            this.carGroup.visible = false;
+            
+            // Wrap around
+            this.currentSegment = ((this.currentSegment % totalSegments) + totalSegments) % totalSegments;
+            
+            // Make visible again after a brief delay to ensure smooth transition
+            setTimeout(() => {
+                this.carGroup.visible = true;
+            }, 100);
+        } else {
+            // Ensure car is visible during normal driving
+            if (!this.carGroup.visible) {
+                this.carGroup.visible = true;
+            }
+        }
         
         // Restore speed if slowed down
         if (this.currentSpeed < this.baseSpeed) {
