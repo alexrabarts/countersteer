@@ -506,8 +506,8 @@ class Environment {
                          // Combine displacements with height-based variation
                          const totalDisplacement = primary + secondary + tertiary + micro;
 
-                         // Apply faceting by quantizing displacement - much smaller facets for more detail
-                         const facetSize = 0.6 + Math.sin(idx * 0.3) * 0.2; // Much smaller facet size for more angular detail
+                         // Apply faceting by quantizing displacement - even smaller facets for maximum detail
+                         const facetSize = 0.3 + Math.sin(idx * 0.3) * 0.1; // Very small facet size (0.3-0.4 units) for sharp angular detail
                          const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
 
                          // Calculate base final distance
@@ -659,34 +659,57 @@ class Environment {
             mainCliff.castShadow = true;
             group.add(mainCliff);
             
-            // Add MORE boulders with proper ground testing
-            // Test function to ensure boulders are properly positioned
-            const testBoulderPosition = (x, y, z, roadPoint) => {
+            // Enhanced boulder position testing with more comprehensive checks
+            const testBoulderPosition = (x, y, z, roadPoint, boulderRadius, side) => {
                 // Test 1: Not on the road (must be at least 10 units from center)
                 const perpDist = Math.sqrt(
                     Math.pow(x - roadPoint.x, 2) + 
                     Math.pow(z - roadPoint.z, 2)
                 );
                 if (perpDist < 10) {
-                    console.warn(`Boulder too close to road: ${perpDist} units from center`);
+                    console.warn(`Boulder too close to road: ${perpDist.toFixed(1)} units from center`);
                     return false;
                 }
                 
-                // Test 2: Not floating (Y position should be at or below road level)
-                const maxAllowedHeight = (roadPoint.y || 0) + 2; // Allow 2 units above road max
-                if (y > maxAllowedHeight) {
-                    console.warn(`Boulder floating: Y=${y}, road Y=${roadPoint.y}, max=${maxAllowedHeight}`);
-                    return false;
+                // Test 2: Calculate expected ground level based on terrain
+                let expectedGroundY;
+                if (side > 0) {
+                    // Right side - calculate drop-off based on distance from road
+                    const dropDistance = Math.max(0, perpDist - 8); // Distance beyond road edge
+                    const terrainDrop = Math.min(dropDistance * 4, 50); // Progressive drop, max 50
+                    expectedGroundY = (roadPoint.y || 0) - terrainDrop;
+                } else {
+                    // Left side - should be at road level
+                    expectedGroundY = roadPoint.y || 0;
                 }
                 
-                // Test 3: Properly embedded (Y should be slightly below ground)
-                const minEmbedDepth = (roadPoint.y || 0) - 2;
-                if (y < minEmbedDepth) {
-                    console.warn(`Boulder too deep: Y=${y}, min=${minEmbedDepth}`);
-                    return false;
+                // Test 3: Boulder bottom should be at or below expected ground
+                const boulderBottom = y - boulderRadius;
+                const tolerance = 0.5; // Small tolerance for variations
+                
+                if (boulderBottom > expectedGroundY + tolerance) {
+                    console.warn(`Boulder FLOATING: Bottom at ${boulderBottom.toFixed(1)}, expected ground at ${expectedGroundY.toFixed(1)}`);
+                    return { valid: false, correctY: expectedGroundY - boulderRadius * 0.3 }; // Return corrected position
                 }
                 
-                return true;
+                // Test 4: Boulder shouldn't be too deep (more than 60% embedded)
+                const boulderTop = y + boulderRadius;
+                if (boulderTop < expectedGroundY - boulderRadius * 0.2) {
+                    console.warn(`Boulder too deep: Top at ${boulderTop.toFixed(1)}, ground at ${expectedGroundY.toFixed(1)}`);
+                    return { valid: false, correctY: expectedGroundY - boulderRadius * 0.3 };
+                }
+                
+                // Test 5: Check against cliff wall position (left side)
+                if (side < 0) {
+                    // Ensure boulder isn't inside the cliff wall (starts around 8.5 units)
+                    const distFromCenter = Math.abs(perpDist);
+                    if (distFromCenter < 9 && distFromCenter > 7) {
+                        console.warn(`Boulder conflicting with cliff base at ${distFromCenter.toFixed(1)} units`);
+                        return false;
+                    }
+                }
+                
+                return { valid: true };
             };
             
             // Add MANY more boulders along the cliff base
@@ -705,18 +728,18 @@ class Environment {
                             rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
                         );
                         
-                        // Height position on cliff (0 = base, 1 = top)
-                        const heightRatio = Math.random() * 0.7; // Don't go too high
+                        // Height position on cliff (0 = base, 1 = top) - keep rocks lower to prevent floating
+                        const heightRatio = Math.random() * 0.4; // Maximum 40% up the cliff
                         const cliffHeight = Math.abs(height) * heightRatio;
                         
-                        // Calculate base distance accounting for slope
-                        let distance = 7.0; // Start closer than cliff base
+                        // Calculate base distance accounting for slope - ensure rocks are ON the cliff face
+                        let distance = 8.5; // Start at cliff base position
                         if (side > 0 && isDropOff) {
-                            // Right cliff - account for outward slope
-                            distance += heightRatio * heightRatio * 30; // Less than cliff slope
+                            // Right cliff - account for outward slope but keep close to face
+                            distance += heightRatio * 25; // Match cliff slope more closely
                         } else if (side < 0 && !isDropOff) {
-                            // Left cliff - account for overhang
-                            distance += heightRatio * heightRatio * 15;
+                            // Left cliff - account for overhang but keep attached
+                            distance += heightRatio * 20; // Match cliff overhang
                         }
                         
                         // Add some random variation in distance
@@ -794,18 +817,21 @@ class Environment {
                             boulderY = (point.y || 0) - baseBoulderSize * 0.5;
                         }
                         
-                        // TEST: Ensure boulder is not on road (minimum 10 units from center)
-                        const distFromCenter = Math.sqrt(perpX * perpX + perpZ * perpZ);
-                        if (distFromCenter < 10) {
-                            console.warn(`Boulder too close to road: ${distFromCenter.toFixed(1)} units`);
-                            continue; // Skip this boulder
-                        }
+                        // Run comprehensive position tests
+                        const testResult = testBoulderPosition(
+                            boulderX, boulderY, boulderZ, 
+                            point, baseBoulderSize, side
+                        );
                         
-                        // TEST: Ensure boulder is not floating
-                        const maxAllowedY = (point.y || 0) + 1;
-                        if (boulderY > maxAllowedY) {
-                            console.warn(`Boulder floating at Y=${boulderY.toFixed(1)}, max=${maxAllowedY}`);
-                            boulderY = (point.y || 0) - baseBoulderSize * 0.5; // Force to ground
+                        if (!testResult || !testResult.valid) {
+                            if (testResult && testResult.correctY !== undefined) {
+                                // Use corrected Y position
+                                boulderY = testResult.correctY;
+                                console.log(`Boulder position corrected to Y=${boulderY.toFixed(1)}`);
+                            } else {
+                                // Skip this boulder entirely
+                                continue;
+                            }
                         }
 
                         baseBoulder.position.set(boulderX, boulderY, boulderZ);
@@ -1093,19 +1119,22 @@ class Environment {
                             );
                             const moss = new THREE.Mesh(mossGeometry, mossMaterial);
                             
-                            if (height > 0) {
-                                moss.position.set(
-                                    point.x + perpX,
-                                    (point.y || 0) + cliffHeight,
-                                    point.z + perpZ
-                                );
-                            } else {
-                                moss.position.set(
-                                    point.x + perpX,
-                                    (point.y || 0) - cliffHeight,
-                                    point.z + perpZ
-                                );
-                            }
+                        // Position rock embedded into cliff face
+                        const embedDepth = rockSize * 0.4; // Embed 40% into cliff
+                        
+                        if (height > 0) {
+                            rock.position.set(
+                                point.x + perpX,
+                                (point.y || 0) + cliffHeight - embedDepth, // Lower to embed
+                                point.z + perpZ
+                            );
+                        } else {
+                            rock.position.set(
+                                point.x + perpX,
+                                (point.y || 0) - cliffHeight + embedDepth, // Raise to embed on drop-off
+                                point.z + perpZ
+                            );
+                        }
                             
                             // Rotate to face outward from cliff
                             moss.rotation.y = point.heading + (side > 0 ? Math.PI/2 : -Math.PI/2);
