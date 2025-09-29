@@ -59,7 +59,7 @@ class Cones {
                             z: point.z
                         });
                     }
-                } else if (index % 6 === 0 && index > 25 && !isNearCheckpoint) {
+                } else if (index % 6 === 0 && index > 30 && !isNearCheckpoint) {
                     // Corner section - place cones at apex, offset to the inside on grass (less frequent)
                     const turnDirection = signedHeadingChange > 0 ? 1 : -1;
                     const offset = turnDirection * 10;
