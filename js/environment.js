@@ -448,7 +448,7 @@ class Environment {
                          if (side > 0 && isDropOff) {
                              // Right wall (drop-off) - add dramatic overhanging slope
                              // Start at road edge, slope inward as we go down
-                             const slopeAmount = verticalProgress * verticalProgress * 25; // Quadratic slope for overhang
+                             const slopeAmount = verticalProgress * verticalProgress * 50; // Quadratic slope for overhang
                              baseDistance -= slopeAmount;
                             
                              // Debug: Log slope amount for first segment
@@ -480,20 +480,27 @@ class Environment {
                         const tertiary = (Math.sin(idx * 1.2 + j * 1.5) * 0.6 +
                                         Math.cos(idx * 1.8 - j * 2.0) * 0.4) * 1.5 * heightFactor;
                         
-                        // Layer 4: Micro details for texture
-                        const micro = Math.sin(idx * 3.5 + j * 4.0) * 0.5 * heightFactor;
-                        
-                        // Combine displacements with height-based variation
-                        const totalDisplacement = primary + secondary + tertiary + micro;
-                        
-                        // Apply faceting by quantizing displacement - smaller facets for more angular look
-                        const facetSize = 1.2 + Math.sin(idx * 0.3) * 0.4; // Smaller variable facet size for sharper angles
-                        const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
+                         // Layer 4: Micro details for texture
+                         const micro = Math.sin(idx * 3.5 + j * 4.0) * 0.5 * heightFactor;
 
-                        // Final distance from road
-                        // Ensure minimum distance to prevent gaps at road edge (8 units from center)
-                        const displacementScale = verticalProgress === 0 ? 0.15 : 0.55; // Further increased displacement scale for more pronounced faceting
-                        const finalDistance = Math.max(baseDistance + facetedDisplacement * displacementScale, 7.5);
+                         // Combine displacements with height-based variation
+                         const totalDisplacement = primary + secondary + tertiary + micro;
+
+                         // Apply faceting by quantizing displacement - smaller facets for more angular look
+                         const facetSize = 1.2 + Math.sin(idx * 0.3) * 0.4; // Smaller variable facet size for sharper angles
+                         const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
+
+                         // Calculate base final distance
+                         const displacementScale = verticalProgress === 0 ? 0.15 : 0.55; // Further increased displacement scale for more pronounced faceting
+                         let finalDistance = baseDistance + facetedDisplacement * displacementScale;
+
+                         // Apply slope for overhang
+                         if (side > 0 && isDropOff) {
+                             finalDistance -= slopeAmount;
+                         }
+
+                         // Ensure minimum distance to prevent gaps at road edge (8 units from center)
+                         finalDistance = Math.max(finalDistance, 5);
                         
                         // Calculate position
                         const perpX = Math.cos(interpHeading) * finalDistance * side;
