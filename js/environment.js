@@ -1157,9 +1157,6 @@ class Environment {
         };
         
 
-        const leftStrip = createGroundStrip(-1, 4, 11);
-        this.scene.add(leftStrip);
-
         // New ground strips implementation
         const createGroundStrip = (side, startDist, endDist) => {
             const geometry = new THREE.BufferGeometry();
