@@ -968,8 +968,8 @@ class Vehicle {
                     }
                 }
                 
-                // Much more responsive - almost instant but with tiny smoothing to prevent jitter
-                this.position.y = this.position.y * 0.1 + targetY * 0.9;
+                 // Smooth elevation following to prevent bobbing with gradual changes
+                 this.position.y = this.position.y * 0.7 + targetY * 0.3;
             }
         }
     }
