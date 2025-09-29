@@ -1186,24 +1186,24 @@ class Environment {
                 // Add vertices for this segment
                 const baseIndex = i * 4;
                 vertices.push(
-                    point.x + perpX1, point.y, point.z + perpZ1,
-                    point.x + perpX2, point.y, point.z + perpZ2,
-                    nextPoint.x + nextPerpX1, nextPoint.y, nextPoint.z + nextPerpZ1,
-                    nextPoint.x + nextPerpX2, nextPoint.y, nextPoint.z + nextPerpZ2
+                    point.x + perpX1, point.y - 0.05, point.z + perpZ1,
+                    point.x + perpX2, point.y - 0.05, point.z + perpZ2,
+                    nextPoint.x + nextPerpX1, nextPoint.y - 0.05, nextPoint.z + nextPerpZ1,
+                    nextPoint.x + nextPerpX2, nextPoint.y - 0.05, nextPoint.z + nextPerpZ2
                 );
 
-                // Add color (red for right, brown for left)
-                const r = side > 0 ? 1 : 0.25;
-                const g = side > 0 ? 0 : 0.2;
-                const b = side > 0 ? 0 : 0.18;
+                // Add color (blue for right, green for left)
+                const r = 0;
+                const g = side > 0 ? 0 : 1;
+                const b = side > 0 ? 1 : 0;
                 for (let j = 0; j < 4; j++) {
                     colors.push(r, g, b);
                 }
 
-                // Create triangles with correct winding
+                // Create triangles
                 indices.push(
-                    baseIndex, baseIndex + 1, baseIndex + 2,
-                    baseIndex + 1, baseIndex + 3, baseIndex + 2
+                    baseIndex, baseIndex + 2, baseIndex + 1,
+                    baseIndex + 1, baseIndex + 2, baseIndex + 3
                 );
             }
 
