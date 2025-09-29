@@ -158,8 +158,17 @@ class Game {
 
     setupCamera() {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
-        this.camera.position.set(0, 5, -10);
+        
+        // Start camera from above for intro animation
+        this.camera.position.set(0, 50, -15); // Start high above
         this.camera.lookAt(0, 0, 0);
+        
+        // Camera intro animation state
+        this.cameraIntroActive = true;
+        this.cameraIntroStartTime = performance.now();
+        this.cameraIntroDuration = 2500; // 2.5 seconds intro
+        this.cameraIntroStartPos = new THREE.Vector3(0, 50, -15);
+        this.cameraIntroEndPos = new THREE.Vector3(0, 5, -10);
         
         // Dynamic camera offset for mountain roads
         this.baseCameraOffset = new THREE.Vector3(0, 3, -6); // Even closer view for more immersion
@@ -170,13 +179,42 @@ class Game {
         this.cameraLerpFactor = 0.08; // Slightly faster response for mountain roads
         this.cameraLateralOffset = 0; // Track lateral offset for smooth side movement
         this.previousYawAngle = 0; // Track yaw changes for lateral movement
-        console.log('Camera setup complete');
+        console.log('Camera setup complete - starting intro animation');
     }
 
 
 
     updateCamera() {
-        // Follow camera - keep camera behind vehicle
+        // Handle camera intro animation
+        if (this.cameraIntroActive) {
+            const elapsed = performance.now() - this.cameraIntroStartTime;
+            const progress = Math.min(elapsed / this.cameraIntroDuration, 1);
+            
+            // Use easing function for smooth animation (ease-in-out)
+            const easeProgress = progress < 0.5 
+                ? 2 * progress * progress 
+                : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+            
+            // Interpolate camera position from above to behind vehicle
+            this.camera.position.lerpVectors(
+                this.cameraIntroStartPos,
+                this.cameraIntroEndPos,
+                easeProgress
+            );
+            
+            // Look at the vehicle
+            this.camera.lookAt(this.vehicle.position.x, this.vehicle.position.y + 1, this.vehicle.position.z);
+            
+            // End intro when complete
+            if (progress >= 1) {
+                this.cameraIntroActive = false;
+                console.log('Camera intro complete');
+            }
+            
+            return; // Skip normal camera update during intro
+        }
+        
+        // Normal camera follow behavior
         const vehiclePos = this.vehicle.position.clone();
         const vehicleRotation = new THREE.Euler(0, this.vehicle.yawAngle, 0);
         
