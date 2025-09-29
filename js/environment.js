@@ -497,7 +497,7 @@ class Environment {
                           // Apply slope for overhang
                           if (side > 0 && isDropOff) {
                               const slopeAmount = verticalProgress * 100;
-                              finalDistance -= slopeAmount;
+                              finalDistance += slopeAmount;
                           }
 
                          // Ensure minimum distance to prevent gaps at road edge (8 units from center)
