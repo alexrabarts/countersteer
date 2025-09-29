@@ -238,18 +238,45 @@ class Vehicle {
 
 
 
-                // Check if hit ground (invisible ground plane at y = -80)
-                const groundLevel = -80;
-                if (this.position.y <= groundLevel) {
-                    // console.log('HIT GROUND! Setting position to', groundLevel);
-                    this.position.y = groundLevel;
-                    this.velocity.set(0, 0, 0); // Stop all movement
-                    this.speed = 0;
-                    this.hitGround = true;
+                // Check terrain collision - sample terrain height at current position
+                const terrainHeight = this.getTerrainHeightAt(this.position.x, this.position.z);
+                
+                // Check if hit terrain or lake
+                if (this.position.y <= terrainHeight + 0.5) {
+                    // Hit the terrain/slope
+                    this.position.y = terrainHeight + 0.5; // Place bike on terrain
+                    
+                    // Calculate slope normal to determine slide direction
+                    const slopeNormal = this.calculateSlopeNormal(this.position.x, this.position.z);
+                    
+                    // If on a steep slope, slide down it
+                    const slopeAngle = Math.acos(slopeNormal.y);
+                    const slopeDegrees = slopeAngle * 180 / Math.PI;
+                    
+                    if (slopeDegrees > 30) { // Steep slope - keep sliding
+                        // Project velocity onto slope
+                        const slideDirection = new THREE.Vector3(slopeNormal.x, 0, slopeNormal.z).normalize();
+                        const slideSpeed = Math.max(5, this.speed * 0.7); // Maintain some sliding speed
+                        
+                        this.velocity.x = slideDirection.x * slideSpeed;
+                        this.velocity.z = slideDirection.z * slideSpeed;
+                        this.velocity.y = -Math.tan(slopeAngle) * slideSpeed * 0.5; // Slide downward
+                        
+                        // Apply friction
+                        this.velocity.multiplyScalar(0.98);
+                    } else {
+                        // Gentle slope or flat - stop
+                        this.velocity.multiplyScalar(0.85); // Quick stop
+                        if (this.velocity.length() < 0.5) {
+                            this.velocity.set(0, 0, 0);
+                            this.speed = 0;
+                            this.hitGround = true;
+                        }
+                    }
 
-                    if (!this.groundHitLogged) {
-                        console.log('CRASHED! Hit the ground after falling',
-                            Math.abs(this.fallStartY - groundLevel).toFixed(1) + ' meters');
+                    if (!this.groundHitLogged && this.hitGround) {
+                        console.log('CRASHED! Hit the terrain after falling',
+                            Math.abs(this.fallStartY - terrainHeight).toFixed(1) + ' meters');
                         this.groundHitLogged = true;
                     }
                 }
@@ -876,11 +903,95 @@ class Vehicle {
     }
 
     reset() {
-        // Find the starting road elevation
-        let startY = 0;
-        if (this.environment && this.environment.roadPath && this.environment.roadPath.length > 0) {
-            startY = this.environment.roadPath[0].y || 0;
+        this.position.set(0, 2, 10);
+        this.velocity.set(0, 0, 0);
+        this.speed = 0;
+        this.heading = 0;
+        this.leanAngle = 0;
+        this.leanVelocity = 0;
+        this.crashed = false;
+        this.crashAngle = 0;
+        this.isJumping = false;
+        this.jumpVelocityY = 0;
+        this.jumpStartHeight = 0;
+        this.jumpRotation = 0;
+        this.previousSpeed = 0;
+        this.isWheelie = false;
+        this.wheelieAngle = 0;
+        this.wheelieVelocity = 0;
+        this.wheelieBalance = 0;
+        this.wheelieStartTime = 0;
+        this.wheelieScoreAccumulated = 0;
+        this.wheelieCombo = 0;
+        this.wheeliePerfectFrames = 0;
+        this.wheelieLastInputTime = 0;
+        this.fallingOffCliff = false;
+        this.hitGround = false;
+        this.fallStartY = 0;
+        this.groundHitLogged = false;
+        this.frame.material.color.setHex(0x0066cc); // Reset to blue
+        this.updateMesh();
+    }
+    
+    getTerrainHeightAt(x, z) {
+        // Sample the terrain height at the given position
+        // Start with lake level
+        let baseHeight = -80;
+        
+        // Check if we're near the road - if so, use road height
+        if (this.environment && this.environment.roadPath) {
+            // Find closest road segment
+            let closestDist = Infinity;
+            let closestHeight = baseHeight;
+            
+            for (const point of this.environment.roadPath) {
+                const dx = x - point.x;
+                const dz = z - point.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                
+                if (dist < closestDist && dist < 100) { // Within 100 units of road
+                    closestDist = dist;
+                    closestHeight = point.y || 0;
+                    
+                    // Interpolate height based on distance from road
+                    if (dist > 20) {
+                        // Slope down from road to lake
+                        const slopeFactor = (dist - 20) / 80; // 0 at road edge, 1 at lake
+                        closestHeight = closestHeight + (baseHeight - closestHeight) * slopeFactor;
+                    }
+                }
+            }
+            
+            if (closestDist < 100) {
+                return closestHeight;
+            }
         }
+        
+        // Default to lake level if far from road
+        return baseHeight;
+    }
+    
+    calculateSlopeNormal(x, z) {
+        // Calculate the normal vector of the terrain slope at this position
+        const epsilon = 1.0; // Sample distance
+        
+        // Sample heights around the current position
+        const h0 = this.getTerrainHeightAt(x, z);
+        const hx1 = this.getTerrainHeightAt(x + epsilon, z);
+        const hx2 = this.getTerrainHeightAt(x - epsilon, z);
+        const hz1 = this.getTerrainHeightAt(x, z + epsilon);
+        const hz2 = this.getTerrainHeightAt(x, z - epsilon);
+        
+        // Calculate gradients
+        const dx = (hx1 - hx2) / (2 * epsilon);
+        const dz = (hz1 - hz2) / (2 * epsilon);
+        
+        // Normal vector (perpendicular to slope)
+        const normal = new THREE.Vector3(-dx, 1, -dz);
+        normal.normalize();
+        
+        return normal;
+    }
         this.position.set(0, startY, 0);
         this.velocity.set(0, 0, 0);
         this.speed = 20; // Reset to starting speed
