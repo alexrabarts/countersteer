@@ -1529,26 +1529,20 @@ class Environment {
         mountain.receiveShadow = true;
         group.add(mountain);
         
-        // Add a prominent snow cap that follows the mountain contours
-        const snowCapGeometry = new THREE.ConeGeometry(peakWidth/4.5, peakHeight * 0.25, 12, 4);
+        // Add a narrow snow cap just for the peak tip
+        const snowCapGeometry = new THREE.ConeGeometry(peakWidth/8, peakHeight * 0.15, 8, 3);
         
-        // Deform snow cap to match mountain shape and blend seamlessly
+        // Deform snow cap slightly for natural look
         const snowPositions = snowCapGeometry.attributes.position;
         for (let i = 0; i < snowPositions.count; i++) {
             const sx = snowPositions.getX(i);
             const sy = snowPositions.getY(i);
             const sz = snowPositions.getZ(i);
             
-            // Make snow cap irregular to match mountain ridges
-            const angle = Math.atan2(sz, sx);
-            const ridgeEffect = Math.sin(angle * 4) * 8; // Match mountain's ridge pattern
-            const snowNoise = Math.sin(i * 0.5) * 5 + Math.cos(i * 0.3) * 3;
-            
-            snowPositions.setX(i, sx + ridgeEffect * 0.5 + snowNoise * 0.3);
-            snowPositions.setZ(i, sz + ridgeEffect * 0.5 + snowNoise * 0.2);
-            
-            // Remove the flat bottom - let it taper naturally
-            // This prevents the "rim" effect
+            // Very subtle irregularity
+            const snowNoise = Math.sin(i * 0.5) * 3;
+            snowPositions.setX(i, sx + snowNoise * 0.2);
+            snowPositions.setZ(i, sz + snowNoise * 0.15);
         }
         
         snowCapGeometry.computeVertexNormals();
@@ -1562,19 +1556,19 @@ class Environment {
         });
         
         const snowCap = new THREE.Mesh(snowCapGeometry, snowMaterial);
-        // Position it higher so it sits on the peak, not around it
-        snowCap.position.set(peakX, peakHeight * 0.88 - 80, peakZ);
+        // Position it at the very top of the mountain
+        snowCap.position.set(peakX, peakHeight * 0.93 - 80, peakZ);
         snowCap.castShadow = true;
         snowCap.receiveShadow = true;
         group.add(snowCap);
         
-        // Add some snow patches lower on the mountain
-        for (let i = 0; i < 8; i++) {
-            const angle = (Math.PI * 2 / 8) * i + Math.random() * 0.5;
-            const heightRatio = 0.4 + Math.random() * 0.2;
-            const distance = peakWidth * 0.15 * (1 - heightRatio);
+        // Add some snow patches near the peak
+        for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI * 2 / 6) * i + Math.random() * 0.3;
+            const heightRatio = 0.65 + Math.random() * 0.15; // Higher up the mountain
+            const distance = peakWidth * 0.08 * (1 - heightRatio); // Closer to center
             
-            const patchGeometry = new THREE.SphereGeometry(20 + Math.random() * 15, 6, 4);
+            const patchGeometry = new THREE.SphereGeometry(10 + Math.random() * 8, 6, 4);
             const snowPatch = new THREE.Mesh(patchGeometry, snowMaterial);
             
             snowPatch.position.set(
@@ -1584,15 +1578,15 @@ class Environment {
             );
             
             snowPatch.scale.set(
-                2 + Math.random(),
-                0.5,
-                2 + Math.random()
+                1.5 + Math.random() * 0.5,
+                0.4,
+                1.5 + Math.random() * 0.5
             );
             
             snowPatch.rotation.set(
-                Math.random() * 0.5,
+                Math.random() * 0.3,
                 Math.random() * Math.PI,
-                Math.random() * 0.5
+                Math.random() * 0.3
             );
             
             group.add(snowPatch);
