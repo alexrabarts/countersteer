@@ -1497,21 +1497,42 @@ class Environment {
         
         mountainGeometry.computeVertexNormals();
         
-        // Create vertex colors for rock texture variation
+        // Create vertex colors with snow at the peak
         const colors = [];
         for (let i = 0; i < positions.count; i++) {
             const py = positions.getY(i);
             const normalizedHeight = (py + peakHeight/2) / peakHeight;
             
-            // Rock colors - darker at base, lighter towards peak
-            const baseGrey = 0.25 + normalizedHeight * 0.2;
-            const variation = Math.random() * 0.05;
-            
-            colors.push(
-                baseGrey + variation,
-                baseGrey + variation + 0.02,
-                baseGrey + variation + 0.05
-            );
+            // Transition to snow color at the peak
+            if (normalizedHeight > 0.85) {
+                // Snow white with slight blue tint
+                const snowWhite = 0.95 + Math.random() * 0.05;
+                colors.push(
+                    snowWhite - 0.02,  // Slightly less red for blue tint
+                    snowWhite,
+                    snowWhite
+                );
+            } else if (normalizedHeight > 0.75) {
+                // Transition zone - mix of rock and snow
+                const mixFactor = (normalizedHeight - 0.75) / 0.1;
+                const rockGrey = 0.35 + normalizedHeight * 0.15;
+                const snowWhite = 0.95;
+                const mixed = rockGrey + (snowWhite - rockGrey) * mixFactor;
+                colors.push(
+                    mixed + Math.random() * 0.03,
+                    mixed + Math.random() * 0.03,
+                    mixed + Math.random() * 0.03 + 0.02
+                );
+            } else {
+                // Rock colors - darker at base, lighter towards peak
+                const baseGrey = 0.25 + normalizedHeight * 0.2;
+                const variation = Math.random() * 0.05;
+                colors.push(
+                    baseGrey + variation,
+                    baseGrey + variation + 0.02,
+                    baseGrey + variation + 0.05
+                );
+            }
         }
         
         mountainGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
@@ -1529,40 +1550,8 @@ class Environment {
         mountain.receiveShadow = true;
         group.add(mountain);
         
-        // Add a small snow cap just for the peak tip
-        const snowCapGeometry = new THREE.ConeGeometry(peakWidth/15, peakHeight * 0.08, 6, 2);
-        
-        // Deform snow cap slightly for natural look
-        const snowPositions = snowCapGeometry.attributes.position;
-        for (let i = 0; i < snowPositions.count; i++) {
-            const sx = snowPositions.getX(i);
-            const sy = snowPositions.getY(i);
-            const sz = snowPositions.getZ(i);
-            
-            // Very subtle irregularity
-            const snowNoise = Math.sin(i * 0.5) * 2;
-            snowPositions.setX(i, sx + snowNoise * 0.1);
-            snowPositions.setZ(i, sz + snowNoise * 0.08);
-        }
-        
-        snowCapGeometry.computeVertexNormals();
-        
-        const snowMaterial = new THREE.MeshStandardMaterial({
-            color: 0xfafafa,
-            roughness: 0.6,
-            metalness: 0.0,
-            emissive: 0xffffff,
-            emissiveIntensity: 0.02 // Slight glow for snow
-        });
-        
-        const snowCap = new THREE.Mesh(snowCapGeometry, snowMaterial);
-        // Position it at the very top of the mountain
-        snowCap.position.set(peakX, peakHeight * 0.96 - 80, peakZ);
-        snowCap.castShadow = true;
-        snowCap.receiveShadow = true;
-        group.add(snowCap);
-        
-        // Removed snow patches - they were appearing to float
+        // Snow is now integrated into the mountain vertex colors at the peak
+        // No separate snow cap geometry needed
         
         // Add some rocky outcrops
         const rockMaterial = new THREE.MeshStandardMaterial({
