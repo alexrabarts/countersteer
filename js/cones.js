@@ -44,18 +44,23 @@ class Cones {
                     this.environment.roadPath[prevIndex].heading;
                 const headingChange = Math.abs(signedHeadingChange);
 
-                // Place cones based on section type
+                // Place cones based on section type - avoid checkpoints and start later
+                // Checkpoints are at segments: ~18, 32, 46, 60, 2 (wrapped)
+                const checkpointSegments = [18, 32, 46, 60, 2];
+                const isNearCheckpoint = checkpointSegments.some(cp => Math.abs(index - cp) < 5);
+
                 if (headingChange < 0.02) {
-                    // Straight section - place slalom cones every 3 segments on alternating sides on grass
-                    if (index % 3 === 0 && index > 10 && index < this.environment.roadPath.length - 10) {
-                        const sideOffset = (Math.floor(index / 3) % 2 === 0) ? 10 : -10;
+                    // Straight section - place slalom cones every 4 segments on alternating sides on grass
+                    // Start after segment 20 to ensure proper triggering, avoid checkpoints
+                    if (index % 4 === 0 && index > 20 && index < this.environment.roadPath.length - 10 && !isNearCheckpoint) {
+                        const sideOffset = (Math.floor(index / 4) % 2 === 0) ? 10 : -10;
                         conePositions.push({
                             x: point.x + sideOffset,
                             z: point.z
                         });
                     }
-                } else if (index % 5 === 0) {
-                    // Corner section - place cones at apex, offset to the inside on grass
+                } else if (index % 6 === 0 && !isNearCheckpoint) {
+                    // Corner section - place cones at apex, offset to the inside on grass (less frequent)
                     const turnDirection = signedHeadingChange > 0 ? 1 : -1;
                     const offset = turnDirection * 10;
                     conePositions.push({
