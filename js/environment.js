@@ -1159,7 +1159,69 @@ class Environment {
 
         const leftStrip = createGroundStrip(-1, 4, 11);
         this.scene.add(leftStrip);
-        
+
+        // New ground strips implementation
+        const createGroundStrip = (side, startDist, endDist) => {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const indices = [];
+            const colors = [];
+
+            for (let i = 0; i < this.roadPath.length - 1; i++) {
+                const point = this.roadPath[i];
+                const nextPoint = this.roadPath[i + 1];
+
+                // Perpendicular offsets
+                const perpX1 = Math.cos(point.heading) * startDist * side;
+                const perpZ1 = -Math.sin(point.heading) * startDist * side;
+                const perpX2 = Math.cos(point.heading) * endDist * side;
+                const perpZ2 = -Math.sin(point.heading) * endDist * side;
+
+                const nextPerpX1 = Math.cos(nextPoint.heading) * startDist * side;
+                const nextPerpZ1 = -Math.sin(nextPoint.heading) * startDist * side;
+                const nextPerpX2 = Math.cos(nextPoint.heading) * endDist * side;
+                const nextPerpZ2 = -Math.sin(nextPoint.heading) * endDist * side;
+
+                const baseIndex = i * 4;
+                vertices.push(
+                    point.x + perpX1, point.y, point.z + perpZ1,
+                    point.x + perpX2, point.y, point.z + perpZ2,
+                    nextPoint.x + nextPerpX1, nextPoint.y, nextPoint.z + nextPerpZ1,
+                    nextPoint.x + nextPerpX2, nextPoint.y, nextPoint.z + nextPerpZ2
+                );
+
+                // Brown color
+                for (let j = 0; j < 4; j++) {
+                    colors.push(0.25, 0.2, 0.18);
+                }
+
+                indices.push(
+                    baseIndex, baseIndex + 1, baseIndex + 2,
+                    baseIndex + 1, baseIndex + 3, baseIndex + 2
+                );
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals();
+
+            const material = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                roughness: 0.95,
+                metalness: 0.0
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.receiveShadow = true;
+            return mesh;
+        };
+
+        const leftStrip = createGroundStrip(-1, 8, 15);
+        this.scene.add(leftStrip);
+        const rightStrip = createGroundStrip(1, 8, 15);
+        this.scene.add(rightStrip);
+
         // Left cliff wall (mountain face rising above)
         const leftCliff = createFacetedCliff(-1, 40, false);  // Taller mountain wall
         this.scene.add(leftCliff);
