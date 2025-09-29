@@ -102,8 +102,9 @@ class InputHandler {
         this.throttleInput = (keyW || keyUp) ? 1 : 0;
         this.brakeInput = (keyS || keyDown) ? 1 : 0;
         
-        // Wheelie input - Shift key or Space key
-        this.wheelieInput = (this.keys['ShiftLeft'] || this.keys['ShiftRight'] || this.keys['Space']) ? 1 : 0;
+        // Wheelie input - Shift key or Space key (including virtual)
+        const virtualSpace = this.virtualControls ? this.virtualControls.getKey('Space') : false;
+        this.wheelieInput = (this.keys['ShiftLeft'] || this.keys['ShiftRight'] || this.keys['Space'] || virtualSpace) ? 1 : 0;
     }
 
     getSteeringInput() {

@@ -5,7 +5,8 @@ class VirtualControls {
             KeyA: false,
             KeyS: false,
             KeyD: false,
-            KeyR: false
+            KeyR: false,
+            Space: false
         };
 
         this.buttons = {}; // Store button elements for highlighting
@@ -23,7 +24,7 @@ class VirtualControls {
         const buttonSize = isMobileLandscape ? 50 : Math.min(50, viewportHeight * 0.06);
         const gap = 5;
         const controlsHeight = (buttonSize + gap) * 2;
-        const controlsWidth = (buttonSize + gap) * 3;
+        const controlsWidth = (buttonSize + gap) * 4; // Increased width for Space button
 
         // Calculate safe bottom position to ensure controls fit in viewport
         const safeBottomMargin = Math.min(20, viewportHeight * 0.02);
@@ -43,32 +44,38 @@ class VirtualControls {
             width: ${controlsWidth}px;
         `;
         
-        // WASD layout positions - Y coordinates inverted (bottom-up positioning)
+        // WASD + Space layout positions - Y coordinates inverted (bottom-up positioning)
         const buttons = [
             { key: 'KeyW', label: 'W', x: buttonSize + gap, y: buttonSize + gap },
             { key: 'KeyA', label: 'A', x: 0, y: 0 },
             { key: 'KeyS', label: 'S', x: buttonSize + gap, y: 0 },
-            { key: 'KeyD', label: 'D', x: (buttonSize + gap) * 2, y: 0 }
+            { key: 'KeyD', label: 'D', x: (buttonSize + gap) * 2, y: 0 },
+            { key: 'Space', label: 'SPACE', x: (buttonSize + gap) * 3, y: 0 } // Space for clutch pop
         ];
         
         buttons.forEach(btn => {
             const button = document.createElement('div');
             button.className = 'virtual-button';
             button.innerHTML = btn.label;
+            
+            // Special styling for Space button
+            const isSpaceButton = btn.key === 'Space';
+            const buttonHeight = isSpaceButton ? buttonSize * 2 + gap : buttonSize;
+            
             button.style.cssText = `
                 position: absolute;
                 width: ${buttonSize}px;
-                height: ${buttonSize}px;
+                height: ${buttonHeight}px;
                 left: ${btn.x}px;
                 bottom: ${btn.y}px;
-                background: rgba(255, 255, 255, 0.1);
-                border: 2px solid rgba(255, 255, 255, 0.3);
+                background: ${isSpaceButton ? 'rgba(255, 200, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'};
+                border: 2px solid ${isSpaceButton ? 'rgba(255, 200, 0, 0.4)' : 'rgba(255, 255, 255, 0.3)'};
                 border-radius: 10px;
-                color: white;
+                color: ${isSpaceButton ? '#ffc800' : 'white'};
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: ${Math.floor(buttonSize * 0.35)}px;
+                font-size: ${isSpaceButton ? Math.floor(buttonSize * 0.22) : Math.floor(buttonSize * 0.35)}px;
                 font-weight: bold;
                 font-family: monospace;
                 cursor: pointer;
@@ -82,22 +89,37 @@ class VirtualControls {
             button.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 this.touches[btn.key] = true;
-                button.style.background = 'rgba(255, 255, 255, 0.3)';
-                button.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+                if (isSpaceButton) {
+                    button.style.background = 'rgba(255, 200, 0, 0.4)';
+                    button.style.borderColor = 'rgba(255, 200, 0, 0.7)';
+                } else {
+                    button.style.background = 'rgba(255, 255, 255, 0.3)';
+                    button.style.borderColor = 'rgba(255, 255, 255, 0.6)';
+                }
             });
             
             button.addEventListener('touchend', (e) => {
                 e.preventDefault();
                 this.touches[btn.key] = false;
-                button.style.background = 'rgba(255, 255, 255, 0.1)';
-                button.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                if (isSpaceButton) {
+                    button.style.background = 'rgba(255, 200, 0, 0.1)';
+                    button.style.borderColor = 'rgba(255, 200, 0, 0.4)';
+                } else {
+                    button.style.background = 'rgba(255, 255, 255, 0.1)';
+                    button.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                }
             });
             
             button.addEventListener('touchcancel', (e) => {
                 e.preventDefault();
                 this.touches[btn.key] = false;
-                button.style.background = 'rgba(255, 255, 255, 0.1)';
-                button.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                if (isSpaceButton) {
+                    button.style.background = 'rgba(255, 200, 0, 0.1)';
+                    button.style.borderColor = 'rgba(255, 200, 0, 0.4)';
+                } else {
+                    button.style.background = 'rgba(255, 255, 255, 0.1)';
+                    button.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                }
             });
             
             // Mouse events for testing
