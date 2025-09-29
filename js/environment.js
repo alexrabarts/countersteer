@@ -458,7 +458,7 @@ class Environment {
                         } else if (side < 0 && !isDropOff) {
                             // Left wall (mountain) - dramatic overhanging slope as it goes up
                             // Creates an intimidating overhanging cliff face
-                            const slopeAmount = verticalProgress * verticalProgress * 25; // Quadratic slope for overhang
+                            const slopeAmount = verticalProgress * 150; // Linear slope for overhang
                             baseDistance += slopeAmount;
                         }
                         
