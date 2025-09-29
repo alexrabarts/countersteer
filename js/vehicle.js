@@ -992,24 +992,6 @@ class Vehicle {
         
         return normal;
     }
-        this.position.set(0, startY, 0);
-        this.velocity.set(0, 0, 0);
-        this.speed = 20; // Reset to starting speed
-        this.leanAngle = 0;
-        this.leanVelocity = 0;
-        this.steeringAngle = 0;
-        this.yawAngle = 0;
-        this.crashed = false;
-        this.crashAngle = 0;
-        this.fallingOffCliff = false;
-        this.hitGround = false;
-        this.fallStartY = 0;
-        this.groundHitLogged = false;
-        this.distanceTraveled = 0;
-        this.lastPosition = new THREE.Vector3(0, 0, 0);
-
-        this.frame.material.color.setHex(0x0066cc);
-    }
 
     getSpeed() {
         return this.crashed ? 0 : this.speed * 2.237; // Convert m/s to mph
