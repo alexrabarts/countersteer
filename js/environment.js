@@ -1945,22 +1945,22 @@ class Environment {
 
             this.createDirtRamp(offsetPoint, midSegment);
             
-            // Add construction equipment (static bulldozer)
+            // Add construction equipment (static bulldozer) - moved further from road
             this.createBulldozer(
-                rampPoint.x + Math.cos(rampPoint.heading) * 10,
+                rampPoint.x + Math.cos(rampPoint.heading) * 15,
                 rampPoint.y,
-                rampPoint.z - Math.sin(rampPoint.heading) * 10,
+                rampPoint.z - Math.sin(rampPoint.heading) * 15,
                 rampPoint.heading
             );
         } else if (zoneType === 'minor') {
             // For minor zones, just add some work equipment
             const workPoint = this.roadPath[startSegment];
             
-            // Add a simple work truck instead of bulldozer
+            // Add a simple work truck instead of bulldozer (moved further from road)
             this.createWorkTruck(
-                workPoint.x + Math.cos(workPoint.heading) * 7,
+                workPoint.x + Math.cos(workPoint.heading) * 12,
                 workPoint.y,
-                workPoint.z - Math.sin(workPoint.heading) * 7,
+                workPoint.z - Math.sin(workPoint.heading) * 12,
                 workPoint.heading
             );
         }

@@ -368,13 +368,13 @@ class Vehicle {
                 // Simple box collision detection
                 let collisionDistance;
                 if (obstacle.type === 'barrier') {
-                    collisionDistance = 3.0; // Barrier collision radius (increased to account for barrier size)
+                    collisionDistance = 4.0; // Barrier collision radius (increased for safety)
                 } else if (obstacle.type === 'bulldozer') {
-                    collisionDistance = 3.5; // Larger collision radius for bulldozer
+                    collisionDistance = 5.0; // Larger collision radius for bulldozer
                 } else if (obstacle.type === 'worktruck') {
-                    collisionDistance = 2.5; // Work truck collision radius
+                    collisionDistance = 4.0; // Work truck collision radius
                 } else {
-                    collisionDistance = 2;
+                    collisionDistance = 3;
                 }
 
                 const distance = Math.sqrt(dx * dx + dz * dz);
