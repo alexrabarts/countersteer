@@ -748,19 +748,21 @@ class Environment {
                         const perpX = Math.cos(point.heading) * distance * side;
                         const perpZ = -Math.sin(point.heading) * distance * side;
                         
-                        // Position the rock
+                        // Position the rock embedded into cliff face
+                        const embedDepth = rockSize * 0.4; // Embed 40% into cliff
+                        
                         if (height > 0) {
                             // Left side - mountain wall going up
                             rock.position.set(
                                 point.x + perpX,
-                                (point.y || 0) + cliffHeight,
+                                (point.y || 0) + cliffHeight - embedDepth, // Lower to embed
                                 point.z + perpZ
                             );
                         } else {
                             // Right side - cliff going down
                             rock.position.set(
                                 point.x + perpX,
-                                (point.y || 0) - cliffHeight,
+                                (point.y || 0) - cliffHeight + embedDepth, // Raise to embed on drop-off
                                 point.z + perpZ
                             );
                         }
@@ -1119,22 +1121,16 @@ class Environment {
                             );
                             const moss = new THREE.Mesh(mossGeometry, mossMaterial);
                             
-                        // Position rock embedded into cliff face
-                        const embedDepth = rockSize * 0.4; // Embed 40% into cliff
-                        
-                        if (height > 0) {
-                            rock.position.set(
+                            // Position moss on cliff face
+                            const mossY = height > 0 ? 
+                                (point.y || 0) + cliffHeight :  // Mountain side
+                                (point.y || 0) - cliffHeight;    // Drop-off side
+                            
+                            moss.position.set(
                                 point.x + perpX,
-                                (point.y || 0) + cliffHeight - embedDepth, // Lower to embed
+                                mossY,
                                 point.z + perpZ
                             );
-                        } else {
-                            rock.position.set(
-                                point.x + perpX,
-                                (point.y || 0) - cliffHeight + embedDepth, // Raise to embed on drop-off
-                                point.z + perpZ
-                            );
-                        }
                             
                             // Rotate to face outward from cliff
                             moss.rotation.y = point.heading + (side > 0 ? Math.PI/2 : -Math.PI/2);
