@@ -327,6 +327,11 @@ class Vehicle {
             this.frame.material.color.setHex(0xff6600); // Orange for low-speed fall
             console.log('CRASHED! Speed too low:', (this.speed * 2.237).toFixed(1) + ' mph');
         }
+
+        // Debug: Log crash state
+        if (this.crashed) {
+            console.log('Bike is crashed, fallingOffCliff:', this.fallingOffCliff);
+        }
         
         // Check for boulder collisions
         if (this.environment && this.environment.boulders) {
@@ -359,11 +364,11 @@ class Vehicle {
             for (const obstacle of this.environment.roadworkObstacles) {
                 const dx = this.position.x - obstacle.position.x;
                 const dz = this.position.z - obstacle.position.z;
-                
+
                 // Simple box collision detection
                 let collisionDistance;
                 if (obstacle.type === 'barrier') {
-                    collisionDistance = 2.5; // Barrier collision radius
+                    collisionDistance = 3.0; // Barrier collision radius (increased to account for barrier size)
                 } else if (obstacle.type === 'bulldozer') {
                     collisionDistance = 3.5; // Larger collision radius for bulldozer
                 } else if (obstacle.type === 'worktruck') {
@@ -371,21 +376,26 @@ class Vehicle {
                 } else {
                     collisionDistance = 2;
                 }
-                
+
                 const distance = Math.sqrt(dx * dx + dz * dz);
-                
+
+                // Debug logging for roadwork collisions
+                // if (distance < 10) { // Only log when close
+                //     console.log('Roadwork obstacle check:', obstacle.type, 'distance:', distance.toFixed(2), 'collisionDistance:', collisionDistance);
+                // }
+
                 if (distance < collisionDistance) {
                     this.crashed = true;
                     this.crashAngle = this.leanAngle || 0.5;
                     this.frame.material.color.setHex(0xFF8C00); // Dark orange for construction crash
-                    
+
                     // Set crash velocity based on impact
                     const impactForce = this.speed * 0.6;
                     const impactDir = new THREE.Vector3(dx, 0, dz).normalize();
                     this.velocity = impactDir.multiplyScalar(impactForce);
                     this.velocity.y = 1.5; // Small upward force
-                    
-                    console.log('CRASHED! Hit construction', obstacle.type, 'at', (this.speed * 2.237).toFixed(1) + ' mph');
+
+                    console.log('CRASHED! Hit construction', obstacle.type, 'at', (this.speed * 2.237).toFixed(1) + ' mph', 'distance:', distance.toFixed(2));
                     break;
                 }
             }
@@ -987,11 +997,13 @@ class Vehicle {
         }
 
         if (this.environment && this.environment.roadPath) {
+            console.log('Environment has roadPath with', this.environment.roadPath.length, 'segments');
 
             // Use current road segment for more accurate perpDistance calculation
             let currentSegment = null;
             if (this.currentRoadSegment < this.environment.roadPath.length) {
                 currentSegment = this.environment.roadPath[this.currentRoadSegment];
+                console.log('Using current segment:', this.currentRoadSegment, 'at', currentSegment.x.toFixed(1), currentSegment.z.toFixed(1));
             }
 
             // Fallback to closest segment if current segment is invalid
@@ -1020,13 +1032,14 @@ class Vehicle {
 
                 const roadWidth = 8; // Half of total road width (16m)
                 // Improved road boundary logic with hysteresis
-                const roadEdge = 7.0; // Edge of the road (reduced for easier falling)
-                const safetyZone = 8.0; // Safety zone - slow down but don't crash
-                const cliffEdge = 9.0; // Cliff edge - fall past this
-                const rightWallBuffer = 8.5; // Right wall buffer
+                const roadEdge = 8.0; // Edge of the road (matches actual road width)
+                const safetyZone = 9.0; // Safety zone - slow down but don't crash
+                const cliffEdge = 10.0; // Cliff edge - fall past this
+                const rightWallBuffer = 9.5; // Right wall buffer
 
                 // Dot product gives signed distance (positive = right of road, negative = left of road)
                 const perpDistance = toVehicleX * perpX + toVehicleZ * perpZ;
+                console.log('Raw perpDistance:', perpDistance.toFixed(2), 'perpX:', perpX.toFixed(2), 'perpZ:', perpZ.toFixed(2));
 
                 // Hysteresis to prevent oscillating between states
                 const hysteresisBuffer = 0.5; // Half unit buffer
@@ -1050,36 +1063,36 @@ class Vehicle {
                     // console.log('NEAR EDGE: Slowing down at distance', perpDistance.toFixed(1));
                 }
                 
-                // Check if we've hit the right mountain wall (positive perpDistance)
-                if (perpDistance > rightWallBuffer && !this.crashed) {
-                    // Hit the mountain wall on the right - crash into it, don't fall
+                // Check if we've hit the left mountain wall (negative perpDistance)
+                if (perpDistance < -rightWallBuffer && !this.crashed) {
+                    // Hit the mountain wall on the left - crash into it, don't fall
                     this.crashed = true;
                     this.fallingOffCliff = false; // Not falling, we hit a wall
-                    this.crashAngle = Math.PI/6; // Crash leaning right into the wall
+                    this.crashAngle = -Math.PI/6; // Crash leaning left into the wall
                     this.frame.material.color.setHex(0x8B0000); // Dark red for crash
-                    console.log('CRASHED! Hit the right mountain wall at', (this.speed * 2.237).toFixed(1) + ' mph');
-                    // console.log('Right wall hit at distance:', perpDistance);
-                    
+                    console.log('CRASHED! Hit the left mountain wall at', (this.speed * 2.237).toFixed(1) + ' mph');
+                    console.log('Left wall hit at distance:', perpDistance);
+
                     // Stop horizontal movement, we hit a solid wall
                     this.velocity.x *= 0.1;
                     this.velocity.z *= 0.1;
                     this.speed = 0;
                 }
-                
 
-                
-                // Check if we've gone off the left cliff edge (negative perpDistance)
+
+
+                // Check if we've gone off the right cliff edge (positive perpDistance)
                 // Must go past the safety zone to actually fall
-                if (perpDistance < -effectiveCliffEdge && !this.crashed) {
-                    // console.log('=== FALLING OFF CLIFF TRIGGERED! ===');
-                    // console.log('perpDistance:', perpDistance, 'cliffEdge:', effectiveCliffEdge);
-                    // console.log('Vehicle position:', this.position.x.toFixed(1), this.position.z.toFixed(1));
-                    console.log('CRASHED! Fell off the left cliff edge at', (this.speed * 2.237).toFixed(1) + ' mph');
+                if (perpDistance > effectiveCliffEdge && !this.crashed) {
+                    console.log('=== FALLING OFF CLIFF TRIGGERED! ===');
+                    console.log('perpDistance:', perpDistance, 'cliffEdge:', effectiveCliffEdge);
+                    console.log('Vehicle position:', this.position.x.toFixed(1), this.position.z.toFixed(1));
+                    console.log('CRASHED! Fell off the right cliff edge at', (this.speed * 2.237).toFixed(1) + ' mph');
                     this.crashed = true;
-                    this.fallingOffCliff = true; // Fall off the left cliff edge
+                    this.fallingOffCliff = true; // Fall off the right cliff edge
                     this.fallStartY = this.position.y;
                     this.groundHitLogged = false;
-                    this.crashAngle = Math.PI/4; // Fall to the right after going off left edge
+                    this.crashAngle = -Math.PI/4; // Fall to the left after going off right edge
                     this.frame.material.color.setHex(0x8B0000); // Dark red for falling
 
                     // Continue forward momentum but start falling

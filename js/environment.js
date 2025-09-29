@@ -1893,9 +1893,9 @@ class Environment {
 
             const point = this.roadPath[i];
 
-            // Place barrier on right side
-            const barrierX = point.x + Math.cos(point.heading) * 5;
-            const barrierZ = point.z - Math.sin(point.heading) * 5;
+            // Place barrier on right side (moved further out to avoid blocking road)
+            const barrierX = point.x + Math.cos(point.heading) * 10;
+            const barrierZ = point.z - Math.sin(point.heading) * 10;
 
             const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
             barrier.position.set(barrierX, point.y + 0.5, barrierZ);
@@ -1912,6 +1912,8 @@ class Environment {
                 height: 1,
                 depth: 0.8
             });
+
+            // console.log('Created barrier at:', barrierX.toFixed(1), barrierZ.toFixed(1), 'segment:', i);
 
             // Add orange and white stripes
             const stripeTexture = this.createConstructionStripeTexture();
