@@ -1191,9 +1191,9 @@ class Environment {
                     nextPoint.x + nextPerpX2, nextPoint.y, nextPoint.z + nextPerpZ2
                 );
                 
-                // Add color (blue for visibility)
+                // Add color (green for left, blue for right)
                 const r = 0;
-                const g = 0;
+                const g = side > 0 ? 0 : 1;
                 const b = 1;
                 for (let j = 0; j < 4; j++) {
                     colors.push(r, g, b);
@@ -1223,7 +1223,9 @@ class Environment {
         };
         
         // Add ground strips to fill gaps
-        const rightStrip = createGroundStrip(-1, 4, 9.4);
+        const leftStrip = createGroundStrip(-1, 4, 9.4);
+        this.scene.add(leftStrip);
+        const rightStrip = createGroundStrip(1, 4, 9.4);
         this.scene.add(rightStrip);
         
         // Left cliff wall (mountain face rising above)
