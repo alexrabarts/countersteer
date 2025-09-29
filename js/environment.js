@@ -1223,7 +1223,7 @@ class Environment {
         };
         
         // Add ground strips to fill gaps
-        const rightStrip = createGroundStrip(-1, 4);
+        const rightStrip = createGroundStrip(-1, 4, 9.4);
         this.scene.add(rightStrip);
         
         // Left cliff wall (mountain face rising above)
