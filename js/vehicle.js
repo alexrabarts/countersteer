@@ -802,7 +802,16 @@ class Vehicle {
             this.group.rotation.z = this.leanAngle * 0.5; // Reduce lean while jumping
             this.rider.rotation.z = this.leanAngle * 0.1;
         } else if (this.isWheelie) {
-            // Wheelie animation - backward rotation
+            // Wheelie animation - pivot around bottom of back wheel
+            const backWheelOffset = this.wheelbase / 2; // 0.7m behind center
+            const cosTheta = Math.cos(this.wheelieAngle);
+            const sinTheta = Math.sin(this.wheelieAngle);
+
+            // Calculate center position after rotation around back wheel contact point
+            this.group.position.y = this.position.y + this.cgHeight * cosTheta - backWheelOffset * sinTheta;
+            this.group.position.z = this.position.z + this.cgHeight * sinTheta + backWheelOffset * (cosTheta - 1);
+
+            // Apply rotation
             this.group.rotation.x = -this.wheelieAngle; // Negative for wheelie (front up)
             this.group.rotation.z = this.leanAngle * 0.3; // Reduce lean during wheelie
             this.rider.rotation.z = this.leanAngle * 0.1;
