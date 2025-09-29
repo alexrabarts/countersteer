@@ -501,7 +501,7 @@ class Environment {
                           }
 
                           // Ensure minimum distance to prevent gaps at road edge (8 units from center)
-                          finalDistance = Math.max(finalDistance, 12);
+                          finalDistance = Math.max(finalDistance, 10);
                         
                         // Calculate position
                         const perpX = Math.cos(interpHeading) * finalDistance * side;
