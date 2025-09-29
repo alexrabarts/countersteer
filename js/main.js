@@ -159,15 +159,15 @@ class Game {
     setupCamera() {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
         
-        // Start camera from above for intro animation
-        this.camera.position.set(0, 50, -15); // Start high above
+        // Start camera from above but closer for intro animation
+        this.camera.position.set(0, 15, -8); // Start moderately high, closer to bike
         this.camera.lookAt(0, 0, 0);
         
         // Camera intro animation state
         this.cameraIntroActive = true;
         this.cameraIntroStartTime = performance.now();
-        this.cameraIntroDuration = 2500; // 2.5 seconds intro
-        this.cameraIntroStartPos = new THREE.Vector3(0, 50, -15);
+        this.cameraIntroDuration = 1500; // 1.5 seconds intro - quicker
+        this.cameraIntroStartPos = new THREE.Vector3(0, 15, -8);
         this.cameraIntroEndPos = new THREE.Vector3(0, 5, -10);
         
         // Dynamic camera offset for mountain roads
