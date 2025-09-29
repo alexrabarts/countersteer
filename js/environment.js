@@ -1270,6 +1270,9 @@ class Environment {
         
         // Layer 4: Majestic peak - the dominant mountain
         this.createMajesticPeak();
+        
+        // Layer 5: End course dramatic mountains
+        this.createEndCourseMountains();
     }
     
     createDistantMountainRange() {
@@ -2074,6 +2077,270 @@ class Environment {
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
         return texture;
+    }
+    
+    createEndCourseMountains() {
+        // Add dramatic mountain scenery specifically for the end section of the course
+        const group = new THREE.Group();
+        
+        // Calculate positions based on the last quarter of the road path
+        const lastQuarterIndex = Math.floor(this.roadPath.length * 0.75);
+        const endPoint = this.roadPath[this.roadPath.length - 1];
+        const threeQuarterPoint = this.roadPath[lastQuarterIndex];
+        
+        // Create a dramatic mountain wall on the left side for the final section
+        const finalMountainGeometry = new THREE.ConeGeometry(600, 700, 24, 12);
+        
+        // Deform for natural mountain shape
+        const positions = finalMountainGeometry.attributes.position;
+        for (let i = 0; i < positions.count; i++) {
+            const px = positions.getX(i);
+            const py = positions.getY(i);
+            const pz = positions.getZ(i);
+            
+            const normalizedHeight = (py + 350) / 700;
+            
+            // Create dramatic ridges
+            const angle = Math.atan2(pz, px);
+            const ridgeEffect = Math.sin(angle * 4) * (1 - normalizedHeight) * 40;
+            const noise = Math.sin(i * 0.2) * 20 * (1 - normalizedHeight);
+            
+            const distance = Math.sqrt(px * px + pz * pz);
+            const newDistance = distance + ridgeEffect + noise;
+            const scale = newDistance / (distance || 1);
+            
+            positions.setX(i, px * scale);
+            positions.setZ(i, pz * scale);
+            
+            // Dramatic peak shaping
+            if (normalizedHeight > 0.8) {
+                positions.setY(i, py + Math.sin(angle * 2) * 15);
+            }
+            
+            // Wide dramatic base
+            if (normalizedHeight < 0.2) {
+                const baseScale = 1 + (0.2 - normalizedHeight) * 3;
+                positions.setX(i, px * baseScale);
+                positions.setZ(i, pz * baseScale);
+            }
+        }
+        
+        finalMountainGeometry.computeVertexNormals();
+        
+        // Add vertex colors with dramatic snow coverage
+        const colors = [];
+        for (let i = 0; i < positions.count; i++) {
+            const py = positions.getY(i);
+            const normalizedHeight = (py + 350) / 700;
+            
+            if (normalizedHeight > 0.7) {
+                // Extensive snow coverage
+                const snow = 0.92 + Math.random() * 0.08;
+                colors.push(snow, snow, snow + 0.03);
+            } else if (normalizedHeight > 0.5) {
+                // Mixed zone
+                const mix = 0.4 + normalizedHeight * 0.3;
+                colors.push(mix, mix + 0.02, mix + 0.05);
+            } else {
+                // Dark dramatic rock
+                const rock = 0.2 + normalizedHeight * 0.2;
+                colors.push(rock, rock + 0.01, rock + 0.02);
+            }
+        }
+        
+        finalMountainGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        
+        const mountainMaterial = new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            roughness: 0.95,
+            metalness: 0.0,
+            flatShading: true
+        });
+        
+        // Position multiple peaks AWAY from the road using perpendicular offsets
+        // Calculate perpendicular direction at end point
+        const endHeading = endPoint.heading || 0;
+        const perpX = Math.cos(endHeading);
+        const perpZ = -Math.sin(endHeading);
+        
+        // First peak - far to the left of the road
+        const finalPeak1 = new THREE.Mesh(finalMountainGeometry, mountainMaterial);
+        finalPeak1.position.set(
+            endPoint.x - perpX * 1000,  // 1000 units perpendicular to left
+            -100,
+            endPoint.z - perpZ * 1000
+        );
+        finalPeak1.rotation.y = Math.random() * Math.PI;
+        finalPeak1.castShadow = true;
+        finalPeak1.receiveShadow = true;
+        group.add(finalPeak1);
+        
+        // Second peak - far to the right of the road
+        const finalPeak2 = new THREE.Mesh(finalMountainGeometry.clone(), mountainMaterial);
+        finalPeak2.position.set(
+            endPoint.x + perpX * 1200,  // 1200 units perpendicular to right
+            -150,
+            endPoint.z + perpZ * 1200
+        );
+        finalPeak2.scale.set(1.2, 1.3, 1.2);
+        finalPeak2.rotation.y = Math.random() * Math.PI;
+        finalPeak2.castShadow = true;
+        finalPeak2.receiveShadow = true;
+        group.add(finalPeak2);
+        
+        // Third peak - left side at three-quarter point
+        const threeQuarterHeading = threeQuarterPoint.heading || 0;
+        const perpX3Q = Math.cos(threeQuarterHeading);
+        const perpZ3Q = -Math.sin(threeQuarterHeading);
+        
+        const finalPeak3 = new THREE.Mesh(finalMountainGeometry.clone(), mountainMaterial);
+        finalPeak3.position.set(
+            threeQuarterPoint.x - perpX3Q * 800,  // 800 units to left
+            -80,
+            threeQuarterPoint.z - perpZ3Q * 800
+        );
+        finalPeak3.scale.set(0.9, 1.1, 0.9);
+        finalPeak3.rotation.y = Math.random() * Math.PI;
+        finalPeak3.castShadow = true;
+        finalPeak3.receiveShadow = true;
+        group.add(finalPeak3);
+        
+        // Add dramatic ridge line between the left-side peaks
+        const ridgeGeometry = new THREE.ConeGeometry(400, 400, 16, 8);
+        const ridge1 = new THREE.Mesh(ridgeGeometry, mountainMaterial);
+        ridge1.position.set(
+            endPoint.x - perpX * 900,
+            -120,
+            endPoint.z - perpZ * 900
+        );
+        ridge1.scale.set(2, 1, 0.5);
+        ridge1.rotation.y = endHeading;  // Align with road direction
+        ridge1.rotation.z = 0.2;
+        ridge1.castShadow = true;
+        ridge1.receiveShadow = true;
+        group.add(ridge1);
+        
+        // Add smaller peaks in a semi-circle BEHIND the end point (not around it)
+        for (let i = 0; i < 5; i++) {
+            const smallPeakGeometry = new THREE.ConeGeometry(200, 250, 12, 6);
+            const smallPeak = new THREE.Mesh(smallPeakGeometry, mountainMaterial);
+            
+            // Position behind and to the sides of the end point
+            const angle = (Math.PI * 0.5 * i) / 4 - Math.PI / 4;  // Semi-circle behind
+            const distance = 1500 + Math.random() * 400;
+            
+            // Calculate position relative to road direction
+            const forwardX = Math.sin(endHeading);
+            const forwardZ = Math.cos(endHeading);
+            
+            smallPeak.position.set(
+                endPoint.x + forwardX * distance * Math.cos(angle) + perpX * distance * Math.sin(angle),
+                -100 - Math.random() * 50,
+                endPoint.z + forwardZ * distance * Math.cos(angle) + perpZ * distance * Math.sin(angle)
+            );
+            smallPeak.scale.set(
+                0.8 + Math.random() * 0.4,
+                0.7 + Math.random() * 0.6,
+                0.8 + Math.random() * 0.4
+            );
+            smallPeak.rotation.y = Math.random() * Math.PI;
+            smallPeak.castShadow = true;
+            smallPeak.receiveShadow = true;
+            group.add(smallPeak);
+        }
+        
+        // Add DISTANT mountain range on the LEFT side towards the end
+        const distantMountainMaterial = new THREE.MeshStandardMaterial({
+            color: 0x6b7b9a,  // Blue-grey for atmospheric perspective
+            roughness: 0.95,
+            metalness: 0.0,
+            flatShading: true
+        });
+        
+        // Create a long mountain range to the left
+        for (let i = 0; i < 8; i++) {
+            const distantGeometry = new THREE.ConeGeometry(
+                800 + Math.random() * 400,  // Wider bases
+                600 + Math.random() * 300,  // Varied heights
+                16, 8
+            );
+            
+            // Deform for variety
+            const positions = distantGeometry.attributes.position;
+            for (let j = 0; j < positions.count; j++) {
+                const py = positions.getY(j);
+                const px = positions.getX(j);
+                const pz = positions.getZ(j);
+                
+                // Add some ridge variation
+                const angle = Math.atan2(pz, px);
+                positions.setX(j, px + Math.sin(angle * 3) * 30);
+                positions.setZ(j, pz + Math.cos(angle * 2) * 40);
+            }
+            distantGeometry.computeVertexNormals();
+            
+            const distantPeak = new THREE.Mesh(distantGeometry, distantMountainMaterial);
+            
+            // Position along the left side, getting closer to the end
+            const progressAlongEnd = 0.6 + (i / 8) * 0.4;  // From 60% to 100% of road
+            const roadIndex = Math.floor(this.roadPath.length * progressAlongEnd);
+            const roadPoint = this.roadPath[Math.min(roadIndex, this.roadPath.length - 1)];
+            const localHeading = roadPoint.heading || 0;
+            const localPerpX = Math.cos(localHeading);
+            const localPerpZ = -Math.sin(localHeading);
+            
+            distantPeak.position.set(
+                roadPoint.x - localPerpX * (2000 + i * 300),  // 2000-4400 units to left
+                -200 - Math.random() * 100,
+                roadPoint.z - localPerpZ * (2000 + i * 300)
+            );
+            distantPeak.scale.set(
+                1.5 + Math.random() * 0.5,
+                1.2 + Math.random() * 0.4,
+                1.5 + Math.random() * 0.5
+            );
+            distantPeak.rotation.y = Math.random() * Math.PI;
+            distantPeak.castShadow = true;
+            distantPeak.receiveShadow = true;
+            group.add(distantPeak);
+        }
+        
+        // Add even more distant layered peaks ahead/left of the end point
+        const veryDistantMaterial = new THREE.MeshStandardMaterial({
+            color: 0x8a95aa,  // Even more faded blue-grey
+            roughness: 0.98,
+            metalness: 0.0,
+            flatShading: true,
+            transparent: true,
+            opacity: 0.9
+        });
+        
+        // Mountains ahead and to the left of the finish
+        for (let i = 0; i < 6; i++) {
+            const farGeometry = new THREE.ConeGeometry(1200, 800, 12, 6);
+            const farPeak = new THREE.Mesh(farGeometry, veryDistantMaterial);
+            
+            // Position ahead and left of the end point
+            const forwardDist = 3000 + i * 500;
+            const leftDist = 1500 + i * 400;
+            
+            farPeak.position.set(
+                endPoint.x - perpX * leftDist + Math.sin(endHeading) * forwardDist,
+                -300 - Math.random() * 100,
+                endPoint.z - perpZ * leftDist + Math.cos(endHeading) * forwardDist
+            );
+            farPeak.scale.set(
+                1.8 + Math.random() * 0.6,
+                1.5 + Math.random() * 0.5,
+                1.8 + Math.random() * 0.6
+            );
+            farPeak.rotation.y = Math.random() * Math.PI * 2;
+            farPeak.castShadow = false;  // Too distant for shadows
+            farPeak.receiveShadow = true;
+            group.add(farPeak);
+        }
+        
+        this.scene.add(group);
     }
     
     createGrass() {
