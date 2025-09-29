@@ -1,0 +1,20 @@
+{
+  "name": "countersteer-game",
+  "version": "1.0.0",
+  "description": "Mountain road counter-steer motorcycle racing game",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest tests/unit",
+    "test:integration": "node tests/integration/run-integration.mjs",
+    "test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch",
+    "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
+    "serve": "python3 -m http.server 8080"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "puppeteer": "^23.0.0"
+  }
+}

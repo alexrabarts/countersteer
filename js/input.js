@@ -5,6 +5,7 @@ class InputHandler {
         this.targetSteeringInput = 0;
         this.throttleInput = 0;
         this.brakeInput = 0;
+        this.wheelieInput = 0;
         this.resetPressed = false;
         this.soundTogglePressed = false;
         this.checkpointRestartPressed = false;
@@ -84,6 +85,9 @@ class InputHandler {
         // Throttle and brake - combine WASD and arrow keys
         this.throttleInput = (keyW || keyUp) ? 1 : 0;
         this.brakeInput = (keyS || keyDown) ? 1 : 0;
+        
+        // Wheelie input - Shift key or Space key
+        this.wheelieInput = (this.keys['ShiftLeft'] || this.keys['ShiftRight'] || this.keys['Space']) ? 1 : 0;
     }
 
     getSteeringInput() {
@@ -106,6 +110,14 @@ class InputHandler {
             this.updateInputs();
         }
         return this.brakeInput;
+    }
+    
+    getWheelieInput() {
+        // Update inputs before returning
+        if (this.virtualControls) {
+            this.updateInputs();
+        }
+        return this.wheelieInput;
     }
     
     checkReset() {

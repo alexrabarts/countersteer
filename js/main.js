@@ -268,12 +268,39 @@ class Game {
         // Update FPS
         document.getElementById('fps').textContent = `FPS: ${this.fps}`;
         
+        // Update wheelie indicator
+        this.updateWheelieIndicator();
+        
         // Update score display
         this.updateScoreDisplay();
     }
     
     updateHighScoreDisplay() {
         document.getElementById('highScore').textContent = `Best: ${this.highScore.toLocaleString()}`;
+    }
+    
+    updateWheelieIndicator() {
+        const indicator = document.getElementById('wheelieIndicator');
+        const zoneText = document.getElementById('wheelieZone');
+        const comboText = document.getElementById('wheelieCombo');
+        
+        if (this.vehicle.isWheelie) {
+            const angleDegrees = this.vehicle.wheelieAngle * 180 / Math.PI;
+            
+            indicator.classList.add('active');
+            
+            // Simple display - just show WHEELIE and angle
+            indicator.classList.remove('perfect', 'good', 'danger', 'low');
+            indicator.classList.add('good'); // Just use one consistent style
+            
+            // Show wheelie text with angle
+            zoneText.textContent = `WHEELIE ${angleDegrees.toFixed(0)}°`;
+            
+            // Clear combo text (no longer using combo system)
+            comboText.textContent = '';
+        } else {
+            indicator.classList.remove('active');
+        }
     }
 
     showFinishScreen() {
@@ -363,6 +390,7 @@ class Game {
         const steeringInput = this.input.getSteeringInput();
         const throttleInput = this.input.getThrottleInput();
         const brakeInput = this.input.getBrakeInput();
+        const wheelieInput = this.input.getWheelieInput();
         
         // Check for reset
         if (this.input.checkReset()) {
@@ -420,7 +448,7 @@ class Game {
         // Check for crash (before updating vehicle)
         const wasCrashed = this.vehicle.crashed;
 
-        this.vehicle.update(deltaTime, steeringInput, throttleInput, brakeInput);
+        this.vehicle.update(deltaTime, steeringInput, throttleInput, brakeInput, wheelieInput);
 
         // Play crash sound if we just crashed
         if (!wasCrashed && this.vehicle.crashed) {

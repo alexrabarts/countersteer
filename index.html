@@ -5,6 +5,66 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Counter-Steering Motorcycle</title>
     <style>
+        .wheelie-indicator {
+            position: absolute;
+            bottom: 200px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 32px;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            animation: pulse 0.5s infinite;
+        }
+        
+        .wheelie-indicator.active {
+            display: block;
+        }
+        
+        .wheelie-indicator.perfect {
+            color: #FFD700;
+            background: rgba(255, 215, 0, 0.2);
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        }
+        
+        .wheelie-indicator.good {
+            color: #00FF00;
+            background: rgba(0, 255, 0, 0.2);
+            text-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+        }
+        
+        .wheelie-indicator.danger {
+            color: #FF0000;
+            background: rgba(255, 0, 0, 0.2);
+            text-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+            animation: flash 0.3s infinite;
+        }
+        
+        .wheelie-indicator.low {
+            color: #FFAA00;
+            background: rgba(255, 170, 0, 0.2);
+            text-shadow: 0 0 20px rgba(255, 170, 0, 0.8);
+        }
+        
+        @keyframes pulse {
+            0% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.05); }
+            100% { transform: translateX(-50%) scale(1); }
+        }
+        
+        @keyframes flash {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .wheelie-combo {
+            font-size: 18px;
+            color: #FFD700;
+            margin-top: 5px;
+        }
         body {
             margin: 0;
             padding: 0;
@@ -211,6 +271,7 @@
         <p>S - Brake</p>
         <p>A - Steer left (initiates right lean)</p>
         <p>D - Steer right (initiates left lean)</p>
+        <p>Space - Pop clutch for a wheelie</p>
         <p>R - Reset after crash</p>
         <p>C - Restart from last checkpoint (with penalty)</p>
         <p>M - Toggle sound on/off</p>
@@ -232,6 +293,12 @@
         <div id="highScore" style="font-size: 18px; color: #FFD700;">Best: 0</div>
         <div id="checkpointCount" style="font-size: 14px; color: #00ff00;">Checkpoints: 0/10</div>
         <div id="fps" style="font-size: 10px; color: #666;">FPS: 0</div>
+    </div>
+    
+    <!-- Wheelie Indicator -->
+    <div id="wheelieIndicator" class="wheelie-indicator">
+        <div id="wheelieZone">WHEELIE!</div>
+        <div id="wheelieCombo" class="wheelie-combo"></div>
     </div>
     
     <!-- Motorcycle Speedometer -->
