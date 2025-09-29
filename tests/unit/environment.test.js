@@ -71,4 +71,21 @@ describe('Environment Boulder Positioning', () => {
         const cliffSideOffset = 25; // Positive for right side
         expect(cliffSideOffset).toBeGreaterThan(roadCenter);
     });
+
+    test('cliff boulders should be positioned correctly for terrain drop-off', () => {
+        // Test that boulders on drop-off side are positioned much lower
+        const roadY = 10;
+        const baseBoulderSize = 2.0;
+
+        // Left side (mountain) boulder - should be at road level
+        const leftBoulderY = roadY - baseBoulderSize * 0.4;
+        expect(leftBoulderY).toBeCloseTo(9.2, 1); // roadY - 0.8
+
+        // Right side (drop-off) boulder - should be much lower
+        const rightBoulderY = roadY - 45 - baseBoulderSize * 0.4;
+        expect(rightBoulderY).toBeCloseTo(-35.8, 1); // roadY - 45 - 0.8
+
+        // Right side should be significantly lower than left side
+        expect(rightBoulderY).toBeLessThan(leftBoulderY - 40);
+    });
 });

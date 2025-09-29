@@ -720,9 +720,16 @@ class Environment {
                     const perpX = Math.cos(point.heading) * baseDistance * side;
                     const perpZ = -Math.sin(point.heading) * baseDistance * side;
 
-                    // Embed in ground
+                    // Embed in ground - adjust Y based on terrain side
                     const boulderX = point.x + perpX;
-                    const boulderY = (point.y || 0) - baseBoulderSize * 0.4;
+                    let boulderY;
+                    if (side > 0) {
+                        // Right side (drop-off) - position much lower to match terrain drop
+                        boulderY = (point.y || 0) - 45 - baseBoulderSize * 0.4; // Terrain drops to -50, so -45 embeds in terrain
+                    } else {
+                        // Left side (mountain) - position at road level
+                        boulderY = (point.y || 0) - baseBoulderSize * 0.4;
+                    }
                     const boulderZ = point.z + perpZ;
 
                     baseBoulder.position.set(boulderX, boulderY, boulderZ);
