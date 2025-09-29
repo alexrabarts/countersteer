@@ -351,7 +351,7 @@ class Game {
         // Calculate final score with finish bonus
         const distance = this.vehicle.getDistanceTraveled();
         const timeSeconds = this.finishTime / 1000;
-        const averageSpeed = distance / timeSeconds * 3.6; // km/h
+        const averageSpeed = distance / timeSeconds * 3.6 * 0.621371; // mph
         
         // Add finish bonus to current score
         const finishBonus = 1000 * this.comboMultiplier;
@@ -386,7 +386,7 @@ class Game {
             <div style="font-size: 24px; margin-bottom: 20px;">
                 <div style="margin-bottom: 10px;">Distance: <span style="color: #3498db;">${distance.toFixed(0)} meters</span></div>
                 <div style="margin-bottom: 10px;">Time: <span style="color: #e74c3c;">${timeSeconds.toFixed(1)} seconds</span></div>
-                <div style="margin-bottom: 10px;">Average Speed: <span style="color: #9b59b6;">${averageSpeed.toFixed(1)} km/h</span></div>
+                <div style="margin-bottom: 10px;">Average Speed: <span style="color: #9b59b6;">${averageSpeed.toFixed(1)} mph</span></div>
             </div>
             <div style="font-size: 36px; font-weight: bold; color: #f39c12; margin-bottom: 20px;">
                 SCORE: ${totalScore.toLocaleString()}
