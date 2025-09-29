@@ -1970,19 +1970,12 @@ class Environment {
                 rampPoint.heading
             );
 
-            // Add shipping containers for collision - positioned on road side for visibility and jumping
+            // Add shipping container for collision - positioned on road side for visibility and jumping
             this.createShippingContainer(
                 rampPoint.x + Math.cos(rampPoint.heading) * 8,
                 rampPoint.y,
                 rampPoint.z - Math.sin(rampPoint.heading) * 8,
                 rampPoint.heading
-            );
-
-            this.createShippingContainer(
-                rampPoint.x + Math.cos(rampPoint.heading) * 9,
-                rampPoint.y,
-                rampPoint.z - Math.sin(rampPoint.heading) * 9,
-                rampPoint.heading + Math.PI/2
             );
         } else if (zoneType === 'minor') {
             // For minor zones, just add some work equipment
