@@ -445,16 +445,16 @@ class Environment {
                         // Start closer to account for displacement pushing wall outward
                         let baseDistance = 6.5; // Reduced from 8 to eliminate gap
                         
-                        if (side > 0 && isDropOff) {
-                            // Right wall (drop-off) - add dramatic outward slope
-                            // Start at road edge, slope outward as we go down
-                            const slopeAmount = verticalProgress * verticalProgress * 50; // More dramatic quadratic slope
-                            baseDistance += slopeAmount;
+                         if (side > 0 && isDropOff) {
+                             // Right wall (drop-off) - add dramatic overhanging slope
+                             // Start at road edge, slope inward as we go down
+                             const slopeAmount = verticalProgress * verticalProgress * 25; // Quadratic slope for overhang
+                             baseDistance -= slopeAmount;
                             
-                            // Debug: Log slope amount for first segment
-                            if (i === 0 && h === 0 && j % 5 === 0) {
-                                console.log(`Right cliff slope at height ${verticalProgress.toFixed(2)}: base=${baseDistance.toFixed(1)}, slope=${slopeAmount.toFixed(1)}`);
-                            }
+                             // Debug: Log slope amount for first segment
+                             if (i === 0 && h === 0 && j % 5 === 0) {
+                                 console.log(`Right cliff overhang at height ${verticalProgress.toFixed(2)}: base=${baseDistance.toFixed(1)}, slope=${slopeAmount.toFixed(1)}`);
+                             }
                         } else if (side < 0 && !isDropOff) {
                             // Left wall (mountain) - dramatic overhanging slope as it goes up
                             // Creates an intimidating overhanging cliff face
