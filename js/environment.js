@@ -1529,25 +1529,26 @@ class Environment {
         mountain.receiveShadow = true;
         group.add(mountain);
         
-        // Add a prominent snow cap
-        const snowCapGeometry = new THREE.ConeGeometry(peakWidth/3, peakHeight * 0.35, 12, 4);
+        // Add a prominent snow cap that follows the mountain contours
+        const snowCapGeometry = new THREE.ConeGeometry(peakWidth/4.5, peakHeight * 0.25, 12, 4);
         
-        // Deform snow cap to match mountain shape
+        // Deform snow cap to match mountain shape and blend seamlessly
         const snowPositions = snowCapGeometry.attributes.position;
         for (let i = 0; i < snowPositions.count; i++) {
             const sx = snowPositions.getX(i);
             const sy = snowPositions.getY(i);
             const sz = snowPositions.getZ(i);
             
-            // Make snow cap irregular
-            const snowNoise = Math.sin(i * 0.5) * 10 + Math.cos(i * 0.3) * 5;
-            snowPositions.setX(i, sx + snowNoise * 0.5);
-            snowPositions.setZ(i, sz + snowNoise * 0.3);
+            // Make snow cap irregular to match mountain ridges
+            const angle = Math.atan2(sz, sx);
+            const ridgeEffect = Math.sin(angle * 4) * 8; // Match mountain's ridge pattern
+            const snowNoise = Math.sin(i * 0.5) * 5 + Math.cos(i * 0.3) * 3;
             
-            // Flatten bottom to sit on mountain
-            if (sy < -peakHeight * 0.1) {
-                snowPositions.setY(i, -peakHeight * 0.1);
-            }
+            snowPositions.setX(i, sx + ridgeEffect * 0.5 + snowNoise * 0.3);
+            snowPositions.setZ(i, sz + ridgeEffect * 0.5 + snowNoise * 0.2);
+            
+            // Remove the flat bottom - let it taper naturally
+            // This prevents the "rim" effect
         }
         
         snowCapGeometry.computeVertexNormals();
@@ -1561,7 +1562,8 @@ class Environment {
         });
         
         const snowCap = new THREE.Mesh(snowCapGeometry, snowMaterial);
-        snowCap.position.set(peakX, peakHeight * 0.75 - 80, peakZ);
+        // Position it higher so it sits on the peak, not around it
+        snowCap.position.set(peakX, peakHeight * 0.88 - 80, peakZ);
         snowCap.castShadow = true;
         snowCap.receiveShadow = true;
         group.add(snowCap);
