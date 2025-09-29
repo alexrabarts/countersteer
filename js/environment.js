@@ -1185,10 +1185,10 @@ class Environment {
                 // Add vertices for this segment
                 const baseIndex = i * 4;
                 vertices.push(
-                    point.x + perpX1, point.y - 0.05, point.z + perpZ1,
-                    point.x + perpX2, point.y - 0.05, point.z + perpZ2,
-                    nextPoint.x + nextPerpX1, nextPoint.y - 0.05, nextPoint.z + nextPerpZ1,
-                    nextPoint.x + nextPerpX2, nextPoint.y - 0.05, nextPoint.z + nextPerpZ2
+                    point.x + perpX1, point.y, point.z + perpZ1,
+                    point.x + perpX2, point.y, point.z + perpZ2,
+                    nextPoint.x + nextPerpX1, nextPoint.y, nextPoint.z + nextPerpZ1,
+                    nextPoint.x + nextPerpX2, nextPoint.y, nextPoint.z + nextPerpZ2
                 );
                 
                 // Add color (green for left, red for right)
