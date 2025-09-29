@@ -1169,7 +1169,7 @@ class Environment {
                 
                 // Road edge position (8 units from center)
                 const roadEdgeDistance = 8;
-                const cliffBaseDistance = 9.4; // Matches minimum cliff distance
+                const cliffBaseDistance = 7.5; // Matches minimum cliff distance
                 
                 // Calculate perpendicular offsets for this segment
                 const perpX1 = Math.cos(point.heading) * roadEdgeDistance * side;
