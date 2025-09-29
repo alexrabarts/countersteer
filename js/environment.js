@@ -1191,9 +1191,12 @@ class Environment {
                     nextPoint.x + nextPerpX2, nextPoint.y - 0.05, nextPoint.z + nextPerpZ2
                 );
                 
-                // Add color (dark rock/dirt color)
+                // Add color (dark rock/dirt color or red for right)
+                const r = side > 0 ? 1 : 0.25;
+                const g = side > 0 ? 0 : 0.2;
+                const b = side > 0 ? 0 : 0.18;
                 for (let j = 0; j < 4; j++) {
-                    colors.push(0.25, 0.2, 0.18);
+                    colors.push(r, g, b);
                 }
                 
                 // Create triangles
