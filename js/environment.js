@@ -1977,13 +1977,20 @@ class Environment {
                 rampPoint.heading
             );
 
-            // Add shipping container for collision - positioned on mountain side to avoid drop-off
-            // Placed at -6 units (left side) for better visibility while avoiding dirt pile
+            // Add shipping containers for collision - positioned on mountain side to avoid drop-off
+            // Placed at -6 and -7 units (left side) for better visibility while avoiding dirt pile
             this.createShippingContainer(
                 rampPoint.x - Math.cos(rampPoint.heading) * 6,
                 rampPoint.y,
                 rampPoint.z + Math.sin(rampPoint.heading) * 6,
                 rampPoint.heading
+            );
+
+            this.createShippingContainer(
+                rampPoint.x - Math.cos(rampPoint.heading) * 7,
+                rampPoint.y,
+                rampPoint.z + Math.sin(rampPoint.heading) * 7,
+                rampPoint.heading + Math.PI/2
             );
         } else if (zoneType === 'minor') {
             // For minor zones, just add some work equipment
