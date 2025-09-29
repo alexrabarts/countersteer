@@ -1970,18 +1970,18 @@ class Environment {
                 rampPoint.heading
             );
 
-            // Add shipping containers for collision on mountain side - moved closer for visibility
+            // Add shipping containers for collision - positioned on road side for visibility and jumping
             this.createShippingContainer(
-                rampPoint.x - Math.cos(rampPoint.heading) * 12,
+                rampPoint.x + Math.cos(rampPoint.heading) * 8,
                 rampPoint.y,
-                rampPoint.z + Math.sin(rampPoint.heading) * 12,
+                rampPoint.z - Math.sin(rampPoint.heading) * 8,
                 rampPoint.heading
             );
 
             this.createShippingContainer(
-                rampPoint.x - Math.cos(rampPoint.heading) * 10,
+                rampPoint.x + Math.cos(rampPoint.heading) * 9,
                 rampPoint.y,
-                rampPoint.z + Math.sin(rampPoint.heading) * 10,
+                rampPoint.z - Math.sin(rampPoint.heading) * 9,
                 rampPoint.heading + Math.PI/2
             );
         } else if (zoneType === 'minor') {
