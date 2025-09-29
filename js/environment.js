@@ -1334,13 +1334,13 @@ class Environment {
         // Create mid-distance mountains with more detail
         const group = new THREE.Group();
         
-        // Create several individual peaks - much further away
+        // Create several individual peaks - positioned well beyond road area
         const peaks = [
-            { x: -600, z: 800, height: 250, width: 300 },
-            { x: -200, z: 900, height: 200, width: 280 },
-            { x: 300, z: 750, height: 280, width: 350 },
-            { x: 700, z: 850, height: 230, width: 290 },
-            { x: 1100, z: 800, height: 260, width: 310 }
+            { x: -800, z: 1000, height: 250, width: 300 },  // Far left back
+            { x: -400, z: 1100, height: 200, width: 280 },  // Left back
+            { x: 200, z: 1200, height: 280, width: 350 },   // Center back (well beyond road)
+            { x: 1000, z: 1100, height: 230, width: 290 },  // Right back
+            { x: 1500, z: 1000, height: 260, width: 310 }   // Far right back
         ];
         
         peaks.forEach(peak => {
@@ -1361,12 +1361,13 @@ class Environment {
         // Create near hills with vegetation and detail
         const group = new THREE.Group();
         
-        // Near hills much further from road to avoid overlap
+        // Near hills positioned well clear of the road
+        // Road goes from X:0-700, Z:-187 to 488, so we position hills outside this area
         const hills = [
-            { x: -450, z: 400, height: 120, width: 200 },
-            { x: -100, z: 450, height: 100, width: 180 },
-            { x: 350, z: 500, height: 140, width: 220 },
-            { x: 700, z: 420, height: 110, width: 190 }
+            { x: -600, z: 600, height: 120, width: 200 },  // Far left
+            { x: -300, z: 700, height: 100, width: 180 },  // Left side, far back
+            { x: 900, z: 600, height: 140, width: 220 },   // Far right (beyond road)
+            { x: 1200, z: 500, height: 110, width: 190 }   // Far right back
         ];
         
         hills.forEach(hill => {
