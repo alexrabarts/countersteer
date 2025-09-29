@@ -1220,7 +1220,7 @@ class Environment {
             return mesh;
         };
 
-        const leftStrip = createGroundStrip(-1, 4, 9.4);
+        const leftStrip = createGroundStrip(-1, 4, 11);
         this.scene.add(leftStrip);
         const rightStrip = createGroundStrip(1, 4, 9.4);
         this.scene.add(rightStrip);
