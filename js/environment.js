@@ -1449,20 +1449,20 @@ class Environment {
         // Create twin peaks - two massive mountains close together
         const group = new THREE.Group();
         
-        // First peak - slightly taller
+        // First peak - Mont Blanc style with shallower slope
         const peak1X = 500;
         const peak1Z = 1000;
         const peak1Height = 500; // Very tall
-        const peak1Width = 400;  // Narrower for twin peaks
+        const peak1Width = 800;  // Much wider base for shallower Mont Blanc-like slope
         
         // Second peak - slightly shorter and offset
-        const peak2X = 750;
+        const peak2X = 900;  // Move further apart due to wider bases
         const peak2Z = 950;
         const peak2Height = 450;
-        const peak2Width = 380;
+        const peak2Width = 750;  // Also wider for shallower slope
         
-        // Create the first peak
-        const mountain1Geometry = new THREE.ConeGeometry(peak1Width/2, peak1Height, 16, 8);
+        // Create the first peak with more segments for smoother slope
+        const mountain1Geometry = new THREE.ConeGeometry(peak1Width/2, peak1Height, 20, 10);
         
         // Deform the first peak to make it more mountain-like
         const positions1 = mountain1Geometry.attributes.position;
@@ -1474,10 +1474,10 @@ class Environment {
             // Get normalized height (0 at base, 1 at peak)
             const normalizedHeight = (py + peak1Height/2) / peak1Height;
             
-            // Add ridges and variation
+            // Add gentler ridges and variation for Mont Blanc style
             const ridgeAngle = Math.atan2(pz, px);
-            const ridgeEffect = Math.sin(ridgeAngle * 4) * (1 - normalizedHeight) * 30;
-            const noiseEffect = Math.sin(i * 0.3) * 20 * (1 - normalizedHeight);
+            const ridgeEffect = Math.sin(ridgeAngle * 3) * (1 - normalizedHeight) * 20;  // Gentler ridges
+            const noiseEffect = Math.sin(i * 0.3) * 15 * (1 - normalizedHeight);  // Less noise
             
             // Apply deformation
             const distance = Math.sqrt(px * px + pz * pz);
@@ -1564,8 +1564,8 @@ class Environment {
     }
     
     createSecondPeak(x, z, height, width) {
-        // Create the second peak with similar structure but slightly different
-        const mountainGeometry = new THREE.ConeGeometry(width/2, height, 16, 8);
+        // Create the second peak with shallower slope
+        const mountainGeometry = new THREE.ConeGeometry(width/2, height, 20, 10);
         
         // Deform to make it natural
         const positions = mountainGeometry.attributes.position;
@@ -1576,10 +1576,10 @@ class Environment {
             
             const normalizedHeight = (py + height/2) / height;
             
-            // Different ridge pattern for variety
+            // Gentle ridge pattern for Mont Blanc style
             const ridgeAngle = Math.atan2(pz, px);
-            const ridgeEffect = Math.sin(ridgeAngle * 5) * (1 - normalizedHeight) * 25;
-            const noiseEffect = Math.sin(i * 0.4) * 15 * (1 - normalizedHeight);
+            const ridgeEffect = Math.sin(ridgeAngle * 4) * (1 - normalizedHeight) * 18;  // Gentler
+            const noiseEffect = Math.sin(i * 0.4) * 12 * (1 - normalizedHeight);  // Less noise
             
             const distance = Math.sqrt(px * px + pz * pz);
             const newDistance = distance + ridgeEffect + noiseEffect;
