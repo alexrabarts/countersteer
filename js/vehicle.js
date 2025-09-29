@@ -10,7 +10,7 @@ class Vehicle {
         // Vehicle parameters
         this.speed = 20; // m/s (starts at ~72 km/h)
         this.minSpeed = 5; // m/s (~18 km/h) - below this, bike falls
-        this.maxSpeed = 50; // m/s (~180 km/h)
+        this.maxSpeed = 60; // m/s (~216 km/h)
         this.acceleration = 12; // m/s²
         this.brakeForce = 15; // m/s²
         this.wheelbase = 1.4; // metres
