@@ -488,10 +488,25 @@ class Game {
             }
         }
 
+        // Check if vehicle is in roadworks zone
+        let inRoadworksZone = false;
+        if (this.environment.roadworksZones) {
+            let currentSegment = 0;
+            if (this.vehicle.currentRoadSegment < this.environment.roadPath.length) {
+                currentSegment = this.vehicle.currentRoadSegment;
+            }
+            for (const zone of this.environment.roadworksZones) {
+                if (currentSegment >= zone.startSegment && currentSegment <= zone.endSegment) {
+                    inRoadworksZone = true;
+                    break;
+                }
+            }
+        }
+
         // Update traffic
         if (this.traffic) {
             const collision = this.traffic.update(deltaTime, this.vehicle.position);
-            if (collision && collision.hit && !this.vehicle.crashed) {
+            if (collision && collision.hit && !this.vehicle.crashed && !inRoadworksZone) {
                 this.vehicle.crashed = true;
                 this.vehicle.crashAngle = this.vehicle.leanAngle || 0.5;
                 this.vehicle.frame.material.color.setHex(0xff00ff); // Magenta for traffic collision
