@@ -230,7 +230,7 @@ class Game {
         lookTarget.y += 1;
 
         // Add lean-based lateral offset for corner viewing
-        const leanLateralOffset = this.vehicle.leanAngle * 8; // Lean angle affects how far to look laterally
+        const leanLateralOffset = -this.vehicle.leanAngle * 8; // Lean angle affects how far to look laterally
         const lateralVector = new THREE.Vector3(leanLateralOffset, 0, 0);
         lateralVector.applyEuler(vehicleRotation);
         lookTarget.add(lateralVector);
