@@ -31,12 +31,17 @@ class Game {
             
             // Now update camera positions to be relative to actual vehicle height
             const cameraStartY = startY + 10; // 10 units above the bike
-            const cameraEndY = startY + 4;    // 4 units above the bike for normal view
+            
+            // Calculate where the normal follow camera would be
+            const normalCameraOffset = this.baseCameraOffset.clone();
+            normalCameraOffset.applyEuler(new THREE.Euler(0, this.vehicle.yawAngle, 0));
+            const normalCameraPos = this.vehicle.position.clone().add(normalCameraOffset);
             
             this.camera.position.set(0, cameraStartY, -8);
             this.cameraIntroStartPos.y = cameraStartY;
-            this.cameraIntroEndPos.y = cameraEndY;
-            this.currentCameraPos.y = cameraStartY; // Update current pos too
+            // End position matches where the follow camera would naturally be
+            this.cameraIntroEndPos.set(normalCameraPos.x, normalCameraPos.y, normalCameraPos.z);
+            this.currentCameraPos.set(0, cameraStartY, -8);
         }
         
         this.input = new InputHandler();
@@ -217,7 +222,14 @@ class Game {
             // End intro when complete
             if (progress >= 1) {
                 this.cameraIntroActive = false;
-                console.log('Camera intro complete');
+                
+                // Initialize the follow camera positions to match intro end position
+                // to avoid jump when switching to normal camera
+                this.currentCameraPos.copy(this.camera.position);
+                this.currentLookTarget.copy(this.vehicle.position);
+                this.currentLookTarget.y += 1;
+                
+                console.log('Camera intro complete - smooth transition to follow camera');
             }
             
             return; // Skip normal camera update during intro
