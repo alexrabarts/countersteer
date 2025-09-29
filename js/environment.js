@@ -1529,8 +1529,8 @@ class Environment {
         mountain.receiveShadow = true;
         group.add(mountain);
         
-        // Add a narrow snow cap just for the peak tip
-        const snowCapGeometry = new THREE.ConeGeometry(peakWidth/8, peakHeight * 0.15, 8, 3);
+        // Add a small snow cap just for the peak tip
+        const snowCapGeometry = new THREE.ConeGeometry(peakWidth/15, peakHeight * 0.08, 6, 2);
         
         // Deform snow cap slightly for natural look
         const snowPositions = snowCapGeometry.attributes.position;
@@ -1540,9 +1540,9 @@ class Environment {
             const sz = snowPositions.getZ(i);
             
             // Very subtle irregularity
-            const snowNoise = Math.sin(i * 0.5) * 3;
-            snowPositions.setX(i, sx + snowNoise * 0.2);
-            snowPositions.setZ(i, sz + snowNoise * 0.15);
+            const snowNoise = Math.sin(i * 0.5) * 2;
+            snowPositions.setX(i, sx + snowNoise * 0.1);
+            snowPositions.setZ(i, sz + snowNoise * 0.08);
         }
         
         snowCapGeometry.computeVertexNormals();
@@ -1557,40 +1557,12 @@ class Environment {
         
         const snowCap = new THREE.Mesh(snowCapGeometry, snowMaterial);
         // Position it at the very top of the mountain
-        snowCap.position.set(peakX, peakHeight * 0.93 - 80, peakZ);
+        snowCap.position.set(peakX, peakHeight * 0.96 - 80, peakZ);
         snowCap.castShadow = true;
         snowCap.receiveShadow = true;
         group.add(snowCap);
         
-        // Add some snow patches near the peak
-        for (let i = 0; i < 6; i++) {
-            const angle = (Math.PI * 2 / 6) * i + Math.random() * 0.3;
-            const heightRatio = 0.65 + Math.random() * 0.15; // Higher up the mountain
-            const distance = peakWidth * 0.08 * (1 - heightRatio); // Closer to center
-            
-            const patchGeometry = new THREE.SphereGeometry(10 + Math.random() * 8, 6, 4);
-            const snowPatch = new THREE.Mesh(patchGeometry, snowMaterial);
-            
-            snowPatch.position.set(
-                peakX + Math.cos(angle) * distance,
-                peakHeight * heightRatio - 80,
-                peakZ + Math.sin(angle) * distance
-            );
-            
-            snowPatch.scale.set(
-                1.5 + Math.random() * 0.5,
-                0.4,
-                1.5 + Math.random() * 0.5
-            );
-            
-            snowPatch.rotation.set(
-                Math.random() * 0.3,
-                Math.random() * Math.PI,
-                Math.random() * 0.3
-            );
-            
-            group.add(snowPatch);
-        }
+        // Removed snow patches - they were appearing to float
         
         // Add some rocky outcrops
         const rockMaterial = new THREE.MeshStandardMaterial({
