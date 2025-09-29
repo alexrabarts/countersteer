@@ -186,13 +186,21 @@ class Game {
         this.cameraIntroStartPos = new THREE.Vector3(0, 15, 0); // Directly above
         this.cameraIntroEndPos = new THREE.Vector3(0, 4, -10); // Behind bike
         
+        // Camera mode system
+        this.cameraMode = 0; // 0 = standard, 1 = high/far, 2 = onboard
+        this.cameraModes = [
+            { name: 'Standard', offset: new THREE.Vector3(0, 3, -6), lerpFactor: 0.08 },
+            { name: 'High View', offset: new THREE.Vector3(0, 8, -12), lerpFactor: 0.06 },
+            { name: 'Onboard', offset: new THREE.Vector3(0, 1.2, 0.5), lerpFactor: 0.15 }
+        ];
+        
         // Dynamic camera offset for mountain roads
-        this.baseCameraOffset = new THREE.Vector3(0, 3, -6); // Even closer view for more immersion
+        this.baseCameraOffset = this.cameraModes[0].offset.clone();
         this.cameraOffset = this.baseCameraOffset.clone();
         this.cameraTarget = new THREE.Vector3();
         this.currentCameraPos = this.camera.position.clone();
         this.currentLookTarget = new THREE.Vector3(0, 1, 0);
-        this.cameraLerpFactor = 0.08; // Slightly faster response for mountain roads
+        this.cameraLerpFactor = this.cameraModes[0].lerpFactor;
         this.cameraLateralOffset = 0; // Track lateral offset for smooth side movement
         this.previousYawAngle = 0; // Track yaw changes for lateral movement
         console.log('Camera setup complete - starting intro animation');
@@ -249,21 +257,39 @@ class Game {
         const targetLateralOffset = -yawDelta * 25; // Strong lateral movement
         this.cameraLateralOffset = this.cameraLateralOffset * 0.85 + targetLateralOffset * 0.15;
 
-        // Dynamic camera offset based on lean angle for better mountain road feel
-        const leanInfluence = this.vehicle.leanAngle * 2; // Shift camera opposite to lean
+        // Get current camera mode settings
+        const currentMode = this.cameraModes[this.cameraMode];
+        this.baseCameraOffset = currentMode.offset.clone();
+        this.cameraLerpFactor = currentMode.lerpFactor;
         
-        // Combine lateral lag with lean influence
-        this.cameraOffset.x = this.baseCameraOffset.x - leanInfluence + this.cameraLateralOffset;
-        
-        // Adjust height based on speed for dramatic effect
-        const speedRatio = this.vehicle.speed / this.vehicle.maxSpeed;
-        this.cameraOffset.y = this.baseCameraOffset.y + speedRatio * 0.5; // Slight rise with speed
-        this.cameraOffset.z = this.baseCameraOffset.z - speedRatio * 1; // Move back slightly with speed
-
-        // Wheelie camera swing - move camera to the side for dramatic wheelie view
-        if (this.vehicle.isWheelie) {
-            const wheelieSwing = 8; // How far to swing the camera laterally
-            this.cameraOffset.x += wheelieSwing;
+        // Mode-specific adjustments
+        if (this.cameraMode === 2) {
+            // Onboard camera - minimal lateral movement, rotates with bike
+            this.cameraOffset.x = this.baseCameraOffset.x;
+            this.cameraOffset.y = this.baseCameraOffset.y;
+            this.cameraOffset.z = this.baseCameraOffset.z;
+            
+            // Add small vibration for realism
+            this.cameraOffset.x += Math.sin(performance.now() * 0.01) * 0.02;
+            this.cameraOffset.y += Math.sin(performance.now() * 0.013) * 0.01;
+        } else {
+            // Standard and High View cameras
+            // Dynamic camera offset based on lean angle for better mountain road feel
+            const leanInfluence = this.vehicle.leanAngle * (this.cameraMode === 1 ? 3 : 2); // More influence in high view
+            
+            // Combine lateral lag with lean influence
+            this.cameraOffset.x = this.baseCameraOffset.x - leanInfluence + this.cameraLateralOffset;
+            
+            // Adjust height based on speed for dramatic effect
+            const speedRatio = this.vehicle.speed / this.vehicle.maxSpeed;
+            this.cameraOffset.y = this.baseCameraOffset.y + speedRatio * 0.5; // Slight rise with speed
+            this.cameraOffset.z = this.baseCameraOffset.z - speedRatio * (this.cameraMode === 1 ? 2 : 1); // Move back with speed
+            
+            // Wheelie camera swing - move camera to the side for dramatic wheelie view
+            if (this.vehicle.isWheelie && this.cameraMode !== 1) { // Less swing in high view
+                const wheelieSwing = 8; // How far to swing the camera laterally
+                this.cameraOffset.x += wheelieSwing;
+            }
         }
 
         // Calculate camera position relative to vehicle
@@ -291,26 +317,51 @@ class Game {
         
         this.camera.position.copy(this.currentCameraPos);
 
-        // Dynamic FOV based on speed for immersion
-        const speedFactor = this.vehicle.speed / this.vehicle.maxSpeed;
-        this.camera.fov = 70 + speedFactor * 15; // 70 to 85 degrees for mountain roads
-        this.camera.updateProjectionMatrix();
-
-        // Look ahead of vehicle for better anticipation on mountain roads
-        const lookAheadDistance = 3 + speedRatio * 7; // Look further ahead at speed
-        const lookAhead = new THREE.Vector3(0, 0, lookAheadDistance);
-        lookAhead.applyEuler(vehicleRotation);
-
-        const lookTarget = this.vehicle.position.clone().add(lookAhead);
-        lookTarget.y += 1;
-
-        // Add lean-based lateral offset for corner viewing
-        const leanLateralOffset = -this.vehicle.leanAngle * 4; // Lean angle affects how far to look laterally
-        const lateralVector = new THREE.Vector3(leanLateralOffset, 0, 0);
-        lateralVector.applyEuler(vehicleRotation);
-        lookTarget.add(lateralVector);
-        this.currentLookTarget.lerp(lookTarget, this.cameraLerpFactor * 1.5);
-        this.camera.lookAt(this.currentLookTarget);
+        // Mode-specific FOV and look target
+        const speedRatio = this.vehicle.speed / this.vehicle.maxSpeed;
+        
+        if (this.cameraMode === 2) {
+            // Onboard camera - wider FOV, look directly ahead
+            this.camera.fov = 90 + speedRatio * 10; // 90 to 100 degrees for immersive onboard view
+            this.camera.updateProjectionMatrix();
+            
+            // Look straight ahead from bike position
+            const lookAheadDistance = 10 + speedRatio * 5;
+            const lookAhead = new THREE.Vector3(0, 0.5, lookAheadDistance);
+            lookAhead.applyEuler(vehicleRotation);
+            
+            const lookTarget = this.vehicle.position.clone().add(lookAhead);
+            
+            // Add bike lean to camera rotation for immersive feel
+            this.camera.rotation.z = -this.vehicle.leanAngle * 0.5;
+            
+            this.currentLookTarget.lerp(lookTarget, 0.3); // Fast response for onboard
+            this.camera.lookAt(this.currentLookTarget);
+        } else {
+            // Standard and High View cameras
+            const speedFactor = this.vehicle.speed / this.vehicle.maxSpeed;
+            this.camera.fov = (this.cameraMode === 1 ? 65 : 70) + speedFactor * 15; // Wider FOV for high view
+            this.camera.updateProjectionMatrix();
+            
+            // Reset any Z rotation from onboard mode
+            this.camera.rotation.z = 0;
+            
+            // Look ahead of vehicle for better anticipation on mountain roads
+            const lookAheadDistance = (this.cameraMode === 1 ? 5 : 3) + speedRatio * 7; // Look further in high view
+            const lookAhead = new THREE.Vector3(0, 0, lookAheadDistance);
+            lookAhead.applyEuler(vehicleRotation);
+            
+            const lookTarget = this.vehicle.position.clone().add(lookAhead);
+            lookTarget.y += this.cameraMode === 1 ? 2 : 1; // Look higher in high view
+            
+            // Add lean-based lateral offset for corner viewing (less in high view)
+            const leanLateralOffset = -this.vehicle.leanAngle * (this.cameraMode === 1 ? 2 : 4);
+            const lateralVector = new THREE.Vector3(leanLateralOffset, 0, 0);
+            lateralVector.applyEuler(vehicleRotation);
+            lookTarget.add(lateralVector);
+            this.currentLookTarget.lerp(lookTarget, this.cameraLerpFactor * 1.5);
+            this.camera.lookAt(this.currentLookTarget);
+        }
         
         // Update shadow camera to follow player
         this.updateShadowCamera();
@@ -569,12 +620,38 @@ class Game {
             }
         }
         
+        // Check for camera mode switch
+        if (this.input.checkCameraSwitch()) {
+            this.cameraMode = (this.cameraMode + 1) % this.cameraModes.length;
+            console.log(`Camera mode: ${this.cameraModes[this.cameraMode].name}`);
+            
+            // Show notification
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = `Camera: ${this.cameraModes[this.cameraMode].name}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 10px 20px;
+                border-radius: 5px;
+                font-size: 20px;
+                z-index: 1000;
+                animation: fadeInOut 1s ease-out;
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 1000);
+        }
+        
         // Check for crash (before updating vehicle)
         const wasCrashed = this.vehicle.crashed;
 
-        this.vehicle.update(deltaTime, steeringInput, throttleInput, brakeInput, wheelieInput);
+         this.vehicle.update(deltaTime, steeringInput, throttleInput, brakeInput, wheelieInput);
 
-        // Play crash sound if we just crashed
+         // Play crash sound if we just crashed
         if (!wasCrashed && this.vehicle.crashed) {
             this.soundManager.playCrashSound();
         }
@@ -1139,8 +1216,8 @@ class SoundManager {
         // Reset start time for timing
         this.startTime = performance.now();
 
-        // Reset cones
-        this.cones.reset();
+         // Reset cones
+         this.cones.reset();
 
         // Show notification
         const notification = document.createElement('div');

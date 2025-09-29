@@ -881,7 +881,7 @@ class Vehicle {
             this.group.rotation.x = 0; // Reset pitch
             this.group.rotation.z = this.leanAngle;
             this.rider.rotation.z = this.leanAngle * 0.2; // Rider leans subtly
-            
+
             // Restore normal bike color
             if (!this.crashed) {
                 this.frame.material.color.setHex(0x1a4db3); // Normal blue

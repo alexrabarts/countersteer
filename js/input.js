@@ -9,6 +9,7 @@ class InputHandler {
         this.resetPressed = false;
         this.soundTogglePressed = false;
         this.checkpointRestartPressed = false;
+        this.cameraSwitchPressed = false;
         this.virtualControls = null;
         this.steeringSmoothing = 0.4; // How quickly steering ramps up (0-1, higher = faster)
         this.setupEventListeners();
@@ -41,6 +42,11 @@ class InputHandler {
                 console.log('C key pressed - checkpoint restart triggered');
             }
 
+            // Check for camera mode switch
+            if (event.code === 'KeyZ') {
+                this.cameraSwitchPressed = true;
+            }
+
             // Test key to force falling
             if (event.code === 'KeyF') {
                 console.log('F key pressed - forcing fall test');
@@ -67,6 +73,10 @@ class InputHandler {
 
             if (event.code === 'KeyC') {
                 this.checkpointRestartPressed = false;
+            }
+
+            if (event.code === 'KeyZ') {
+                this.cameraSwitchPressed = false;
             }
         });
     }
@@ -163,6 +173,20 @@ class InputHandler {
         if (this.checkpointRestartPressed) {
             this.checkpointRestartPressed = false;
             console.log('Checkpoint restart triggered');
+            return true;
+        }
+        return false;
+    }
+    
+    checkCameraSwitch() {
+        // Check virtual control camera button
+        if (this.virtualControls && this.virtualControls.getKey('KeyZ')) {
+            this.virtualControls.touches['KeyZ'] = false; // Clear after use
+            return true;
+        }
+        
+        if (this.cameraSwitchPressed) {
+            this.cameraSwitchPressed = false;
             return true;
         }
         return false;

@@ -146,6 +146,77 @@ class VirtualControls {
             container.appendChild(button);
         });
         
+        // Camera button (Z) - position it above the reset button
+        const cameraButtonSize = isMobileLandscape ? 60 : Math.min(80, viewportHeight * 0.09);
+        const cameraButton = document.createElement('div');
+        cameraButton.className = 'virtual-button-camera';
+        cameraButton.innerHTML = 'Z';
+        cameraButton.style.cssText = `
+            position: fixed;
+            bottom: ${bottomPosition + cameraButtonSize + 10}px;
+            right: ${safeBottomMargin}px;
+            width: ${cameraButtonSize}px;
+            height: ${cameraButtonSize}px;
+            background: rgba(100, 200, 255, 0.2);
+            border: 2px solid rgba(100, 200, 255, 0.4);
+            border-radius: 50%;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: ${Math.floor(cameraButtonSize * 0.35)}px;
+            font-weight: bold;
+            font-family: monospace;
+            z-index: 1000;
+            cursor: pointer;
+            touch-action: none;
+            user-select: none;
+            transition: background 0.1s;
+        `;
+
+        // Store camera button reference
+        this.buttons['KeyZ'] = cameraButton;
+        
+        cameraButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.touches['KeyZ'] = true;
+            cameraButton.style.background = 'rgba(100, 200, 255, 0.5)';
+            cameraButton.style.borderColor = 'rgba(100, 200, 255, 0.7)';
+        });
+        
+        cameraButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            setTimeout(() => {
+                this.touches['KeyZ'] = false;
+                cameraButton.style.background = 'rgba(100, 200, 255, 0.2)';
+                cameraButton.style.borderColor = 'rgba(100, 200, 255, 0.4)';
+            }, 100);
+        });
+        
+        cameraButton.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            this.touches['KeyZ'] = false;
+            cameraButton.style.background = 'rgba(100, 200, 255, 0.2)';
+            cameraButton.style.borderColor = 'rgba(100, 200, 255, 0.4)';
+        });
+        
+        // Mouse events for testing
+        cameraButton.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            this.touches['KeyZ'] = true;
+            cameraButton.style.background = 'rgba(100, 200, 255, 0.5)';
+            cameraButton.style.borderColor = 'rgba(100, 200, 255, 0.7)';
+        });
+        
+        cameraButton.addEventListener('mouseup', (e) => {
+            e.preventDefault();
+            setTimeout(() => {
+                this.touches['KeyZ'] = false;
+                cameraButton.style.background = 'rgba(100, 200, 255, 0.2)';
+                cameraButton.style.borderColor = 'rgba(100, 200, 255, 0.4)';
+            }, 100);
+        });
+
         // Reset button on the right
         const resetButtonSize = isMobileLandscape ? 60 : Math.min(80, viewportHeight * 0.09);
         const resetButton = document.createElement('div');
@@ -218,6 +289,7 @@ class VirtualControls {
         });
         
         document.body.appendChild(container);
+        document.body.appendChild(cameraButton);
         document.body.appendChild(resetButton);
         
         // Instructions - position above controls
@@ -235,7 +307,7 @@ class VirtualControls {
             font-family: monospace;
             pointer-events: none;
         `;
-        instructions.innerHTML = 'W: Throttle | S: Brake<br>A/D: Steering | R: Reset';
+        instructions.innerHTML = 'W: Throttle | S: Brake<br>A/D: Steering | R: Reset | Z: Camera';
         document.body.appendChild(instructions);
         
         // Handle orientation changes

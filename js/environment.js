@@ -833,15 +833,16 @@ class Environment {
                             boulderY = roadY - baseBoulderSize * embedRatio;
                         }
                         
-                        // Special handling for very small boulders
+                        // Special handling for very small boulders - use consistent drop calculation
                         if (baseBoulderSize < 1.2) {
                             // Force small boulders to be deeply embedded
                             if (side > 0) {
-                                const dropDistance = baseDistance - 8;
-                                const dropAmount = Math.min(dropDistance * 2, 45);
-                                boulderY = (point.y || 0) - dropAmount - baseBoulderSize * 0.7; // 70% embedded
+                                const dropDistance = Math.max(0, baseDistance - 8);
+                                const terrainDropRate = 3; // MUST match the rate used above
+                                const dropAmount = Math.min(dropDistance * terrainDropRate, 50);
+                                boulderY = roadY - dropAmount - baseBoulderSize * 0.7; // 70% embedded
                             } else {
-                                boulderY = (point.y || 0) - baseBoulderSize * 0.7;
+                                boulderY = roadY - baseBoulderSize * 0.7;
                             }
                         }
                         
@@ -1091,16 +1092,18 @@ class Environment {
                     const perpX = Math.cos(point.heading) * distance * side;
                     const perpZ = -Math.sin(point.heading) * distance * side;
                     
+                    const roadY = point.y || 0;
+                    
                     if (height > 0) {
                         vine.position.set(
                             point.x + perpX,
-                            (point.y || 0) + vineHeight - vineLength/2,
+                            roadY + vineHeight - vineLength/2,
                             point.z + perpZ
                         );
                     } else {
                         vine.position.set(
                             point.x + perpX,
-                            (point.y || 0) - vineHeight - vineLength/2,
+                            roadY - vineHeight - vineLength/2,
                             point.z + perpZ
                         );
                     }
