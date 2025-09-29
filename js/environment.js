@@ -506,21 +506,13 @@ class Environment {
                          // Combine displacements with height-based variation
                          const totalDisplacement = primary + secondary + tertiary + micro;
 
-                          // Apply faceting by quantizing displacement - LARGER facets for visible effect
-                          // The issue was facets were TOO small - they need to be large enough to see
-                          const facetSize = 3.0; // LARGE facets (3 units) for very visible angular chunks
-                          
-                          // Quantize the displacement to create sharp faceted surfaces
+                          // Apply faceting by quantizing displacement - smaller facets for more angular look
+                          const facetSize = 1.2 + Math.sin(idx * 0.3) * 0.4; // Smaller variable facet size for sharper angles
                           const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
-                          
-                          // Debug: Log to verify faceting is working
-                          if (i === 0 && h === 0 && j === 0) {
-                              console.log(`FACETING: size=${facetSize}, total=${totalDisplacement.toFixed(2)} -> faceted=${facetedDisplacement.toFixed(2)}`);
-                          }
 
-                          // Calculate base final distance - MUCH MORE displacement for visible faceting
-                          const displacementScale = verticalProgress === 0 ? 0.3 : 1.5; // Massively increased displacement scale for very pronounced faceting
-                          let finalDistance = baseDistance + facetedDisplacement * displacementScale;
+                           // Calculate base final distance
+                           const displacementScale = verticalProgress === 0 ? 0.15 : 0.55; // Further increased displacement scale for more pronounced faceting
+                           let finalDistance = baseDistance + facetedDisplacement * displacementScale;
 
                           // Apply slope for overhang
                           if (side > 0 && isDropOff) {
