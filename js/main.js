@@ -160,15 +160,15 @@ class Game {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
         
         // Start camera from above but closer for intro animation
-        this.camera.position.set(0, 15, -8); // Start moderately high, closer to bike
+        this.camera.position.set(0, 12, -8); // Start moderately high, closer to bike
         this.camera.lookAt(0, 0, 0);
         
         // Camera intro animation state
         this.cameraIntroActive = true;
         this.cameraIntroStartTime = performance.now();
         this.cameraIntroDuration = 1500; // 1.5 seconds intro - quicker
-        this.cameraIntroStartPos = new THREE.Vector3(0, 15, -8);
-        this.cameraIntroEndPos = new THREE.Vector3(0, 5, -10);
+        this.cameraIntroStartPos = new THREE.Vector3(0, 12, -8);
+        this.cameraIntroEndPos = new THREE.Vector3(0, 6, -10); // Higher end position to stay above bike
         
         // Dynamic camera offset for mountain roads
         this.baseCameraOffset = new THREE.Vector3(0, 3, -6); // Even closer view for more immersion
@@ -259,6 +259,13 @@ class Game {
             cameraPos.z += (Math.random() - 0.5) * shakeAmount;
         }
         this.currentCameraPos.lerp(cameraPos, lerpFactor);
+        
+        // Ensure camera never goes below bike level (bike is at roughly y=2)
+        const minCameraHeight = vehiclePos.y + 2; // At least 2 units above bike
+        if (this.currentCameraPos.y < minCameraHeight) {
+            this.currentCameraPos.y = minCameraHeight;
+        }
+        
         this.camera.position.copy(this.currentCameraPos);
 
         // Dynamic FOV based on speed for immersion
