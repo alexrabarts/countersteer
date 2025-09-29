@@ -1764,6 +1764,7 @@ class Environment {
         // Define construction zones with variety - some with ramps, some without
         // Adjusted for new track layout with hairpin
         const roadworksLocations = [
+            { startSegment: 15, endSegment: 17, hasRamp: false, type: 'minor' },  // Early minor construction
             { startSegment: 27, endSegment: 29, hasRamp: true, type: 'major' },  // After hairpin major construction with jump
             { startSegment: 48, endSegment: 49, hasRamp: false, type: 'minor' }  // Near end minor repairs
         ];
@@ -1953,18 +1954,18 @@ class Environment {
                 rampPoint.heading
             );
 
-            // Add shipping containers for collision on mountain side
+            // Add shipping containers for collision on mountain side - moved closer for visibility
             this.createShippingContainer(
-                rampPoint.x - Math.cos(rampPoint.heading) * 20,
+                rampPoint.x - Math.cos(rampPoint.heading) * 12,
                 rampPoint.y,
-                rampPoint.z + Math.sin(rampPoint.heading) * 20,
+                rampPoint.z + Math.sin(rampPoint.heading) * 12,
                 rampPoint.heading
             );
 
             this.createShippingContainer(
-                rampPoint.x - Math.cos(rampPoint.heading) * 15,
+                rampPoint.x - Math.cos(rampPoint.heading) * 10,
                 rampPoint.y,
-                rampPoint.z + Math.sin(rampPoint.heading) * 15,
+                rampPoint.z + Math.sin(rampPoint.heading) * 10,
                 rampPoint.heading + Math.PI/2
             );
         } else if (zoneType === 'minor') {
@@ -2479,35 +2480,45 @@ class Environment {
         // Create shipping container geometry
         const containerGeometry = new THREE.BoxGeometry(2.5, 2.5, 6);
         const containerMaterial = new THREE.MeshStandardMaterial({
-            color: 0x8B4513, // Brown/rust color
+            color: 0xFF6B35, // Bright orange for visibility
             roughness: 0.9,
             metalness: 0.1
         });
 
         const container = new THREE.Mesh(containerGeometry, containerMaterial);
 
-        // Add rust details with darker patches
-        const rustGeometry = new THREE.PlaneGeometry(2, 1.5);
-        const rustMaterial = new THREE.MeshStandardMaterial({
-            color: 0x654321,
-            roughness: 0.95,
-            metalness: 0.05,
+        // Add hazard stripes for visibility
+        const stripeGeometry = new THREE.PlaneGeometry(2.4, 0.3);
+        const stripeMaterial = new THREE.MeshStandardMaterial({
+            color: 0x000000, // Black hazard stripes
+            roughness: 0.8,
+            metalness: 0.2,
             side: THREE.DoubleSide
         });
 
-        // Add rust patches on sides
-        const rustPatches = [
+        // Add hazard stripes on all sides
+        const stripePositions = [
+            // Front and back
+            { position: [0, 0.6, 3.01], rotation: [0, 0, 0] },
             { position: [0, 0, 3.01], rotation: [0, 0, 0] },
+            { position: [0, -0.6, 3.01], rotation: [0, 0, 0] },
+            { position: [0, 0.6, -3.01], rotation: [0, Math.PI, 0] },
             { position: [0, 0, -3.01], rotation: [0, Math.PI, 0] },
+            { position: [0, -0.6, -3.01], rotation: [0, Math.PI, 0] },
+            // Sides
+            { position: [1.26, 0.6, 0], rotation: [0, Math.PI/2, 0] },
             { position: [1.26, 0, 0], rotation: [0, Math.PI/2, 0] },
-            { position: [-1.26, 0, 0], rotation: [0, -Math.PI/2, 0] }
+            { position: [1.26, -0.6, 0], rotation: [0, Math.PI/2, 0] },
+            { position: [-1.26, 0.6, 0], rotation: [0, -Math.PI/2, 0] },
+            { position: [-1.26, 0, 0], rotation: [0, -Math.PI/2, 0] },
+            { position: [-1.26, -0.6, 0], rotation: [0, -Math.PI/2, 0] }
         ];
 
-        rustPatches.forEach(patch => {
-            const rust = new THREE.Mesh(rustGeometry, rustMaterial);
-            rust.position.set(...patch.position);
-            rust.rotation.set(...patch.rotation);
-            container.add(rust);
+        stripePositions.forEach(stripe => {
+            const hazardStripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+            hazardStripe.position.set(...stripe.position);
+            hazardStripe.rotation.set(...stripe.rotation);
+            container.add(hazardStripe);
         });
 
         container.position.set(x, y + 1.25, z); // Center at ground level + half height
