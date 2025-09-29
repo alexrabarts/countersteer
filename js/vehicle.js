@@ -373,6 +373,8 @@ class Vehicle {
                     collisionDistance = 3.0; // Larger collision radius for bulldozer
                 } else if (obstacle.type === 'worktruck') {
                     collisionDistance = 2.5; // Work truck collision radius
+                } else if (obstacle.type === 'container') {
+                    collisionDistance = 2.5; // Shipping container collision radius
                 } else {
                     collisionDistance = 2;
                 }
