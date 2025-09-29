@@ -1015,22 +1015,24 @@ class Vehicle {
                 
                 // Check if we've hit the left cliff wall (negative perpDistance)
                 if (perpDistance < -wallBuffer && !this.crashed) {
-                    // Hit the cliff wall on the left - bounce back
-                    console.log('BOUNCED! Hit the left cliff wall at', (this.speed * 2.237).toFixed(1) + ' mph');
+                    // Hit the cliff wall on the left - crash with bounce
+                    this.crashed = true;
+                    this.fallingOffCliff = false; // Not falling, we hit a wall
+                    this.crashAngle = -Math.PI/6; // Crash leaning left into the wall
+                    this.frame.material.color.setHex(0x8B0000); // Dark red for crash
+                    console.log('CRASHED! Hit the left cliff wall at', (this.speed * 2.237).toFixed(1) + ' mph');
                     console.log('Left wall hit at distance:', perpDistance);
 
-                    // Move bike back to wall position
+                    // Move bike back to wall position and apply bounce
                     const targetPerpDistance = -wallBuffer;
                     const adjustment = (targetPerpDistance - perpDistance);
                     this.position.x += perpX * adjustment;
                     this.position.z += perpZ * adjustment;
 
-                    // Bounce off the wall - reverse lateral direction
-                    const bounceDir = new THREE.Vector3(-perpX, 0, -perpZ); // Bounce back toward road center
-                    this.velocity = bounceDir.multiplyScalar(this.speed * 0.3);
-                    this.velocity.y = 1; // Small upward bounce
-
-                    // Don't crash - allow recovery from bounce
+                    // Bounce off the wall - toward road center
+                    const bounceDir = new THREE.Vector3(perpX, 0, perpZ); // Bounce back toward road center
+                    this.velocity = bounceDir.multiplyScalar(this.speed * 0.2);
+                    this.velocity.y = 0.5; // Small upward bounce
                 }
 
 
