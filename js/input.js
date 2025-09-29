@@ -19,7 +19,12 @@ class InputHandler {
         document.addEventListener('keydown', (event) => {
             this.keys[event.code] = true;
             this.updateInputs();
-            
+
+            // Highlight virtual controls
+            if (this.virtualControls && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyR'].includes(event.code)) {
+                this.virtualControls.highlightKey(event.code, true);
+            }
+
             // Check for reset
             if (event.code === 'KeyR') {
                 this.resetPressed = true;
@@ -46,7 +51,12 @@ class InputHandler {
         document.addEventListener('keyup', (event) => {
             this.keys[event.code] = false;
             this.updateInputs();
-            
+
+            // Unhighlight virtual controls
+            if (this.virtualControls && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyR'].includes(event.code)) {
+                this.virtualControls.highlightKey(event.code, false);
+            }
+
             if (event.code === 'KeyR') {
                 this.resetPressed = false;
             }

@@ -7,7 +7,9 @@ class VirtualControls {
             KeyD: false,
             KeyR: false
         };
-        
+
+        this.buttons = {}; // Store button elements for highlighting
+
         this.createControls();
     }
     
@@ -72,6 +74,9 @@ class VirtualControls {
                 cursor: pointer;
                 transition: background 0.1s;
             `;
+
+            // Store button reference
+            this.buttons[btn.key] = button;
             
             // Touch events
             button.addEventListener('touchstart', (e) => {
@@ -146,6 +151,9 @@ class VirtualControls {
             user-select: none;
             transition: background 0.1s;
         `;
+
+        // Store reset button reference
+        this.buttons['KeyR'] = resetButton;
         
         resetButton.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -228,6 +236,19 @@ class VirtualControls {
     
     getKey(keyCode) {
         return this.touches[keyCode] || false;
+    }
+
+    highlightKey(keyCode, active) {
+        const button = this.buttons[keyCode];
+        if (button) {
+            if (active) {
+                button.style.background = keyCode === 'KeyR' ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 255, 255, 0.3)';
+                button.style.borderColor = keyCode === 'KeyR' ? 'rgba(255, 100, 100, 0.7)' : 'rgba(255, 255, 255, 0.6)';
+            } else {
+                button.style.background = keyCode === 'KeyR' ? 'rgba(255, 100, 100, 0.2)' : 'rgba(255, 255, 255, 0.1)';
+                button.style.borderColor = keyCode === 'KeyR' ? 'rgba(255, 100, 100, 0.4)' : 'rgba(255, 255, 255, 0.3)';
+            }
+        }
     }
     
     destroy() {
