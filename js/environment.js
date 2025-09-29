@@ -506,11 +506,17 @@ class Environment {
                          // Combine displacements with height-based variation
                          const totalDisplacement = primary + secondary + tertiary + micro;
 
-                         // Apply faceting by quantizing displacement - 10x smaller facets
-                         const facetSize = 0.001; // 10x smaller - 1mm facet size for extreme micro-detail
-                         // Amplify the displacement before quantizing for more visible effect
-                         const amplifiedDisplacement = totalDisplacement * 2.0;
-                         const facetedDisplacement = Math.floor(amplifiedDisplacement / facetSize) * facetSize * 0.5; // Scale back after quantizing
+                          // Apply faceting by quantizing displacement - LARGER facets for visible effect
+                          // The issue was facets were TOO small - they need to be large enough to see
+                          const facetSize = 3.0; // LARGE facets (3 units) for very visible angular chunks
+                          
+                          // Quantize the displacement to create sharp faceted surfaces
+                          const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
+                          
+                          // Debug: Log to verify faceting is working
+                          if (i === 0 && h === 0 && j === 0) {
+                              console.log(`FACETING: size=${facetSize}, total=${totalDisplacement.toFixed(2)} -> faceted=${facetedDisplacement.toFixed(2)}`);
+                          }
 
                           // Calculate base final distance - MUCH MORE displacement for visible faceting
                           const displacementScale = verticalProgress === 0 ? 0.3 : 1.5; // Massively increased displacement scale for very pronounced faceting
