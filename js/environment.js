@@ -1377,12 +1377,12 @@ class Environment {
         // Create a dramatic mountain rising from the lake in the center of the map
         const group = new THREE.Group();
         
-        // Main mountain peak rising from the lake - make it more prominent
+        // Main mountain peak rising from the lake - smaller to avoid road
         const mainPeak = this.createMountainPeak(
             350,   // Center of the map area
             100,   // Slightly forward from true center
-            250,   // Taller for more drama
-            350,   // Wider base for island effect
+            180,   // Reduced height to avoid crossing road
+            250,   // Smaller base
             0x3a4540 // Darker grey-green for contrast with lake
         );
         group.add(mainPeak);
@@ -1390,22 +1390,14 @@ class Environment {
         // Add a secondary smaller peak for visual interest
         const secondaryPeak = this.createMountainPeak(
             250,   // Offset to the left
-            20,    // Closer to viewer
-            150,   // Medium height
-            200,   // Medium width
+            -50,   // Move further forward/left to avoid road
+            120,   // Smaller height
+            150,   // Smaller width
             0x424845 // Similar but slightly different color
         );
         group.add(secondaryPeak);
         
-        // Add a third small peak to create an island chain effect
-        const thirdPeak = this.createMountainPeak(
-            450,   // To the right
-            150,   // Further back
-            100,   // Shorter
-            140,   // Narrower
-            0x3d4743 // Similar color family
-        );
-        group.add(thirdPeak);
+        // Remove the third peak that might be floating/problematic
         
         // Add some rocky outcrops around the base
         const rockMaterial = new THREE.MeshStandardMaterial({
@@ -1438,9 +1430,6 @@ class Environment {
             rock.receiveShadow = true;
             group.add(rock);
         }
-        
-        // Add some mist/fog sprites around the base for atmosphere (optional visual effect)
-        // This would need sprite textures to implement fully
         
         return group;
     }
