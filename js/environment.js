@@ -441,13 +441,13 @@ class Environment {
                         const verticalProgress = j / verticalSegments;
                         
                         // Variable height along the cliff length
-                        // Use sine waves and noise for natural variation
+                        // Use sine waves and noise for natural variation - higher frequency for more ups and downs
                         const lengthProgress = i / this.roadPath.length;
                         const cliffHeightMultiplier = 1.0 + 
-                            Math.sin(lengthProgress * Math.PI * 3) * 0.3 +  // Large undulations
-                            Math.sin(lengthProgress * Math.PI * 7) * 0.15 +  // Medium variation
-                            Math.sin(lengthProgress * Math.PI * 13) * 0.1 +  // Small detail
-                            (Math.random() - 0.5) * 0.1;  // Random noise
+                            Math.sin(lengthProgress * Math.PI * 8) * 0.5 +   // 8 major peaks and valleys
+                            Math.sin(lengthProgress * Math.PI * 15) * 0.25 + // 15 medium variations
+                            Math.sin(lengthProgress * Math.PI * 27) * 0.15 + // 27 small details
+                            (Math.random() - 0.5) * 0.2;  // Random noise (20%)
                         
                         const variableHeight = height * cliffHeightMultiplier;
                         const currentHeight = variableHeight * verticalProgress;
