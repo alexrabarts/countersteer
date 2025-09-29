@@ -522,6 +522,11 @@ class Game {
             // High score is updated when finishing the course, not on reset
 
             this.vehicle.reset();
+            if (this.environment.roadPath && this.environment.roadPath.length > 0) {
+                this.vehicle.position.x = this.environment.roadPath[0].x || 0;
+                this.vehicle.position.y = this.environment.roadPath[0].y || 0;
+                this.vehicle.position.z = this.environment.roadPath[0].z || 0;
+            }
             this.cones.reset();
             this.finished = false;
             this.startTime = performance.now();

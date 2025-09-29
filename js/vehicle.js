@@ -903,10 +903,11 @@ class Vehicle {
     }
 
     reset() {
-        this.position.set(0, 2, 10);
+        this.position.set(0, 0, 0);
         this.velocity.set(0, 0, 0);
-        this.speed = 0;
-        this.heading = 0;
+        this.speed = 20;
+        this.yawAngle = 0;
+        this.steeringAngle = 0;
         this.leanAngle = 0;
         this.leanVelocity = 0;
         this.crashed = false;
@@ -930,6 +931,7 @@ class Vehicle {
         this.fallStartY = 0;
         this.groundHitLogged = false;
         this.frame.material.color.setHex(0x0066cc); // Reset to blue
+        this.group.rotation.set(0, 0, 0);
         this.updateMesh();
     }
     
