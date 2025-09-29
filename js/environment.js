@@ -1187,9 +1187,12 @@ class Environment {
                     nextPoint.x + nextPerpX2, nextPoint.y, nextPoint.z + nextPerpZ2
                 );
 
-                // Brown color
+                // Color: brown for right, green for left
+                const r = side > 0 ? 0.25 : 0;
+                const g = side > 0 ? 0.2 : 1;
+                const b = side > 0 ? 0.18 : 0;
                 for (let j = 0; j < 4; j++) {
-                    colors.push(0.25, 0.2, 0.18);
+                    colors.push(r, g, b);
                 }
 
                 indices.push(
