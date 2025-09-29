@@ -1033,13 +1033,12 @@ class Vehicle {
                 const roadWidth = 8; // Half of total road width (16m)
                 // Improved road boundary logic with hysteresis
                 const roadEdge = 8.0; // Edge of the road (matches actual road width)
-                const safetyZone = 9.0; // Safety zone - slow down but don't crash
-                const cliffEdge = 10.0; // Cliff edge - fall past this
-                const rightWallBuffer = 9.5; // Right wall buffer
+                const safetyZone = 8.5; // Safety zone - slow down but don't crash
+                const cliffEdge = 9.0; // Cliff edge - fall past this
+                const wallBuffer = 8.5; // Wall crash buffer
 
                 // Dot product gives signed distance (positive = right of road, negative = left of road)
                 const perpDistance = toVehicleX * perpX + toVehicleZ * perpZ;
-                console.log('Raw perpDistance:', perpDistance.toFixed(2), 'perpX:', perpX.toFixed(2), 'perpZ:', perpZ.toFixed(2));
 
                 // Hysteresis to prevent oscillating between states
                 const hysteresisBuffer = 0.5; // Half unit buffer
@@ -1054,7 +1053,8 @@ class Vehicle {
                 // console.log('PerpDistance:', perpDistance.toFixed(2),
                 //     'RoadEdge:', effectiveRoadEdge.toFixed(1),
                 //     'SafetyZone:', effectiveSafetyZone.toFixed(1),
-                //     'CliffEdge:', effectiveCliffEdge.toFixed(1));
+                //     'CliffEdge:', effectiveCliffEdge.toFixed(1),
+                //     'WallBuffer:', wallBuffer.toFixed(1));
                 
                 // Check if we're on the ledge areas (slow down but don't crash)
                 if (Math.abs(perpDistance) > effectiveRoadEdge && Math.abs(perpDistance) < effectiveSafetyZone) {
@@ -1064,7 +1064,7 @@ class Vehicle {
                 }
                 
                 // Check if we've hit the left mountain wall (negative perpDistance)
-                if (perpDistance < -rightWallBuffer && !this.crashed) {
+                if (perpDistance < -wallBuffer && !this.crashed) {
                     // Hit the mountain wall on the left - crash into it, don't fall
                     this.crashed = true;
                     this.fallingOffCliff = false; // Not falling, we hit a wall
