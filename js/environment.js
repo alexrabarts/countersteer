@@ -1158,17 +1158,21 @@ class Environment {
         
 
         // New ground strips implementation
-        const createGroundStrip = (side, startDist, endDist) => {
+        // Create ground strips for both sides of the road
+        const createStrip = (side) => {
             const geometry = new THREE.BufferGeometry();
             const vertices = [];
             const indices = [];
             const colors = [];
 
+            const startDist = 8;
+            const endDist = 12;
+
             for (let i = 0; i < this.roadPath.length - 1; i++) {
                 const point = this.roadPath[i];
                 const nextPoint = this.roadPath[i + 1];
 
-                // Perpendicular offsets
+                // Calculate perpendicular vectors
                 const perpX1 = Math.cos(point.heading) * startDist * side;
                 const perpZ1 = -Math.sin(point.heading) * startDist * side;
                 const perpX2 = Math.cos(point.heading) * endDist * side;
@@ -1187,12 +1191,9 @@ class Environment {
                     nextPoint.x + nextPerpX2, nextPoint.y, nextPoint.z + nextPerpZ2
                 );
 
-                // Color: brown for right, green for left
-                const r = side > 0 ? 0.25 : 0;
-                const g = side > 0 ? 0.2 : 1;
-                const b = side > 0 ? 0.18 : 0;
+                // Brown color
                 for (let j = 0; j < 4; j++) {
-                    colors.push(r, g, b);
+                    colors.push(0.25, 0.2, 0.18);
                 }
 
                 indices.push(
@@ -1217,9 +1218,10 @@ class Environment {
             return mesh;
         };
 
-        const leftStrip = createGroundStrip(-1, 8, 20);
+        // Add strips to both sides
+        const leftStrip = createStrip(-1);
         this.scene.add(leftStrip);
-        const rightStrip = createGroundStrip(1, 8, 12);
+        const rightStrip = createStrip(1);
         this.scene.add(rightStrip);
 
         // Left cliff wall (mountain face rising above)
