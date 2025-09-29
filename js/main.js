@@ -493,10 +493,9 @@ class Game {
             this.soundManager.playCrashSound();
         }
 
-        // Show wheelie help when reaching moderate speed
+        // Show wheelie help when over halfway round the course
         if (!this.hasShownWheelieHelp && !this.vehicle.crashed && !this.finished) {
-            const speedKmh = this.vehicle.getSpeed();
-            if (speedKmh >= 25) { // Show when reaching 25 km/h
+            if (this.checkpointsPassed >= 3) { // Show after passing 3 checkpoints (over halfway)
                 this.showWheelieHelpNotification();
                 this.hasShownWheelieHelp = true;
             }
