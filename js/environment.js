@@ -6,6 +6,7 @@ class Environment {
         this.roadworksZones = []; // Store construction zones
         this.jumpRamps = []; // Store jump ramp objects for collision detection
         this.roadworkObstacles = []; // Store barriers and equipment for collision detection
+        this.boulders = []; // Store boulder objects for collision detection
         this.checkpoints = []; // Store checkpoint positions for scoring
         this.createRoad();
         this.createGrass();
@@ -221,9 +222,10 @@ class Environment {
                 const boulderX = point.x + side * (10 + Math.random() * 3) * Math.cos(point.heading);
                 const boulderZ = point.z - side * (10 + Math.random() * 3) * Math.sin(point.heading);
                 const boulderY = point.y - 0.8;  // More deeply embedded
-                
+
+                const boulderRadius = 0.5 + Math.random() * 1.5;
                 const boulderGeometry = new THREE.SphereGeometry(
-                    0.5 + Math.random() * 1.5,
+                    boulderRadius,
                     6 + Math.floor(Math.random() * 3),
                     5 + Math.floor(Math.random() * 3)
                 );
@@ -245,6 +247,13 @@ class Environment {
                 boulder.castShadow = true;
                 boulder.receiveShadow = true;
                 this.scene.add(boulder);
+
+                // Store boulder for collision detection
+                this.boulders.push({
+                    position: new THREE.Vector3(boulderX, boulderY, boulderZ),
+                    radius: boulderRadius,
+                    mesh: boulder
+                });
             }
         });
         
@@ -705,34 +714,41 @@ class Environment {
                         new THREE.DodecahedronGeometry(baseBoulderSize, 0),
                         rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
                     );
-                    
+
                     // Position at cliff base
                     const baseDistance = 7.5 + Math.random() * 1.0;
                     const perpX = Math.cos(point.heading) * baseDistance * side;
                     const perpZ = -Math.sin(point.heading) * baseDistance * side;
-                    
+
                     // Embed in ground
-                    baseBoulder.position.set(
-                        point.x + perpX,
-                        (point.y || 0) - baseBoulderSize * 0.4,
-                        point.z + perpZ
-                    );
-                    
+                    const boulderX = point.x + perpX;
+                    const boulderY = (point.y || 0) - baseBoulderSize * 0.4;
+                    const boulderZ = point.z + perpZ;
+
+                    baseBoulder.position.set(boulderX, boulderY, boulderZ);
+
                     baseBoulder.rotation.set(
                         Math.random() * Math.PI,
                         Math.random() * Math.PI,
                         Math.random() * Math.PI
                     );
-                    
+
                     baseBoulder.scale.set(
                         1.3 + Math.random() * 0.4,
                         0.8 + Math.random() * 0.3,
                         1.2 + Math.random() * 0.4
                     );
-                    
+
                     baseBoulder.castShadow = true;
                     baseBoulder.receiveShadow = true;
                     group.add(baseBoulder);
+
+                    // Store boulder for collision detection (approximate as sphere)
+                    this.boulders.push({
+                        position: new THREE.Vector3(boulderX, boulderY, boulderZ),
+                        radius: baseBoulderSize * 0.6, // Approximate radius for dodecahedron
+                        mesh: baseBoulder
+                    });
                 }
             }
             
