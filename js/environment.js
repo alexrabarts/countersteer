@@ -1893,9 +1893,9 @@ class Environment {
 
             const point = this.roadPath[i];
 
-            // Place barrier on right side (moved further out to avoid blocking road)
-            const barrierX = point.x + Math.cos(point.heading) * 10;
-            const barrierZ = point.z - Math.sin(point.heading) * 10;
+            // Place barrier on right side (moved far out to avoid any collision issues)
+            const barrierX = point.x + Math.cos(point.heading) * 25;
+            const barrierZ = point.z - Math.sin(point.heading) * 25;
 
             const barrier = new THREE.Mesh(barrierGeometry, barrierMaterial);
             barrier.position.set(barrierX, point.y + 0.5, barrierZ);
@@ -1945,22 +1945,22 @@ class Environment {
 
             this.createDirtRamp(offsetPoint, midSegment);
             
-            // Add construction equipment (static bulldozer) - moved further from road
+            // Add construction equipment (static bulldozer) - moved far from road
             this.createBulldozer(
-                rampPoint.x + Math.cos(rampPoint.heading) * 15,
+                rampPoint.x + Math.cos(rampPoint.heading) * 30,
                 rampPoint.y,
-                rampPoint.z - Math.sin(rampPoint.heading) * 15,
+                rampPoint.z - Math.sin(rampPoint.heading) * 30,
                 rampPoint.heading
             );
         } else if (zoneType === 'minor') {
             // For minor zones, just add some work equipment
             const workPoint = this.roadPath[startSegment];
             
-            // Add a simple work truck instead of bulldozer (moved further from road)
+            // Add a simple work truck instead of bulldozer (moved far from road)
             this.createWorkTruck(
-                workPoint.x + Math.cos(workPoint.heading) * 12,
+                workPoint.x + Math.cos(workPoint.heading) * 25,
                 workPoint.y,
-                workPoint.z - Math.sin(workPoint.heading) * 12,
+                workPoint.z - Math.sin(workPoint.heading) * 25,
                 workPoint.heading
             );
         }

@@ -368,21 +368,25 @@ class Vehicle {
                 // Simple box collision detection
                 let collisionDistance;
                 if (obstacle.type === 'barrier') {
-                    collisionDistance = 4.0; // Barrier collision radius (increased for safety)
+                    collisionDistance = 2.0; // Barrier collision radius (reasonable for distant obstacles)
                 } else if (obstacle.type === 'bulldozer') {
-                    collisionDistance = 5.0; // Larger collision radius for bulldozer
+                    collisionDistance = 3.0; // Larger collision radius for bulldozer
                 } else if (obstacle.type === 'worktruck') {
-                    collisionDistance = 4.0; // Work truck collision radius
+                    collisionDistance = 2.5; // Work truck collision radius
                 } else {
-                    collisionDistance = 3;
+                    collisionDistance = 2;
                 }
 
                 const distance = Math.sqrt(dx * dx + dz * dz);
 
                 // Debug logging for roadwork collisions
-                // if (distance < 10) { // Only log when close
-                //     console.log('Roadwork obstacle check:', obstacle.type, 'distance:', distance.toFixed(2), 'collisionDistance:', collisionDistance);
-                // }
+                if (distance < 15) { // Log when reasonably close
+                    console.log('Roadwork obstacle check:', obstacle.type,
+                        'distance:', distance.toFixed(2),
+                        'collisionDistance:', collisionDistance,
+                        'bike pos:', this.position.x.toFixed(1), this.position.z.toFixed(1),
+                        'obstacle pos:', obstacle.position.x.toFixed(1), obstacle.position.z.toFixed(1));
+                }
 
                 if (distance < collisionDistance) {
                     this.crashed = true;
