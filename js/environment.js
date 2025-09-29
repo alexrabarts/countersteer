@@ -2066,7 +2066,7 @@ class Environment {
         const lakeGeometry = new THREE.PlaneGeometry(3000, 3000);
         const lake = new THREE.Mesh(lakeGeometry, lakeMaterial);
         lake.rotation.x = -Math.PI / 2;
-        lake.position.set(0, -80, 0);  // Much lower to emphasize mountain height
+        lake.position.set(0, -200, 0);  // Below cliff level
         lake.receiveShadow = true;
         this.scene.add(lake);
 
