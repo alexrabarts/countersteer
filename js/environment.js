@@ -496,7 +496,7 @@ class Environment {
 
                           // Apply slope for overhang
                           if (side > 0 && isDropOff) {
-                              const slopeAmount = verticalProgress * 100;
+                              const slopeAmount = verticalProgress * verticalProgress * 50;
                               finalDistance += slopeAmount;
                           }
 
