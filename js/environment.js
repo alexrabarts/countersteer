@@ -1191,10 +1191,10 @@ class Environment {
                     nextPoint.x + nextPerpX2, nextPoint.y - 0.05, nextPoint.z + nextPerpZ2
                 );
                 
-                // Add color (dark rock/dirt color or red for right)
-                const r = side > 0 ? 1 : 0.25;
-                const g = side > 0 ? 0 : 0.2;
-                const b = side > 0 ? 0 : 0.18;
+                // Add color (green for left, red for right)
+                const r = side > 0 ? 1 : 0;
+                const g = side > 0 ? 0 : 1;
+                const b = side > 0 ? 0 : 0;
                 for (let j = 0; j < 4; j++) {
                     colors.push(r, g, b);
                 }
