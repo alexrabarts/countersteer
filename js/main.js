@@ -60,6 +60,9 @@ class Game {
         this.finishTime = 0;
         this.startTime = performance.now();
 
+        // Help flags
+        this.hasShownWheelieHelp = false;
+
         console.log('Starting animation loop...');
         this.animate();
     }
@@ -490,6 +493,15 @@ class Game {
             this.soundManager.playCrashSound();
         }
 
+        // Show wheelie help when reaching moderate speed
+        if (!this.hasShownWheelieHelp && !this.vehicle.crashed && !this.finished) {
+            const speedKmh = this.vehicle.getSpeed();
+            if (speedKmh >= 25) { // Show when reaching 25 km/h
+                this.showWheelieHelpNotification();
+                this.hasShownWheelieHelp = true;
+            }
+        }
+
         // Update engine sound based on speed
         if (!this.vehicle.crashed && !this.finished) {
             const speedRatio = this.vehicle.speed / this.vehicle.maxSpeed;
@@ -777,6 +789,18 @@ class Game {
         setTimeout(() => {
             notification.remove();
         }, 1000);
+    }
+
+    showWheelieHelpNotification() {
+        const notification = document.createElement('div');
+        notification.className = 'checkpoint-notification';
+        notification.style.color = '#FFD700';
+        notification.textContent = 'Press SPACE to pop clutch for a wheelie!';
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.remove();
+        }, 3000); // Longer duration for help text
     }
 
     showConeHitNotification(points) {
