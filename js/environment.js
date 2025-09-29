@@ -506,8 +506,8 @@ class Environment {
                          // Combine displacements with height-based variation
                          const totalDisplacement = primary + secondary + tertiary + micro;
 
-                         // Apply faceting by quantizing displacement - extremely small facets for maximum detail
-                         const facetSize = 0.15 + Math.sin(idx * 0.3) * 0.05; // Extremely small facet size (0.15-0.2 units) for very sharp angular detail
+                         // Apply faceting by quantizing displacement - ultra-small facets for extreme detail
+                         const facetSize = 0.05 + Math.sin(idx * 0.3) * 0.02; // Ultra-small facet size (0.05-0.07 units) for extremely sharp, crystalline detail
                          const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
 
                          // Calculate base final distance
