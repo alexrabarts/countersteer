@@ -456,8 +456,17 @@ class Environment {
                                  console.log(`Right cliff overhang at height ${verticalProgress.toFixed(2)}: base=${baseDistance.toFixed(1)}, slope=${slopeAmount.toFixed(1)}`);
                              }
                         } else if (side < 0 && !isDropOff) {
-                            // Left wall (mountain) - dramatic overhanging slope as it goes up
-                            // Creates an intimidating overhanging cliff face
+                            // Left wall (mountain) - with lip at bottom
+                            baseDistance = 8.5; // Start right at road edge
+                            
+                            // Add lip/ledge at the bottom (first 10% of height)
+                            if (verticalProgress < 0.1) {
+                                // Lip extends outward at the base
+                                const lipExtension = (0.1 - verticalProgress) * 20; // Max 2 units out at ground level
+                                baseDistance = 8.5 - lipExtension;
+                            }
+                            
+                            // Then dramatic overhang as it goes up
                             const slopeAmount = verticalProgress * verticalProgress * 25; // Quadratic slope for overhang
                             baseDistance += slopeAmount;
                         }
@@ -1165,8 +1174,11 @@ class Environment {
             const indices = [];
             const colors = [];
 
-            const startDist = 8;
-            const endDist = 12;
+            // Positioned to align with cliff edge
+            // Offset by -17.5 units for optimal left side coverage
+            const offset = -17.5;
+            const startDist = 8 + offset;  // Starts at -9.5 units from center
+            const endDist = 40 + offset;    // Extends to 22.5 units from center - much wider
 
             for (let i = 0; i < this.roadPath.length - 1; i++) {
                 const point = this.roadPath[i];
@@ -1185,10 +1197,10 @@ class Environment {
 
                 const baseIndex = i * 4;
                 vertices.push(
-                    point.x + perpX1, point.y, point.z + perpZ1,
-                    point.x + perpX2, point.y, point.z + perpZ2,
-                    nextPoint.x + nextPerpX1, nextPoint.y, nextPoint.z + nextPerpZ1,
-                    nextPoint.x + nextPerpX2, nextPoint.y, nextPoint.z + nextPerpZ2
+                    point.x + perpX1, point.y - 0.1, point.z + perpZ1,
+                    point.x + perpX2, point.y - 0.1, point.z + perpZ2,
+                    nextPoint.x + nextPerpX1, nextPoint.y - 0.1, nextPoint.z + nextPerpZ1,
+                    nextPoint.x + nextPerpX2, nextPoint.y - 0.1, nextPoint.z + nextPerpZ2
                 );
 
                 // Brown color
@@ -1218,7 +1230,7 @@ class Environment {
             return mesh;
         };
 
-        // Add strips to both sides
+        // Add strips to both sides - revert to original approach
         const leftStrip = createStrip(-1);
         this.scene.add(leftStrip);
         const rightStrip = createStrip(1);
@@ -2128,10 +2140,6 @@ class Environment {
             mesh.castShadow = true;
             return mesh;
         };
-        
-        // Create left side elevated terrain
-        const leftTerrain = createTerrainStrip(-1, 12, 2, 0x3a5f3a);
-        this.scene.add(leftTerrain);
         
         // Create right side drop-off terrain - massive mountainside drop
         const rightTerrain = createTerrainStrip(1, 12, -50, 0x2a4f2a);
