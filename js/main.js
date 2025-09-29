@@ -2,13 +2,27 @@ class Game {
     constructor() {
         console.log('Starting game initialization...');
         
+        // Check for WebGL support
+        if (!this.isWebGLAvailable()) {
+            const errorMsg = 'WebGL is not available in your browser. Please enable WebGL or try a different browser.';
+            console.error(errorMsg);
+            this.showError(errorMsg);
+            throw new Error(errorMsg);
+        }
+        
         this.init();
         this.setupScene();
         this.setupLighting();
         this.setupCamera();
         
         console.log('Creating environment...');
-        this.environment = new Environment(this.scene);
+        try {
+            this.environment = new Environment(this.scene);
+            console.log('Environment created successfully');
+        } catch (error) {
+            console.error('Failed to create environment:', error);
+            throw error;
+        }
         
         console.log('Creating cones course...');
         this.cones = new Cones(this.scene, this.environment, (points) => {
@@ -83,6 +97,38 @@ class Game {
         this.animate();
     }
 
+    isWebGLAvailable() {
+        try {
+            const canvas = document.createElement('canvas');
+            return !!(window.WebGLRenderingContext && 
+                     (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+        } catch(e) {
+            return false;
+        }
+    }
+    
+    showError(message) {
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            max-width: 80%;
+            z-index: 10000;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        `;
+        errorDiv.textContent = message;
+        document.body.appendChild(errorDiv);
+    }
+    
     init() {
         this.scene = new THREE.Scene();
         
@@ -1243,5 +1289,33 @@ document.addEventListener('keydown', (event) => {
 
 // Start the game when page loads
 window.addEventListener('load', () => {
-    window.game = new Game();
+    try {
+        console.log('Window loaded, creating game...');
+        window.game = new Game();
+        console.log('Game created successfully');
+    } catch (error) {
+        console.error('Failed to create game:', error);
+        console.error('Stack trace:', error.stack);
+        
+        // Display error on screen for mobile debugging
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            max-width: 80%;
+            z-index: 10000;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        `;
+        errorDiv.textContent = `Error loading game:\n${error.message}\n\nPlease refresh the page.`;
+        document.body.appendChild(errorDiv);
+    }
 });

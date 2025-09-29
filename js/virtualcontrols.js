@@ -1,17 +1,13 @@
 class VirtualControls {
     constructor() {
-        this.touches = {
-            KeyW: false,
-            KeyA: false,
-            KeyS: false,
-            KeyD: false,
-            KeyR: false,
-            Space: false
-        };
-
-        this.buttons = {}; // Store button elements for highlighting
-
-        this.createControls();
+        try {
+            this.touches = {};
+            this.buttons = {};
+            this.createControls();
+        } catch (error) {
+            console.error('VirtualControls initialization error:', error);
+            throw error;
+        }
     }
     
     createControls() {
@@ -148,12 +144,13 @@ class VirtualControls {
         
         // Camera button (Z) - position it above the reset button
         const cameraButtonSize = isMobileLandscape ? 60 : Math.min(80, viewportHeight * 0.09);
+        const resetButtonSize = isMobileLandscape ? 60 : Math.min(80, viewportHeight * 0.09);
         const cameraButton = document.createElement('div');
         cameraButton.className = 'virtual-button-camera';
         cameraButton.innerHTML = 'Z';
         cameraButton.style.cssText = `
             position: fixed;
-            bottom: ${bottomPosition + cameraButtonSize + 10}px;
+            bottom: ${bottomPosition + resetButtonSize + 10}px;
             right: ${safeBottomMargin}px;
             width: ${cameraButtonSize}px;
             height: ${cameraButtonSize}px;
@@ -218,7 +215,6 @@ class VirtualControls {
         });
 
         // Reset button on the right
-        const resetButtonSize = isMobileLandscape ? 60 : Math.min(80, viewportHeight * 0.09);
         const resetButton = document.createElement('div');
         resetButton.className = 'virtual-button-reset';
         resetButton.innerHTML = 'R';
