@@ -506,8 +506,8 @@ class Environment {
                          // Combine displacements with height-based variation
                          const totalDisplacement = primary + secondary + tertiary + micro;
 
-                         // Apply faceting by quantizing displacement - smaller facets for more angular look
-                         const facetSize = 1.2 + Math.sin(idx * 0.3) * 0.4; // Smaller variable facet size for sharper angles
+                         // Apply faceting by quantizing displacement - much smaller facets for more detail
+                         const facetSize = 0.6 + Math.sin(idx * 0.3) * 0.2; // Much smaller facet size for more angular detail
                          const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
 
                          // Calculate base final distance
@@ -659,19 +659,45 @@ class Environment {
             mainCliff.castShadow = true;
             group.add(mainCliff);
             
-            // Add boulders integrated into the cliff walls for visual interest
-            // These will be positioned to look like they're part of the cliff face
+            // Add MORE boulders with proper ground testing
+            // Test function to ensure boulders are properly positioned
+            const testBoulderPosition = (x, y, z, roadPoint) => {
+                // Test 1: Not on the road (must be at least 10 units from center)
+                const perpDist = Math.sqrt(
+                    Math.pow(x - roadPoint.x, 2) + 
+                    Math.pow(z - roadPoint.z, 2)
+                );
+                if (perpDist < 10) {
+                    console.warn(`Boulder too close to road: ${perpDist} units from center`);
+                    return false;
+                }
+                
+                // Test 2: Not floating (Y position should be at or below road level)
+                const maxAllowedHeight = (roadPoint.y || 0) + 2; // Allow 2 units above road max
+                if (y > maxAllowedHeight) {
+                    console.warn(`Boulder floating: Y=${y}, road Y=${roadPoint.y}, max=${maxAllowedHeight}`);
+                    return false;
+                }
+                
+                // Test 3: Properly embedded (Y should be slightly below ground)
+                const minEmbedDepth = (roadPoint.y || 0) - 2;
+                if (y < minEmbedDepth) {
+                    console.warn(`Boulder too deep: Y=${y}, min=${minEmbedDepth}`);
+                    return false;
+                }
+                
+                return true;
+            };
             
-            for (let i = 0; i < this.roadPath.length; i += 8) { // Regular spacing
+            // Add MANY more boulders along the cliff base
+            for (let i = 0; i < this.roadPath.length; i += 3) { // Much denser spacing
                 const point = this.roadPath[i];
                 
-                // Add rocks at various heights on the cliff
-                if (Math.random() > 0.3) { // 70% chance for variety
-                    
-                    // Calculate how many rocks for this segment (1-3)
-                    const numRocks = 1 + Math.floor(Math.random() * 2);
-                    
-                    for (let r = 0; r < numRocks; r++) {
+                // Add 2-3 rocks per segment
+                const numRocks = 2 + Math.floor(Math.random() * 2);
+                
+                for (let r = 0; r < numRocks; r++) {
+                    if (Math.random() > 0.2) { // 80% chance for variety
                         const rockSize = 0.8 + Math.random() * 2.5;
                         const rockGeometry = new THREE.DodecahedronGeometry(rockSize, 0);
                         const rock = new THREE.Mesh(
@@ -733,60 +759,83 @@ class Environment {
                         rock.castShadow = true;
                         rock.receiveShadow = true;
                         group.add(rock);
-                    }
-                }
+                    }  // Close the if statement from line 700
+                }  // Close the for loop from line 699
                 
-                // Add some larger accent boulders at the base
-                if (i % 15 === 0 && Math.random() > 0.5) {
-                    const baseBoulderSize = 1.5 + Math.random() * 2;
-                    const baseBoulder = new THREE.Mesh(
-                        new THREE.DodecahedronGeometry(baseBoulderSize, 0),
-                        rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
-                    );
+                // Add MANY more boulders at the base - increased frequency
+                if (i % 4 === 0 || Math.random() > 0.3) {  // Much more frequent
+                    // Create 1-3 boulders per position
+                    const numBoulders = 1 + Math.floor(Math.random() * 3);
+                    
+                    for (let b = 0; b < numBoulders; b++) {
+                        const baseBoulderSize = 1.0 + Math.random() * 2.5; // Varied sizes
+                        const baseBoulder = new THREE.Mesh(
+                            new THREE.DodecahedronGeometry(baseBoulderSize, 0),
+                            rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
+                        );
 
-                    // Position at cliff base
-                    const baseDistance = 7.5 + Math.random() * 1.0;
-                    const perpX = Math.cos(point.heading) * baseDistance * side;
-                    const perpZ = -Math.sin(point.heading) * baseDistance * side;
+                        // Position at cliff base with variation
+                        const baseDistance = 10 + Math.random() * 8 + b * 2; // Minimum 10 units from road center
+                        const perpX = Math.cos(point.heading) * baseDistance * side;
+                        const perpZ = -Math.sin(point.heading) * baseDistance * side;
 
-                    // Embed in ground - adjust Y based on terrain side
-                    const boulderX = point.x + perpX;
-                    let boulderY;
-                    if (side > 0) {
-                        // Right side (drop-off) - position much lower to match terrain drop
-                        boulderY = (point.y || 0) - 45 - baseBoulderSize * 0.4; // Terrain drops to -50, so -45 embeds in terrain
-                    } else {
-                        // Left side (mountain) - position at road level
-                        boulderY = (point.y || 0) - baseBoulderSize * 0.4;
+                        // Calculate position
+                        const boulderX = point.x + perpX;
+                        const boulderZ = point.z + perpZ;
+                        let boulderY;
+                        
+                        if (side > 0) {
+                            // Right side - properly calculate drop-off position
+                            const dropDistance = baseDistance - 8; // Distance beyond road edge
+                            const dropAmount = Math.min(dropDistance * 2, 45); // Progressive drop
+                            boulderY = (point.y || 0) - dropAmount - baseBoulderSize * 0.5;
+                        } else {
+                            // Left side - at road level, properly embedded
+                            boulderY = (point.y || 0) - baseBoulderSize * 0.5;
+                        }
+                        
+                        // TEST: Ensure boulder is not on road (minimum 10 units from center)
+                        const distFromCenter = Math.sqrt(perpX * perpX + perpZ * perpZ);
+                        if (distFromCenter < 10) {
+                            console.warn(`Boulder too close to road: ${distFromCenter.toFixed(1)} units`);
+                            continue; // Skip this boulder
+                        }
+                        
+                        // TEST: Ensure boulder is not floating
+                        const maxAllowedY = (point.y || 0) + 1;
+                        if (boulderY > maxAllowedY) {
+                            console.warn(`Boulder floating at Y=${boulderY.toFixed(1)}, max=${maxAllowedY}`);
+                            boulderY = (point.y || 0) - baseBoulderSize * 0.5; // Force to ground
+                        }
+
+                        baseBoulder.position.set(boulderX, boulderY, boulderZ);
+
+                        // Random rotation with some stability (not fully random)
+                        baseBoulder.rotation.set(
+                            Math.random() * Math.PI * 0.5, // Less rotation on X
+                            Math.random() * Math.PI * 2,    // Full rotation on Y
+                            Math.random() * Math.PI * 0.3   // Minimal tilt
+                        );
+
+                        baseBoulder.scale.set(
+                            1.0 + Math.random() * 0.6,
+                            0.7 + Math.random() * 0.4,
+                            1.0 + Math.random() * 0.6
+                        );
+
+                        baseBoulder.castShadow = true;
+                        baseBoulder.receiveShadow = true;
+                        group.add(baseBoulder);
+
+                        // Store boulder for collision detection
+                        this.boulders.push({
+                            position: new THREE.Vector3(boulderX, boulderY, boulderZ),
+                            radius: baseBoulderSize * 0.6,
+                            mesh: baseBoulder
+                        });
                     }
-                    const boulderZ = point.z + perpZ;
-
-                    baseBoulder.position.set(boulderX, boulderY, boulderZ);
-
-                    baseBoulder.rotation.set(
-                        Math.random() * Math.PI,
-                        Math.random() * Math.PI,
-                        Math.random() * Math.PI
-                    );
-
-                    baseBoulder.scale.set(
-                        1.3 + Math.random() * 0.4,
-                        0.8 + Math.random() * 0.3,
-                        1.2 + Math.random() * 0.4
-                    );
-
-                    baseBoulder.castShadow = true;
-                    baseBoulder.receiveShadow = true;
-                    group.add(baseBoulder);
-
-                    // Store boulder for collision detection (approximate as sphere)
-                    this.boulders.push({
-                        position: new THREE.Vector3(boulderX, boulderY, boulderZ),
-                        radius: baseBoulderSize * 0.6, // Approximate radius for dodecahedron
-                        mesh: baseBoulder
-                    });
                 }
-            }
+            }  // Close the for loop from line 693
             
             // Add crack systems to cliff face
             const crackMaterial = new THREE.MeshStandardMaterial({
