@@ -225,9 +225,15 @@ class Game {
         const lookAheadDistance = 3 + speedRatio * 7; // Look further ahead at speed
         const lookAhead = new THREE.Vector3(0, 0, lookAheadDistance);
         lookAhead.applyEuler(vehicleRotation);
-        
+
         const lookTarget = this.vehicle.position.clone().add(lookAhead);
         lookTarget.y += 1;
+
+        // Add lean-based lateral offset for corner viewing
+        const leanLateralOffset = this.vehicle.leanAngle * 2; // Lean angle affects how far to look laterally
+        const lateralVector = new THREE.Vector3(leanLateralOffset, 0, 0);
+        lateralVector.applyEuler(vehicleRotation);
+        lookTarget.add(lateralVector);
         this.currentLookTarget.lerp(lookTarget, this.cameraLerpFactor * 1.5);
         this.camera.lookAt(this.currentLookTarget);
         
