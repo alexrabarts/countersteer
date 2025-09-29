@@ -1237,6 +1237,9 @@ class Environment {
         
         // Layer 3: Near hills with more detail
         this.createNearHills();
+        
+        // Layer 4: Majestic peak - the dominant mountain
+        this.createMajesticPeak();
     }
     
     createDistantMountainRange() {
@@ -1440,6 +1443,199 @@ class Environment {
         // This would need sprite textures to implement fully
         
         return group;
+    }
+    
+    createMajesticPeak() {
+        // Create a massive, dominant mountain with snow cap
+        const group = new THREE.Group();
+        
+        // Position it behind and to the right, dominating the skyline
+        const peakX = 600;
+        const peakZ = 1000;
+        const peakHeight = 500; // Very tall
+        const peakWidth = 600;  // Massive base
+        
+        // Create the main mountain body with custom geometry for more realism
+        const mountainGeometry = new THREE.ConeGeometry(peakWidth/2, peakHeight, 16, 8);
+        
+        // Deform the cone to make it more mountain-like
+        const positions = mountainGeometry.attributes.position;
+        for (let i = 0; i < positions.count; i++) {
+            const px = positions.getX(i);
+            const py = positions.getY(i);
+            const pz = positions.getZ(i);
+            
+            // Get normalized height (0 at base, 1 at peak)
+            const normalizedHeight = (py + peakHeight/2) / peakHeight;
+            
+            // Add ridges and variation
+            const ridgeAngle = Math.atan2(pz, px);
+            const ridgeEffect = Math.sin(ridgeAngle * 4) * (1 - normalizedHeight) * 30;
+            const noiseEffect = Math.sin(i * 0.3) * 20 * (1 - normalizedHeight);
+            
+            // Apply deformation
+            const distance = Math.sqrt(px * px + pz * pz);
+            const newDistance = distance + ridgeEffect + noiseEffect;
+            const scale = newDistance / (distance || 1);
+            
+            positions.setX(i, px * scale);
+            positions.setZ(i, pz * scale);
+            
+            // Make the peak slightly asymmetric
+            if (normalizedHeight > 0.7) {
+                positions.setX(i, px * (1 + Math.sin(py * 0.1) * 0.1));
+                positions.setY(i, py + Math.cos(px * 0.05) * 10);
+            }
+            
+            // Widen the base significantly
+            if (normalizedHeight < 0.3) {
+                const baseWidening = 1 + (0.3 - normalizedHeight) * 2;
+                positions.setX(i, px * baseWidening);
+                positions.setZ(i, pz * baseWidening);
+            }
+        }
+        
+        mountainGeometry.computeVertexNormals();
+        
+        // Create vertex colors for rock texture variation
+        const colors = [];
+        for (let i = 0; i < positions.count; i++) {
+            const py = positions.getY(i);
+            const normalizedHeight = (py + peakHeight/2) / peakHeight;
+            
+            // Rock colors - darker at base, lighter towards peak
+            const baseGrey = 0.25 + normalizedHeight * 0.2;
+            const variation = Math.random() * 0.05;
+            
+            colors.push(
+                baseGrey + variation,
+                baseGrey + variation + 0.02,
+                baseGrey + variation + 0.05
+            );
+        }
+        
+        mountainGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        
+        const mountainMaterial = new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            roughness: 0.95,
+            metalness: 0.0,
+            flatShading: true // Keep some faceting for rock texture
+        });
+        
+        const mountain = new THREE.Mesh(mountainGeometry, mountainMaterial);
+        mountain.position.set(peakX, peakHeight/2 - 80, peakZ);
+        mountain.castShadow = true;
+        mountain.receiveShadow = true;
+        group.add(mountain);
+        
+        // Add a prominent snow cap
+        const snowCapGeometry = new THREE.ConeGeometry(peakWidth/3, peakHeight * 0.35, 12, 4);
+        
+        // Deform snow cap to match mountain shape
+        const snowPositions = snowCapGeometry.attributes.position;
+        for (let i = 0; i < snowPositions.count; i++) {
+            const sx = snowPositions.getX(i);
+            const sy = snowPositions.getY(i);
+            const sz = snowPositions.getZ(i);
+            
+            // Make snow cap irregular
+            const snowNoise = Math.sin(i * 0.5) * 10 + Math.cos(i * 0.3) * 5;
+            snowPositions.setX(i, sx + snowNoise * 0.5);
+            snowPositions.setZ(i, sz + snowNoise * 0.3);
+            
+            // Flatten bottom to sit on mountain
+            if (sy < -peakHeight * 0.1) {
+                snowPositions.setY(i, -peakHeight * 0.1);
+            }
+        }
+        
+        snowCapGeometry.computeVertexNormals();
+        
+        const snowMaterial = new THREE.MeshStandardMaterial({
+            color: 0xfafafa,
+            roughness: 0.6,
+            metalness: 0.0,
+            emissive: 0xffffff,
+            emissiveIntensity: 0.02 // Slight glow for snow
+        });
+        
+        const snowCap = new THREE.Mesh(snowCapGeometry, snowMaterial);
+        snowCap.position.set(peakX, peakHeight * 0.75 - 80, peakZ);
+        snowCap.castShadow = true;
+        snowCap.receiveShadow = true;
+        group.add(snowCap);
+        
+        // Add some snow patches lower on the mountain
+        for (let i = 0; i < 8; i++) {
+            const angle = (Math.PI * 2 / 8) * i + Math.random() * 0.5;
+            const heightRatio = 0.4 + Math.random() * 0.2;
+            const distance = peakWidth * 0.15 * (1 - heightRatio);
+            
+            const patchGeometry = new THREE.SphereGeometry(20 + Math.random() * 15, 6, 4);
+            const snowPatch = new THREE.Mesh(patchGeometry, snowMaterial);
+            
+            snowPatch.position.set(
+                peakX + Math.cos(angle) * distance,
+                peakHeight * heightRatio - 80,
+                peakZ + Math.sin(angle) * distance
+            );
+            
+            snowPatch.scale.set(
+                2 + Math.random(),
+                0.5,
+                2 + Math.random()
+            );
+            
+            snowPatch.rotation.set(
+                Math.random() * 0.5,
+                Math.random() * Math.PI,
+                Math.random() * 0.5
+            );
+            
+            group.add(snowPatch);
+        }
+        
+        // Add some rocky outcrops
+        const rockMaterial = new THREE.MeshStandardMaterial({
+            color: 0x4a4a4a,
+            roughness: 0.98,
+            metalness: 0.0
+        });
+        
+        for (let i = 0; i < 12; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const heightRatio = Math.random() * 0.6;
+            const distance = peakWidth * (0.3 + Math.random() * 0.3) * (1 - heightRatio * 0.5);
+            
+            const rockSize = 15 + Math.random() * 25;
+            const rockGeometry = new THREE.DodecahedronGeometry(rockSize, 0);
+            const rock = new THREE.Mesh(rockGeometry, rockMaterial);
+            
+            rock.position.set(
+                peakX + Math.cos(angle) * distance,
+                peakHeight * heightRatio - 80 + rockSize * 0.3,
+                peakZ + Math.sin(angle) * distance
+            );
+            
+            rock.rotation.set(
+                Math.random() * Math.PI,
+                Math.random() * Math.PI,
+                Math.random() * Math.PI
+            );
+            
+            rock.scale.set(
+                1 + Math.random() * 0.5,
+                0.6 + Math.random() * 0.4,
+                1 + Math.random() * 0.5
+            );
+            
+            rock.castShadow = true;
+            rock.receiveShadow = true;
+            group.add(rock);
+        }
+        
+        this.scene.add(group);
     }
     
     createMountainPeak(x, z, height, width, color) {
