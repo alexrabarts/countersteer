@@ -198,6 +198,12 @@ class Game {
         this.cameraOffset.y = this.baseCameraOffset.y + speedRatio * 0.5; // Slight rise with speed
         this.cameraOffset.z = this.baseCameraOffset.z - speedRatio * 1; // Move back slightly with speed
 
+        // Wheelie camera swing - move camera to the side for dramatic wheelie view
+        if (this.vehicle.isWheelie) {
+            const wheelieSwing = 8; // How far to swing the camera laterally
+            this.cameraOffset.x += wheelieSwing;
+        }
+
         // Calculate camera position relative to vehicle
         const offset = this.cameraOffset.clone();
         offset.applyEuler(vehicleRotation);
