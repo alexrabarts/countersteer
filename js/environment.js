@@ -506,13 +506,15 @@ class Environment {
                          // Combine displacements with height-based variation
                          const totalDisplacement = primary + secondary + tertiary + micro;
 
-                         // Apply faceting by quantizing displacement - ultra-small facets for extreme detail
-                         const facetSize = 0.05 + Math.sin(idx * 0.3) * 0.02; // Ultra-small facet size (0.05-0.07 units) for extremely sharp, crystalline detail
-                         const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
+                         // Apply faceting by quantizing displacement - 10x smaller facets
+                         const facetSize = 0.001; // 10x smaller - 1mm facet size for extreme micro-detail
+                         // Amplify the displacement before quantizing for more visible effect
+                         const amplifiedDisplacement = totalDisplacement * 2.0;
+                         const facetedDisplacement = Math.floor(amplifiedDisplacement / facetSize) * facetSize * 0.5; // Scale back after quantizing
 
-                         // Calculate base final distance
-                         const displacementScale = verticalProgress === 0 ? 0.15 : 0.55; // Further increased displacement scale for more pronounced faceting
-                         let finalDistance = baseDistance + facetedDisplacement * displacementScale;
+                          // Calculate base final distance - MUCH MORE displacement for visible faceting
+                          const displacementScale = verticalProgress === 0 ? 0.3 : 1.5; // Massively increased displacement scale for very pronounced faceting
+                          let finalDistance = baseDistance + facetedDisplacement * displacementScale;
 
                           // Apply slope for overhang
                           if (side > 0 && isDropOff) {
