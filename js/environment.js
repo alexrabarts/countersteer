@@ -1157,31 +1157,32 @@ class Environment {
         };
         
         // Create ground strips to fill gaps between road and cliff bases
+        // Add ground strips to fill gaps
         const createGroundStrip = (side, width, cliffBase = 7.5) => {
             const geometry = new THREE.BufferGeometry();
             const vertices = [];
             const indices = [];
             const colors = [];
-            
+
             for (let i = 0; i < this.roadPath.length - 1; i++) {
                 const point = this.roadPath[i];
                 const nextPoint = this.roadPath[i + 1];
-                
+
                 // Road edge position (8 units from center)
                 const roadEdgeDistance = 8;
-                const cliffBaseDistance = cliffBase; // Matches minimum cliff distance
-                
+                const cliffBaseDistance = cliffBase;
+
                 // Calculate perpendicular offsets for this segment
                 const perpX1 = Math.cos(point.heading) * roadEdgeDistance * side;
                 const perpZ1 = -Math.sin(point.heading) * roadEdgeDistance * side;
                 const perpX2 = Math.cos(point.heading) * (cliffBaseDistance + width) * side;
                 const perpZ2 = -Math.sin(point.heading) * (cliffBaseDistance + width) * side;
-                
+
                 const nextPerpX1 = Math.cos(nextPoint.heading) * roadEdgeDistance * side;
                 const nextPerpZ1 = -Math.sin(nextPoint.heading) * roadEdgeDistance * side;
                 const nextPerpX2 = Math.cos(nextPoint.heading) * (cliffBaseDistance + width) * side;
                 const nextPerpZ2 = -Math.sin(nextPoint.heading) * (cliffBaseDistance + width) * side;
-                
+
                 // Add vertices for this segment
                 const baseIndex = i * 4;
                 vertices.push(
@@ -1190,39 +1191,35 @@ class Environment {
                     nextPoint.x + nextPerpX1, nextPoint.y, nextPoint.z + nextPerpZ1,
                     nextPoint.x + nextPerpX2, nextPoint.y, nextPoint.z + nextPerpZ2
                 );
-                
-                // Add color (green for left, blue for right)
-                const r = 0;
-                const g = side > 0 ? 0 : 1;
-                const b = 1;
+
+                // Add color (brown dirt)
                 for (let j = 0; j < 4; j++) {
-                    colors.push(r, g, b);
+                    colors.push(0.25, 0.2, 0.18);
                 }
-                
-                // Create triangles
+
+                // Create triangles with correct winding
                 indices.push(
-                    baseIndex, baseIndex + 2, baseIndex + 1,
-                    baseIndex + 1, baseIndex + 2, baseIndex + 3
+                    baseIndex, baseIndex + 1, baseIndex + 2,
+                    baseIndex + 1, baseIndex + 3, baseIndex + 2
                 );
             }
-            
+
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
             geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
             geometry.setIndex(indices);
             geometry.computeVertexNormals();
-            
+
             const material = new THREE.MeshStandardMaterial({
                 vertexColors: true,
                 roughness: 0.95,
                 metalness: 0.0
             });
-            
+
             const mesh = new THREE.Mesh(geometry, material);
             mesh.receiveShadow = true;
             return mesh;
         };
-        
-        // Add ground strips to fill gaps
+
         const leftStrip = createGroundStrip(-1, 4, 9.4);
         this.scene.add(leftStrip);
         const rightStrip = createGroundStrip(1, 4, 9.4);
