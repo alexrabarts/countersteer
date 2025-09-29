@@ -1192,10 +1192,10 @@ class Environment {
                     nextPoint.x + nextPerpX2, nextPoint.y - 0.05, nextPoint.z + nextPerpZ2
                 );
 
-                // Add color (red for right, green for left)
-                const r = side > 0 ? 1 : 0;
+                // Add color (blue for right, green for left)
+                const r = 0;
                 const g = side > 0 ? 0 : 1;
-                const b = side > 0 ? 0 : 0;
+                const b = side > 0 ? 1 : 0;
                 for (let j = 0; j < 4; j++) {
                     colors.push(r, g, b);
                 }
