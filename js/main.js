@@ -30,18 +30,23 @@ class Game {
             this.vehicle.position.y = startY;
             
             // Now update camera positions to be relative to actual vehicle height
-            const cameraStartY = startY + 10; // 10 units above the bike
+            // Start camera further along the course looking back
+            const startSegmentIndex = Math.min(10, this.environment.roadPath.length - 1); // 10 segments ahead
+            const startPoint = this.environment.roadPath[startSegmentIndex];
+            const cameraStartX = startPoint.x;
+            const cameraStartZ = startPoint.z;
+            const cameraStartY = (startPoint.y || startY) + 15; // 15 units above the road ahead
             
             // Calculate where the normal follow camera would be
             const normalCameraOffset = this.baseCameraOffset.clone();
             normalCameraOffset.applyEuler(new THREE.Euler(0, this.vehicle.yawAngle, 0));
             const normalCameraPos = this.vehicle.position.clone().add(normalCameraOffset);
             
-            this.camera.position.set(0, cameraStartY, -8);
-            this.cameraIntroStartPos.y = cameraStartY;
+            this.camera.position.set(cameraStartX, cameraStartY, cameraStartZ);
+            this.cameraIntroStartPos.set(cameraStartX, cameraStartY, cameraStartZ);
             // End position matches where the follow camera would naturally be
             this.cameraIntroEndPos.set(normalCameraPos.x, normalCameraPos.y, normalCameraPos.z);
-            this.currentCameraPos.set(0, cameraStartY, -8);
+            this.currentCameraPos.set(cameraStartX, cameraStartY, cameraStartZ);
         }
         
         this.input = new InputHandler();
@@ -173,15 +178,15 @@ class Game {
     setupCamera() {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
         
-        // Initial camera position (will be adjusted after vehicle is positioned)
-        this.camera.position.set(0, 10, -8);
+        // Initial camera position - start further along the course
+        this.camera.position.set(0, 10, 50); // Start ahead of the bike
         this.camera.lookAt(0, 0, 0);
         
         // Camera intro animation state
         this.cameraIntroActive = true;
         this.cameraIntroStartTime = performance.now();
-        this.cameraIntroDuration = 1500; // 1.5 seconds intro - quicker
-        this.cameraIntroStartPos = new THREE.Vector3(0, 10, -8); // Will be adjusted
+        this.cameraIntroDuration = 2000; // 2 seconds for longer travel
+        this.cameraIntroStartPos = new THREE.Vector3(0, 10, 50); // Will be adjusted
         this.cameraIntroEndPos = new THREE.Vector3(0, 4, -10); // Will be adjusted
         
         // Dynamic camera offset for mountain roads
