@@ -1248,9 +1248,9 @@ class Environment {
         
         // Parameters for distant mountains
         const numPeaks = 8;
-        const baseDistance = 800; // Far away
+        const baseDistance = 1500; // Much further away
         const maxHeight = 400;
-        const width = 2000;
+        const width = 3000; // Wider to cover horizon
         
         // Create mountain silhouette
         const points = [];
@@ -1258,13 +1258,15 @@ class Environment {
         // Start from left edge
         points.push(new THREE.Vector3(-width/2, -80, baseDistance));
         
-        // Generate mountain peaks using noise
+        // Generate smooth rolling mountain silhouette
         for (let i = 0; i <= numPeaks * 4; i++) {
             const x = -width/2 + (width / (numPeaks * 4)) * i;
-            const baseHeight = Math.sin(i * 0.3) * 150 + Math.cos(i * 0.15) * 100;
-            const peakHeight = Math.max(0, baseHeight + maxHeight * 0.5);
-            const variation = Math.sin(i * 0.7) * 30;
-            const y = peakHeight + variation;
+            // Use smoother sine waves for rolling hills
+            const baseHeight = Math.sin(i * 0.15) * 120 + Math.cos(i * 0.08) * 80;
+            const mediumWave = Math.sin(i * 0.25) * 50;
+            const smallWave = Math.cos(i * 0.4) * 20;
+            const peakHeight = Math.max(50, baseHeight + mediumWave + smallWave + maxHeight * 0.4);
+            const y = peakHeight;
             points.push(new THREE.Vector3(x, y, baseDistance));
         }
         
@@ -1323,7 +1325,7 @@ class Environment {
         const secondRangeGeometry = geometry.clone();
         const secondRangeMaterial = material.clone();
         const secondRange = new THREE.Mesh(secondRangeGeometry, secondRangeMaterial);
-        secondRange.position.set(300, 50, 200); // Offset to the right and back
+        secondRange.position.set(500, 50, 400); // Further right and back
         secondRange.scale.set(0.8, 0.9, 1);
         this.scene.add(secondRange);
     }
@@ -1332,13 +1334,13 @@ class Environment {
         // Create mid-distance mountains with more detail
         const group = new THREE.Group();
         
-        // Create several individual peaks
+        // Create several individual peaks - much further away
         const peaks = [
-            { x: -400, z: 400, height: 250, width: 200 },
-            { x: -200, z: 450, height: 200, width: 180 },
-            { x: 100, z: 380, height: 280, width: 220 },
-            { x: 350, z: 420, height: 230, width: 190 },
-            { x: 600, z: 400, height: 260, width: 210 }
+            { x: -600, z: 800, height: 250, width: 300 },
+            { x: -200, z: 900, height: 200, width: 280 },
+            { x: 300, z: 750, height: 280, width: 350 },
+            { x: 700, z: 850, height: 230, width: 290 },
+            { x: 1100, z: 800, height: 260, width: 310 }
         ];
         
         peaks.forEach(peak => {
@@ -1359,12 +1361,12 @@ class Environment {
         // Create near hills with vegetation and detail
         const group = new THREE.Group();
         
-        // Near hills behind the existing left cliff
+        // Near hills much further from road to avoid overlap
         const hills = [
-            { x: -250, z: 150, height: 120, width: 150 },
-            { x: -100, z: 180, height: 100, width: 140 },
-            { x: 150, z: 200, height: 140, width: 160 },
-            { x: 400, z: 170, height: 110, width: 145 }
+            { x: -450, z: 400, height: 120, width: 200 },
+            { x: -100, z: 450, height: 100, width: 180 },
+            { x: 350, z: 500, height: 140, width: 220 },
+            { x: 700, z: 420, height: 110, width: 190 }
         ];
         
         hills.forEach(hill => {
@@ -1381,27 +1383,43 @@ class Environment {
     }
     
     createMountainPeak(x, z, height, width, color) {
-        // Create a single mountain peak with faceted appearance
-        const geometry = new THREE.ConeGeometry(width/2, height, 6, 4);
+        // Create a rounded mountain using sphere geometry for softer shapes
+        const geometry = new THREE.SphereGeometry(width/2, 12, 8);
         
-        // Modify vertices for more natural mountain shape
+        // Modify vertices for mountain shape
         const positions = geometry.attributes.position;
         for (let i = 0; i < positions.count; i++) {
             const px = positions.getX(i);
             const py = positions.getY(i);
             const pz = positions.getZ(i);
             
-            // Add noise to make it less perfect
-            const noise = Math.sin(i * 0.5) * 10 + Math.cos(i * 0.3) * 8;
-            positions.setX(i, px + noise * (1 - Math.abs(py) / height));
-            positions.setZ(i, pz + noise * (1 - Math.abs(py) / height) * 0.5);
+            // Stretch vertically and compress horizontally for mountain profile
+            const normalizedY = py / (width/2);
             
-            // Flatten the base
-            if (py < -height * 0.4) {
-                const flattenFactor = (py + height) / (height * 0.6);
-                positions.setX(i, px * (1 + (1 - flattenFactor) * 2));
-                positions.setZ(i, pz * (1 + (1 - flattenFactor) * 2));
+            // Create rounded mountain profile
+            if (py > 0) {
+                // Upper hemisphere - stretch to create peak
+                const stretchFactor = 1.0 + (normalizedY * (height / (width/2) - 1));
+                positions.setY(i, py * stretchFactor);
+                
+                // Gradually narrow towards peak for rounded cone shape
+                const narrowFactor = 1.0 - (normalizedY * 0.3);
+                positions.setX(i, px * narrowFactor);
+                positions.setZ(i, pz * narrowFactor);
+            } else {
+                // Lower hemisphere - flatten significantly
+                positions.setY(i, py * 0.1);
+                
+                // Widen base
+                const widenFactor = 1.0 + Math.abs(normalizedY) * 0.5;
+                positions.setX(i, px * widenFactor);
+                positions.setZ(i, pz * widenFactor);
             }
+            
+            // Add gentle noise for natural variation
+            const noise = Math.sin(i * 0.2) * 5 + Math.cos(i * 0.3) * 3;
+            positions.setX(i, positions.getX(i) + noise * (1 - Math.abs(normalizedY)));
+            positions.setZ(i, positions.getZ(i) + noise * (1 - Math.abs(normalizedY)) * 0.5);
         }
         
         geometry.computeVertexNormals();
@@ -1410,25 +1428,33 @@ class Environment {
             color: color,
             roughness: 0.98,
             metalness: 0.0,
-            flatShading: true // Faceted appearance
+            flatShading: false // Smooth shading for rounded mountains
         });
         
         const mountain = new THREE.Mesh(geometry, material);
-        mountain.position.set(x, height/2 - 50, z); // Base at -50 to blend with terrain
+        mountain.position.set(x, -50, z); // Base at lake level
         mountain.castShadow = true;
         mountain.receiveShadow = true;
         
-        // Add snow cap for tall peaks
+        // Add rounded snow cap for tall peaks
         if (height > 200) {
-            const snowGeometry = new THREE.ConeGeometry(width/4, height * 0.2, 6, 1);
+            const snowGeometry = new THREE.SphereGeometry(width/5, 8, 6);
             const snowMaterial = new THREE.MeshStandardMaterial({
                 color: 0xf0f0f0,
                 roughness: 0.7,
-                metalness: 0.0,
-                flatShading: true
+                metalness: 0.0
             });
             const snowCap = new THREE.Mesh(snowGeometry, snowMaterial);
-            snowCap.position.set(x, height * 0.9 - 50, z);
+            // Deform snow cap to be flatter
+            const snowPositions = snowGeometry.attributes.position;
+            for (let i = 0; i < snowPositions.count; i++) {
+                const sy = snowPositions.getY(i);
+                if (sy < 0) {
+                    snowPositions.setY(i, sy * 0.3);
+                }
+            }
+            snowCap.position.set(x, height * 0.85 - 50, z);
+            snowCap.scale.set(1.2, 0.6, 1.2);
             mountain.add(snowCap);
         }
         
@@ -1493,7 +1519,7 @@ class Environment {
         });
         
         const hill = new THREE.Mesh(hillGeometry, hillMaterial);
-        hill.position.set(x, -20, z); // Base below road level
+        hill.position.set(x, -60, z); // Base at lower level to avoid road
         hill.castShadow = true;
         hill.receiveShadow = true;
         group.add(hill);
@@ -1512,7 +1538,7 @@ class Environment {
             const distance = width * 0.2 + Math.random() * width * 0.3;
             const treeX = x + Math.cos(angle) * distance;
             const treeZ = z + Math.sin(angle) * distance;
-            const treeY = -20 + height * (0.3 + Math.random() * 0.4);
+            const treeY = -60 + height * (0.3 + Math.random() * 0.4);
             
             // Simple tree
             const treeGeometry = new THREE.ConeGeometry(8, 20, 5);
@@ -1536,7 +1562,7 @@ class Environment {
             const distance = width * 0.15 + Math.random() * width * 0.35;
             const bushX = x + Math.cos(angle) * distance;
             const bushZ = z + Math.sin(angle) * distance;
-            const bushY = -20 + height * (0.2 + Math.random() * 0.3);
+            const bushY = -60 + height * (0.2 + Math.random() * 0.3);
             
             const bushGeometry = new THREE.SphereGeometry(3 + Math.random() * 2, 4, 3);
             const bush = new THREE.Mesh(bushGeometry, bushMaterial);
