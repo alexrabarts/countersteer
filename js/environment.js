@@ -673,14 +673,17 @@ class Environment {
                 
                 // Test 2: Calculate expected ground level based on terrain
                 let expectedGroundY;
+                const roadY = roadPoint.y || 0;
+                
                 if (side > 0) {
                     // Right side - calculate drop-off based on distance from road
                     const dropDistance = Math.max(0, perpDist - 8); // Distance beyond road edge
-                    const terrainDrop = Math.min(dropDistance * 4, 50); // Progressive drop, max 50
-                    expectedGroundY = (roadPoint.y || 0) - terrainDrop;
+                    const terrainDropRate = 3; // Must match boulder placement calculation
+                    const terrainDrop = Math.min(dropDistance * terrainDropRate, 50); // Progressive drop, max 50
+                    expectedGroundY = roadY - terrainDrop;
                 } else {
                     // Left side - should be at road level
-                    expectedGroundY = roadPoint.y || 0;
+                    expectedGroundY = roadY;
                 }
                 
                 // Test 3: Boulder bottom should be at or below expected ground
@@ -690,8 +693,8 @@ class Environment {
                 
                 if (boulderBottom > expectedGroundY + tolerance) {
                     console.warn(`Boulder FLOATING (size ${boulderRadius.toFixed(1)}): Bottom at ${boulderBottom.toFixed(1)}, expected ground at ${expectedGroundY.toFixed(1)}`);
-                    // Deeper embedding for small boulders
-                    const embedDepth = boulderRadius < 1.5 ? 0.6 : 0.3;
+                    // Consistent embedding - at least 50% for all boulders
+                    const embedDepth = 0.5 + (boulderRadius < 1.5 ? 0.2 : 0);
                     return { valid: false, correctY: expectedGroundY - boulderRadius * embedDepth };
                 }
                 
@@ -812,18 +815,22 @@ class Environment {
                         const boulderZ = point.z + perpZ;
                         let boulderY;
                         
+                        // FIXED: Use actual road point Y value, not cliff height
+                        const roadY = point.y || 0;
+                        
                         if (side > 0) {
                             // Right side - properly calculate drop-off position
-                            const dropDistance = baseDistance - 8; // Distance beyond road edge
-                            const dropAmount = Math.min(dropDistance * 2, 45); // Progressive drop
-                            // Embed smaller boulders deeper to prevent floating
-                            const embedRatio = baseBoulderSize < 1.5 ? 0.6 : 0.5;
-                            boulderY = (point.y || 0) - dropAmount - baseBoulderSize * embedRatio;
+                            const dropDistance = Math.max(0, baseDistance - 8); // Distance beyond road edge
+                            const terrainDropRate = 3; // Drop 3 units per unit distance from road
+                            const dropAmount = Math.min(dropDistance * terrainDropRate, 50); // Cap at 50 units drop
+                            // All boulders embedded at least 50% of their radius
+                            const embedRatio = 0.5 + (baseBoulderSize < 1.5 ? 0.2 : 0);
+                            boulderY = roadY - dropAmount - baseBoulderSize * embedRatio;
                         } else {
-                            // Left side - at road level, properly embedded
-                            // Small boulders need deeper embedding to look grounded
-                            const embedRatio = baseBoulderSize < 1.5 ? 0.6 : 0.5;
-                            boulderY = (point.y || 0) - baseBoulderSize * embedRatio;
+                            // Left side - at road level, properly embedded  
+                            // All boulders embedded at least 50% of their radius
+                            const embedRatio = 0.5 + (baseBoulderSize < 1.5 ? 0.2 : 0);
+                            boulderY = roadY - baseBoulderSize * embedRatio;
                         }
                         
                         // Special handling for very small boulders
