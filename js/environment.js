@@ -1157,7 +1157,7 @@ class Environment {
         };
         
         // Create ground strips to fill gaps between road and cliff bases
-        const createGroundStrip = (side, width, cliffBase = 7.5) => {
+        const createGroundStrip = (side, width) => {
             const geometry = new THREE.BufferGeometry();
             const vertices = [];
             const indices = [];
@@ -1169,7 +1169,7 @@ class Environment {
                 
                 // Road edge position (8 units from center)
                 const roadEdgeDistance = 8;
-                const cliffBaseDistance = cliffBase; // Matches minimum cliff distance
+                const cliffBaseDistance = 7.5; // Matches minimum cliff distance
                 
                 // Calculate perpendicular offsets for this segment
                 const perpX1 = Math.cos(point.heading) * roadEdgeDistance * side;
@@ -1224,8 +1224,6 @@ class Environment {
         this.scene.add(leftStrip);
         const rightStrip = createGroundStrip(1, 6);
         this.scene.add(rightStrip);
-        const rightStrip2 = createGroundStrip(1, 2, 9.4);
-        this.scene.add(rightStrip2);
         
         // Left cliff wall (mountain face rising above)
         const leftCliff = createFacetedCliff(-1, 40, false);  // Taller mountain wall
