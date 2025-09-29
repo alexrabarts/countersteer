@@ -1219,7 +1219,7 @@ class Environment {
 
         const leftStrip = createGroundStrip(-1, 8, 20);
         this.scene.add(leftStrip);
-        const rightStrip = createGroundStrip(1, 8, 15);
+        const rightStrip = createGroundStrip(1, 8, 12);
         this.scene.add(rightStrip);
 
         // Left cliff wall (mountain face rising above)
