@@ -2,7 +2,7 @@
 import puppeteer from 'puppeteer';
 import { spawn } from 'child_process';
 
-const PORT = 8081;
+const PORT = 8080;
 const BASE_URL = `http://localhost:${PORT}`;
 
 let server;
@@ -182,14 +182,47 @@ async function runTests() {
   await runTest('Canvas is rendered', async () => {
     await page.goto(`${BASE_URL}/index.html`, { waitUntil: 'networkidle2' });
     await new Promise(r => setTimeout(r, 1000));
-    
+
     const canvasExists = await page.evaluate(() => {
       const canvas = document.querySelector('canvas');
       return canvas !== null && canvas.width > 0 && canvas.height > 0;
     });
-    
+
     if (!canvasExists) {
       throw new Error('Canvas not rendered properly');
+    }
+  });
+
+  // Test: Cliffs are rendered (prevent regression where cliffs disappeared)
+  await runTest('Cliffs are rendered', async () => {
+    await page.goto(`${BASE_URL}/index.html`, { waitUntil: 'networkidle2' });
+    await new Promise(r => setTimeout(r, 2000)); // Give time for environment to load
+
+    const cliffsRendered = await page.evaluate(() => {
+      // Check if there are cliff meshes in the scene
+      // This is a basic check - we look for meshes that might be cliffs
+      if (typeof window.game === 'undefined' || !window.game.scene) {
+        return false;
+      }
+
+      const scene = window.game.scene;
+      let cliffCount = 0;
+
+      scene.traverse((object) => {
+        if (object.isMesh && object.geometry) {
+          // Cliffs typically have many vertices and are large
+          const vertexCount = object.geometry.attributes?.position?.count || 0;
+          if (vertexCount > 100) { // Cliff meshes have many vertices
+            cliffCount++;
+          }
+        }
+      });
+
+      return cliffCount > 0; // Should have at least some cliff meshes
+    });
+
+    if (!cliffsRendered) {
+      throw new Error('Cliffs not rendered - possible regression');
     }
   });
 

@@ -35,6 +35,12 @@ class InputHandler {
                 this.checkpointRestartPressed = true;
                 console.log('C key pressed - checkpoint restart triggered');
             }
+
+            // Test key to force falling
+            if (event.code === 'KeyF') {
+                console.log('F key pressed - forcing fall test');
+                // This will be handled in main.js
+            }
         });
 
         document.addEventListener('keyup', (event) => {

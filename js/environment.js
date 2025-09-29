@@ -145,7 +145,7 @@ class Environment {
         
         console.log('Created continuous road with', vertices.length / 3, 'vertices');
     }
-    
+
     addRockFormations() {
         // Create rock materials with variation
         const rockMaterials = [

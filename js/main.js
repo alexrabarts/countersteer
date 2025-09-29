@@ -200,8 +200,17 @@ class Game {
         offset.applyEuler(vehicleRotation);
         const cameraPos = vehiclePos.clone().add(offset);
 
-        // Smooth camera movement with lag
-        this.currentCameraPos.lerp(cameraPos, this.cameraLerpFactor);
+        // Smooth camera movement with lag - faster when falling off cliff
+        let lerpFactor = this.cameraLerpFactor;
+        if (this.vehicle.fallingOffCliff) {
+            lerpFactor = 0.4; // Even faster following during fall
+            // Add slight camera shake during fall
+            const shakeAmount = Math.min(Math.abs(this.vehicle.velocity.y) * 0.01, 0.5);
+            cameraPos.x += (Math.random() - 0.5) * shakeAmount;
+            cameraPos.y += (Math.random() - 0.5) * shakeAmount;
+            cameraPos.z += (Math.random() - 0.5) * shakeAmount;
+        }
+        this.currentCameraPos.lerp(cameraPos, lerpFactor);
         this.camera.position.copy(this.currentCameraPos);
 
         // Dynamic FOV based on speed for immersion

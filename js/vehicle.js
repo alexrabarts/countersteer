@@ -57,6 +57,14 @@ class Vehicle {
         this.distanceTraveled = 0;
         this.lastPosition = new THREE.Vector3(0, 0, 0);
 
+        // Road following tracking
+        this.currentRoadSegment = 0; // Index of current road segment we're following
+        this.segmentProgress = 0; // Progress along current segment (0-1)
+
+        // Road boundary state tracking for hysteresis
+        this.wasNearEdge = false; // Prevents oscillating between edge states
+        this.lastPerpDistance = 0; // For hysteresis calculations
+
          // Physics tuning
         this.steeringForce = 8; // How much force steering creates
         this.leanDamping = 0.02; // Natural damping
@@ -172,30 +180,75 @@ class Vehicle {
         if (!this.crashed && this.lastPosition) {
             const distanceDelta = this.position.distanceTo(this.lastPosition);
             this.distanceTraveled += distanceDelta;
+
+            // Update road segment tracking based on Z-distance traveled
+            if (this.environment && this.environment.roadPath && this.environment.roadPath.length > 1) {
+                const zDelta = this.position.z - this.lastPosition.z;
+                if (Math.abs(zDelta) > 0.01) { // Only update if actually moving
+                    this.segmentProgress += zDelta / 20; // Segment length is 20 units
+
+                    // Handle segment transitions
+                    while (this.segmentProgress >= 1 && this.currentRoadSegment < this.environment.roadPath.length - 1) {
+                        this.segmentProgress -= 1;
+                        this.currentRoadSegment++;
+                    }
+                    while (this.segmentProgress < 0 && this.currentRoadSegment > 0) {
+                        this.segmentProgress += 1;
+                        this.currentRoadSegment--;
+                    }
+
+                    // Clamp to valid range
+                    this.currentRoadSegment = Math.max(0, Math.min(this.environment.roadPath.length - 1, this.currentRoadSegment));
+                    this.segmentProgress = Math.max(0, Math.min(1, this.segmentProgress));
+                }
+            }
         }
         this.lastPosition = this.position.clone();
+        
+        // Check for wall/edge collision FIRST (even when crashed, in case we need to fall)
+        if (!this.fallingOffCliff) {
+            this.checkWallCollision();
+        }
         
         if (this.crashed) {
             // If falling off cliff, apply gravity and check ground collision
             if (this.fallingOffCliff) {
-                // Apply gravity
-                this.velocity.y -= 9.81 * deltaTime;
-                
+                // console.log('FALLING: Y=' + this.position.y.toFixed(1) + ' VelY=' + this.velocity.y.toFixed(1));
+                // Apply stronger gravity for dramatic falling
+                this.velocity.y -= 15 * deltaTime;
+
+                // Add air resistance (proportional to velocity squared)
+                const airResistance = 0.1 * Math.abs(this.velocity.y) * this.velocity.y * deltaTime;
+                if (this.velocity.y < 0) {
+                    this.velocity.y += airResistance; // Slow down falling speed
+                }
+
+                // Apply air resistance to horizontal movement too
+                const horizontalSpeed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z);
+                if (horizontalSpeed > 0.1) {
+                    const dragFactor = 1 - (0.05 * horizontalSpeed * deltaTime);
+                    this.velocity.x *= Math.max(dragFactor, 0.9);
+                    this.velocity.z *= Math.max(dragFactor, 0.9);
+                }
+
                 // Update position
                 this.position.x += this.velocity.x * deltaTime;
                 this.position.y += this.velocity.y * deltaTime;
                 this.position.z += this.velocity.z * deltaTime;
-                
-                // Check if hit ground (grass plane is at y = 0)
-                const groundLevel = 0;
+
+
+
+                // Check if hit ground (invisible ground plane at y = -80)
+                const groundLevel = -80;
                 if (this.position.y <= groundLevel) {
+                    // console.log('HIT GROUND! Setting position to', groundLevel);
                     this.position.y = groundLevel;
                     this.velocity.set(0, 0, 0); // Stop all movement
                     this.speed = 0;
                     this.hitGround = true;
-                    
+
                     if (!this.groundHitLogged) {
-                        console.log('CRASHED! Hit the ground after falling', 
+                        console.log('CRASHED! Hit the ground after falling',
                             Math.abs(this.fallStartY - groundLevel).toFixed(1) + ' meters');
                         this.groundHitLogged = true;
                     }
@@ -340,30 +393,34 @@ class Vehicle {
         
         // Check for wall collision (simplified check based on distance from road center)
         if (this.environment && this.environment.roadPath) {
-            // Find nearest road segment
-            let nearestSegment = null;
-            let minDist = Infinity;
-            for (const segment of this.environment.roadPath) {
-                const dist = Math.sqrt(
-                    Math.pow(this.position.x - segment.x, 2) + 
-                    Math.pow(this.position.z - segment.z, 2)
-                );
-                if (dist < minDist) {
-                    minDist = dist;
-                    nearestSegment = segment;
+            // Use current road segment for consistency
+            let wallSegment = null;
+            if (this.currentRoadSegment < this.environment.roadPath.length) {
+                wallSegment = this.environment.roadPath[this.currentRoadSegment];
+            }
+
+            // Fallback to closest if needed
+            if (!wallSegment) {
+                let minDist = Infinity;
+                for (const segment of this.environment.roadPath) {
+                    const dist = Math.sqrt(
+                        Math.pow(this.position.x - segment.x, 2) +
+                        Math.pow(this.position.z - segment.z, 2)
+                    );
+                    if (dist < minDist) {
+                        minDist = dist;
+                        wallSegment = segment;
+                    }
                 }
             }
-            
-            if (nearestSegment) {
-                // Calculate perpendicular distance from road center
-                const perpX = Math.cos(nearestSegment.heading);
-                const perpZ = -Math.sin(nearestSegment.heading);
-                const toVehicle = new THREE.Vector3(
-                    this.position.x - nearestSegment.x,
-                    0,
-                    this.position.z - nearestSegment.z
-                );
-                const lateralDist = toVehicle.x * perpX + toVehicle.z * perpZ;
+
+            if (wallSegment) {
+                // Calculate perpendicular distance from road center (same as checkWallCollision)
+                const perpX = Math.cos(wallSegment.heading);
+                const perpZ = -Math.sin(wallSegment.heading);
+                const toVehicleX = this.position.x - wallSegment.x;
+                const toVehicleZ = this.position.z - wallSegment.z;
+                const lateralDist = toVehicleX * perpX + toVehicleZ * perpZ;
                 
                 // Check if too close to walls (road is 16 units wide, walls at ~8 units)
                 if (Math.abs(lateralDist) > 7.5) {
@@ -400,10 +457,20 @@ class Vehicle {
         this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
         
         // Update elevation to follow road
+        const preElevationX = this.position.x;
+        const preElevationZ = this.position.z;
         this.updateElevation();
+        const postElevationX = this.position.x;
+        const postElevationZ = this.position.z;
+
+        // Log if elevation update changed lateral position (shouldn't happen)
+        // if (Math.abs(preElevationX - postElevationX) > 0.01 || Math.abs(preElevationZ - postElevationZ) > 0.01) {
+        //     console.log('WARNING: updateElevation changed lateral position!',
+        //         'X:', preElevationX.toFixed(2), '->', postElevationX.toFixed(2),
+        //         'Z:', preElevationZ.toFixed(2), '->', postElevationZ.toFixed(2));
+        // }
         
-        // Check for wall collision
-        this.checkWallCollision();
+        // Wall collision already checked at the beginning of update()
         
         // Update 3D model
         this.updateMesh();
@@ -493,21 +560,22 @@ class Vehicle {
         // Simple wheelie trigger - just need to press the key
         const canStartWheelie = isWheelieKeyPressed && !this.isWheelie;
         
-        // Debug wheelie attempts (commented out to prevent console spam)
-        // if (wheelieInput > 0 && !this.wheelieDebugThrottle) {
-        //     console.log('Wheelie attempt:');
-        //     console.log('  Wheelie key pressed: Yes');
-        //     console.log('  Speed:', this.speed.toFixed(2), 'm/s >=', minWheelieSpeed, 'm/s?', this.speed >= minWheelieSpeed);
-        //     console.log('  Can start?', canStartWheelie);
-        //     this.wheelieDebugThrottle = true; // Only log once
-        //     setTimeout(() => this.wheelieDebugThrottle = false, 1000); // Reset after 1 second
-        // }
+        // Debug wheelie attempts
+        if (wheelieInput > 0 && !this.wheelieDebugThrottle) {
+            console.log('Wheelie attempt:');
+            console.log('  Wheelie key pressed: Yes');
+            console.log('  isWheelie:', this.isWheelie);
+            console.log('  wheelieAngle:', this.wheelieAngle);
+            console.log('  Can start?', canStartWheelie);
+            this.wheelieDebugThrottle = true; // Only log once
+            setTimeout(() => this.wheelieDebugThrottle = false, 1000); // Reset after 1 second
+        }
 
         if (canStartWheelie && this.wheelieAngle === 0) {
-            // Start wheelie with a moderate pop
+            // Start wheelie with a stronger pop
             this.isWheelie = true;
-            this.wheelieAngle = 0.01; // Start with tiny angle
-            this.wheelieVelocity = 2.0; // Gentler initial lift for better control
+            this.wheelieAngle = 0.05; // Start with more visible angle
+            this.wheelieVelocity = 3.5; // Stronger initial lift
             this.wheelieStartTime = performance.now();
             this.wheelieScoreAccumulated = 0;
             console.log('===== WHEELIE STARTED! =====');
@@ -720,8 +788,11 @@ class Vehicle {
         if (this.crashed) {
             // Fall over animation
             this.group.rotation.z = this.crashAngle > 0 ? Math.PI/2 : -Math.PI/2;
-            // Adjust bike position so it sits properly on the ground when rotated
-            this.group.position.y = this.position.y + 0.3;
+            // Only adjust height if not falling off cliff
+            if (!this.fallingOffCliff) {
+                // Adjust bike position so it sits properly on the ground when rotated
+                this.group.position.y = this.position.y + 0.3;
+            }
             this.rider.rotation.z = 0; // Rider doesn't lean when crashed
         } else if (this.isJumping) {
             // Jumping animation - forward rotation
@@ -902,68 +973,117 @@ class Vehicle {
     
     checkWallCollision() {
         // Check if bike has gone off the road edges
+        if (!this.environment) {
+            console.log('ERROR: No environment set on vehicle');
+            return;
+        }
+        if (!this.environment.roadPath) {
+            console.log('ERROR: No roadPath in environment');
+            return;
+        }
+        if (this.environment.roadPath.length === 0) {
+            console.log('ERROR: Empty roadPath');
+            return;
+        }
+
         if (this.environment && this.environment.roadPath) {
-            // Find nearest road segment
-            let closestSegment = null;
-            let minDistance = Infinity;
-            
-            this.environment.roadPath.forEach(segment => {
-                const distance = Math.sqrt(
-                    Math.pow(this.position.x - segment.x, 2) + 
-                    Math.pow(this.position.z - segment.z, 2)
-                );
-                
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    closestSegment = segment;
-                }
-            });
-            
-            if (closestSegment) {
+
+            // Use current road segment for more accurate perpDistance calculation
+            let currentSegment = null;
+            if (this.currentRoadSegment < this.environment.roadPath.length) {
+                currentSegment = this.environment.roadPath[this.currentRoadSegment];
+            }
+
+            // Fallback to closest segment if current segment is invalid
+            if (!currentSegment) {
+                let minDistance = Infinity;
+                this.environment.roadPath.forEach(segment => {
+                    const distance = Math.sqrt(
+                        Math.pow(this.position.x - segment.x, 2) +
+                        Math.pow(this.position.z - segment.z, 2)
+                    );
+
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        currentSegment = segment;
+                    }
+                });
+            }
+
+            if (currentSegment) {
                 // Calculate perpendicular distance from road centerline
-                const roadVector = new THREE.Vector3(
-                    Math.sin(closestSegment.heading),
-                    0,
-                    Math.cos(closestSegment.heading)
-                );
-                
-                const toVehicle = new THREE.Vector3(
-                    this.position.x - closestSegment.x,
-                    0,
-                    this.position.z - closestSegment.z
-                );
-                
-                // Cross product gives perpendicular distance
-                const perpVector = new THREE.Vector3().crossVectors(roadVector, new THREE.Vector3(0, 1, 0));
-                const perpDistance = toVehicle.dot(perpVector);
-                
+                // Use the same perpendicular calculation as environment.js
+                const perpX = Math.cos(currentSegment.heading);
+                const perpZ = -Math.sin(currentSegment.heading);
+                const toVehicleX = this.position.x - currentSegment.x;
+                const toVehicleZ = this.position.z - currentSegment.z;
+
                 const roadWidth = 8; // Half of total road width (16m)
-                const wallBuffer = 7.5; // Slightly inside the actual road edge
+                // Improved road boundary logic with hysteresis
+                const roadEdge = 7.0; // Edge of the road (reduced for easier falling)
+                const safetyZone = 8.0; // Safety zone - slow down but don't crash
+                const cliffEdge = 9.0; // Cliff edge - fall past this
+                const rightWallBuffer = 8.5; // Right wall buffer
+
+                // Dot product gives signed distance (positive = right of road, negative = left of road)
+                const perpDistance = toVehicleX * perpX + toVehicleZ * perpZ;
+
+                // Hysteresis to prevent oscillating between states
+                const hysteresisBuffer = 0.5; // Half unit buffer
+                const effectiveRoadEdge = this.wasNearEdge ? roadEdge - hysteresisBuffer : roadEdge;
+                const effectiveSafetyZone = this.wasNearEdge ? safetyZone - hysteresisBuffer : safetyZone;
+                const effectiveCliffEdge = this.wasNearEdge ? cliffEdge - hysteresisBuffer : cliffEdge;
+
+                // Update hysteresis state
+                this.wasNearEdge = Math.abs(perpDistance) > effectiveRoadEdge;
+
+                // Debug logging (uncomment for troubleshooting)
+                // console.log('PerpDistance:', perpDistance.toFixed(2),
+                //     'RoadEdge:', effectiveRoadEdge.toFixed(1),
+                //     'SafetyZone:', effectiveSafetyZone.toFixed(1),
+                //     'CliffEdge:', effectiveCliffEdge.toFixed(1));
                 
-                // Check if we've hit the right wall (positive perpDistance)
-                if (perpDistance > wallBuffer) {
-                    this.crashed = true;
-                    this.crashAngle = -Math.PI/4; // Fall to the left after hitting right wall
-                    this.frame.material.color.setHex(0xff00ff); // Magenta for wall crash
-                    console.log('CRASHED! Hit the right wall at', (this.speed * 2.237).toFixed(1) + ' mph');
-                    
-                    // Bounce back slightly
-                    this.velocity.x *= -0.5;
-                    this.velocity.z *= -0.5;
+                // Check if we're on the ledge areas (slow down but don't crash)
+                if (Math.abs(perpDistance) > effectiveRoadEdge && Math.abs(perpDistance) < effectiveSafetyZone) {
+                    // On the edge/ledge - slow down but don't crash
+                    this.speed *= 0.95; // Gradual speed reduction
+                    // console.log('NEAR EDGE: Slowing down at distance', perpDistance.toFixed(1));
                 }
                 
-                // Check if we've gone off the left edge (negative perpDistance)
-                if (perpDistance < -wallBuffer) {
+                // Check if we've hit the right mountain wall (positive perpDistance)
+                if (perpDistance > rightWallBuffer && !this.crashed) {
+                    // Hit the mountain wall on the right - crash into it, don't fall
                     this.crashed = true;
-                    this.fallingOffCliff = true;
+                    this.fallingOffCliff = false; // Not falling, we hit a wall
+                    this.crashAngle = Math.PI/6; // Crash leaning right into the wall
+                    this.frame.material.color.setHex(0x8B0000); // Dark red for crash
+                    console.log('CRASHED! Hit the right mountain wall at', (this.speed * 2.237).toFixed(1) + ' mph');
+                    // console.log('Right wall hit at distance:', perpDistance);
+                    
+                    // Stop horizontal movement, we hit a solid wall
+                    this.velocity.x *= 0.1;
+                    this.velocity.z *= 0.1;
+                    this.speed = 0;
+                }
+                
+
+                
+                // Check if we've gone off the left cliff edge (negative perpDistance)
+                // Must go past the safety zone to actually fall
+                if (perpDistance < -effectiveCliffEdge && !this.crashed) {
+                    // console.log('=== FALLING OFF CLIFF TRIGGERED! ===');
+                    // console.log('perpDistance:', perpDistance, 'cliffEdge:', effectiveCliffEdge);
+                    // console.log('Vehicle position:', this.position.x.toFixed(1), this.position.z.toFixed(1));
+                    console.log('CRASHED! Fell off the left cliff edge at', (this.speed * 2.237).toFixed(1) + ' mph');
+                    this.crashed = true;
+                    this.fallingOffCliff = true; // Fall off the left cliff edge
                     this.fallStartY = this.position.y;
                     this.groundHitLogged = false;
                     this.crashAngle = Math.PI/4; // Fall to the right after going off left edge
-                    this.frame.material.color.setHex(0x8B0000); // Dark red for falling off cliff
-                    console.log('CRASHED! Fell off the left edge at', (this.speed * 2.237).toFixed(1) + ' mph');
-                    
+                    this.frame.material.color.setHex(0x8B0000); // Dark red for falling
+
                     // Continue forward momentum but start falling
-                    this.velocity.y = -5; // Start falling downward
+                    this.velocity.y = -10; // Start falling downward with more force
                 }
             }
         }
