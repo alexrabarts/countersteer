@@ -141,6 +141,13 @@ class Game {
         this.renderer.toneMappingExposure = 0.8;
         document.body.appendChild(this.renderer.domElement);
         
+        const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
+        pmremGenerator.compileEquirectangularShader();
+        
+        const envScene = new THREE.Scene();
+        envScene.background = new THREE.Color(0xb8d4e8);
+        this.scene.environment = pmremGenerator.fromScene(envScene).texture;
+        
         window.addEventListener('resize', () => this.onWindowResize());
     }
 

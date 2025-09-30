@@ -490,6 +490,35 @@ class Car {
         antenna.position.set(0.7, 1.31, -0.8);
         this.carGroup.add(antenna);
         
+        // Indicator lights (turn signals)
+        const indicatorGeometry = new THREE.BoxGeometry(0.12, 0.08, 0.05);
+        const indicatorMaterial = new THREE.MeshStandardMaterial({
+            color: 0xff8800,
+            emissive: 0x000000,
+            emissiveIntensity: 0,
+            roughness: 0.3,
+            metalness: 0.2
+        });
+        
+        this.leftFrontIndicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial.clone());
+        this.leftFrontIndicator.position.set(0.72, 0.25, 1.9);
+        this.carGroup.add(this.leftFrontIndicator);
+        
+        this.rightFrontIndicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial.clone());
+        this.rightFrontIndicator.position.set(-0.72, 0.25, 1.9);
+        this.carGroup.add(this.rightFrontIndicator);
+        
+        this.leftRearIndicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial.clone());
+        this.leftRearIndicator.position.set(0.72, 0.28, -1.95);
+        this.carGroup.add(this.leftRearIndicator);
+        
+        this.rightRearIndicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial.clone());
+        this.rightRearIndicator.position.set(-0.72, 0.28, -1.95);
+        this.carGroup.add(this.rightRearIndicator);
+        
+        this.indicatorState = 'off';
+        this.indicatorTimer = 0;
+        
         this.scene.add(this.carGroup);
     }
     
@@ -563,8 +592,41 @@ class Car {
         // Check for roadworks and adjust lane if needed
         this.checkForRoadworks();
         
+        // Update indicator lights
+        this.indicatorTimer += deltaTime;
+        const blinkRate = 0.5;
+        const isBlinkOn = Math.floor(this.indicatorTimer / blinkRate) % 2 === 0;
+        
+        if (this.inDetour && this.detourSide) {
+            this.indicatorState = this.detourSide.includes('left') ? 'left' : 'right';
+        } else {
+            this.indicatorState = 'off';
+        }
+        
+        const emissiveIntensity = isBlinkOn ? 0.6 : 0;
+        if (this.indicatorState === 'left') {
+            this.leftFrontIndicator.material.emissive.setHex(0xff8800);
+            this.leftFrontIndicator.material.emissiveIntensity = emissiveIntensity;
+            this.leftRearIndicator.material.emissive.setHex(0xff8800);
+            this.leftRearIndicator.material.emissiveIntensity = emissiveIntensity;
+            this.rightFrontIndicator.material.emissiveIntensity = 0;
+            this.rightRearIndicator.material.emissiveIntensity = 0;
+        } else if (this.indicatorState === 'right') {
+            this.rightFrontIndicator.material.emissive.setHex(0xff8800);
+            this.rightFrontIndicator.material.emissiveIntensity = emissiveIntensity;
+            this.rightRearIndicator.material.emissive.setHex(0xff8800);
+            this.rightRearIndicator.material.emissiveIntensity = emissiveIntensity;
+            this.leftFrontIndicator.material.emissiveIntensity = 0;
+            this.leftRearIndicator.material.emissiveIntensity = 0;
+        } else {
+            this.leftFrontIndicator.material.emissiveIntensity = 0;
+            this.leftRearIndicator.material.emissiveIntensity = 0;
+            this.rightFrontIndicator.material.emissiveIntensity = 0;
+            this.rightRearIndicator.material.emissiveIntensity = 0;
+        }
+        
         // Move along the road
-        const segmentLength = 20; // Match environment segment length
+        const segmentLength = 20;
         const distanceToMove = this.currentSpeed * deltaTime;
         const segmentsToMove = distanceToMove / segmentLength;
         
