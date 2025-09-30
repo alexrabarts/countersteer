@@ -41,10 +41,10 @@ class Traffic {
             let baseSpeed;
             
             switch(skill) {
-                case 'slow': baseSpeed = 28 + Math.random() * 5; break;
-                case 'average': baseSpeed = 33 + Math.random() * 5; break;
-                case 'fast': baseSpeed = 38 + Math.random() * 5; break;
-                case 'expert': baseSpeed = 43 + Math.random() * 7; break;
+                case 'slow': baseSpeed = 30 + Math.random() * 5; break;
+                case 'average': baseSpeed = 36 + Math.random() * 5; break;
+                case 'fast': baseSpeed = 42 + Math.random() * 6; break;
+                case 'expert': baseSpeed = 48 + Math.random() * 8; break;
             }
             
             const motorcycle = new AIMotorcycle(this.scene, this.environment, {
@@ -54,7 +54,10 @@ class Traffic {
                 lane: 'left',
                 color: this.getRandomBikeColor(),
                 style: this.getRandomBikeStyle(),
-                skill: skill
+                skill: skill,
+                riderName: this.getRiderName(skill),
+                helmetColor: this.getHelmetColorForSkill(skill),
+                suitColor: this.getRiderSuitColor(skill)
             });
             this.motorcycles.push(motorcycle);
         }
@@ -73,10 +76,62 @@ class Traffic {
         ];
         return colors[Math.floor(Math.random() * colors.length)];
     }
-    
+
     getRandomBikeStyle() {
         const styles = ['sport', 'cruiser', 'naked'];
         return styles[Math.floor(Math.random() * styles.length)];
+    }
+
+    getRiderName(skill) {
+        const namesBySkill = {
+            'expert': [
+                'Throttle Bottom',
+                'Rev Hardley',
+                'Skid Marks',
+                'Willy Wheeler'
+            ],
+            'fast': [
+                'Clutch Burner',
+                'Brake Wind',
+                'Torque McSquirt',
+                'Flash Johnson'
+            ],
+            'average': [
+                'Rusty Pipes',
+                'Sticky Wicket',
+                'Lean Meister',
+                'Two Stroke Tony'
+            ],
+            'slow': [
+                'Wheelie Wonka',
+                'Putt Putt Patterson',
+                'Granny Shifter',
+                'Chicken Strips Charlie'
+            ]
+        };
+
+        const names = namesBySkill[skill] || namesBySkill['average'];
+        return names[Math.floor(Math.random() * names.length)];
+    }
+
+    getHelmetColorForSkill(skill) {
+        const helmetColors = {
+            'expert': 0x000000,  // Black (intimidating)
+            'fast': 0xff0000,     // Red (aggressive)
+            'average': 0xffdd00,  // Yellow/gold (visible)
+            'slow': 0xffffff      // White (clean)
+        };
+        return helmetColors[skill] || 0x000000;
+    }
+
+    getRiderSuitColor(skill) {
+        const suitColors = {
+            'expert': 0x1a1a1a,   // Dark gray (professional)
+            'fast': 0x8b0000,     // Dark red (aggressive)
+            'average': 0x3a3a1a,  // Olive/yellow tint
+            'slow': 0x4a4a4a      // Medium gray
+        };
+        return suitColors[skill] || 0x2a2a2a;
     }
     
     getRandomCarColor() {
@@ -114,10 +169,11 @@ class Traffic {
         this.motorcycles.forEach(motorcycle => {
             motorcycle.update(deltaTime, playerPosition, this.motorcycles);
             
-            if (!collisionResult && motorcycle.checkCollision(playerPosition)) {
-                motorcycle.onCollision();
-                collisionResult = { hit: true, vehicle: motorcycle };
-            }
+            // Collisions with AI motorcycles disabled
+            // if (!collisionResult && motorcycle.checkCollision(playerPosition)) {
+            //     motorcycle.onCollision();
+            //     collisionResult = { hit: true, vehicle: motorcycle };
+            // }
         });
         
         if (collisionResult) {
@@ -851,40 +907,109 @@ class AIMotorcycle {
         this.leanAngle = 0;
         this.overtaking = false;
         this.overtakeProgress = 0;
-        
+
+        // Rider identity
+        this.riderName = options.riderName || 'Unknown Rider';
+        this.helmetColor = options.helmetColor || 0x000000;
+        this.suitColor = options.suitColor || 0x2a2a2a;
+        this.skill = options.skill || 'average';
+
         this.createBikeModel();
-        
+
         if (this.environment && this.environment.roadPath && this.environment.roadPath.length > 0) {
             this.updatePosition();
         }
+
+        // Log rider identity for debugging
+        console.log(`AI Rider spawned: ${this.riderName} (${this.skill}) on ${this.style} bike`);
     }
     
     createBikeModel() {
         this.bikeGroup = new THREE.Group();
         
-        const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.12, 12);
-        const wheelMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x0d0d0d, 
-            roughness: 0.98, 
-            metalness: 0.0 
+        // Tire material
+        const tireMaterial = new THREE.MeshStandardMaterial({
+            color: 0x0d0d0d,
+            roughness: 0.98,
+            metalness: 0.0
         });
+
+        // Rim material - colored for variety
+        const rimMaterial = new THREE.MeshStandardMaterial({
+            color: 0xb0b0b0,  // Silver/chrome
+            roughness: 0.2,
+            metalness: 0.9
+        });
+
+        // Rear wheel with spokes
+        const rearWheelGroup = new THREE.Group();
+
+        const rearTireGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.12, 16);
+        const rearTire = new THREE.Mesh(rearTireGeometry, tireMaterial);
+        rearTire.rotation.z = Math.PI / 2;
+        rearWheelGroup.add(rearTire);
+
+        const rearRimGeometry = new THREE.CylinderGeometry(0.18, 0.18, 0.13, 14);
+        const rearRim = new THREE.Mesh(rearRimGeometry, rimMaterial);
+        rearRim.rotation.z = Math.PI / 2;
+        rearWheelGroup.add(rearRim);
+
+        const rearHubGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.14, 10);
+        const rearHub = new THREE.Mesh(rearHubGeometry, rimMaterial);
+        rearHub.rotation.z = Math.PI / 2;
+        rearWheelGroup.add(rearHub);
+
+        // 5 spokes for AI bikes (simpler than player)
+        const rearSpokeGeometry = new THREE.BoxGeometry(0.02, 0.14, 0.1);
+        for (let i = 0; i < 5; i++) {
+            const spoke = new THREE.Mesh(rearSpokeGeometry, rimMaterial);
+            spoke.rotation.z = Math.PI / 2;
+            spoke.rotation.y = (i * Math.PI * 2) / 5;
+            rearWheelGroup.add(spoke);
+        }
+
+        rearWheelGroup.position.set(0, 0.3, -0.6);
+        rearWheelGroup.castShadow = true;
+        this.rearWheel = rearWheelGroup;
+        this.bikeGroup.add(rearWheelGroup);
+
+        // Front wheel with spokes
+        const frontWheelGroup = new THREE.Group();
+
+        const frontTireGeometry = new THREE.CylinderGeometry(0.28, 0.28, 0.11, 16);
+        const frontTire = new THREE.Mesh(frontTireGeometry, tireMaterial);
+        frontTire.rotation.z = Math.PI / 2;
+        frontWheelGroup.add(frontTire);
+
+        const frontRimGeometry = new THREE.CylinderGeometry(0.17, 0.17, 0.12, 14);
+        const frontRim = new THREE.Mesh(frontRimGeometry, rimMaterial);
+        frontRim.rotation.z = Math.PI / 2;
+        frontWheelGroup.add(frontRim);
+
+        const frontHubGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.13, 10);
+        const frontHub = new THREE.Mesh(frontHubGeometry, rimMaterial);
+        frontHub.rotation.z = Math.PI / 2;
+        frontWheelGroup.add(frontHub);
+
+        // 5 spokes
+        const frontSpokeGeometry = new THREE.BoxGeometry(0.02, 0.13, 0.1);
+        for (let i = 0; i < 5; i++) {
+            const spoke = new THREE.Mesh(frontSpokeGeometry, rimMaterial);
+            spoke.rotation.z = Math.PI / 2;
+            spoke.rotation.y = (i * Math.PI * 2) / 5;
+            frontWheelGroup.add(spoke);
+        }
+
+        frontWheelGroup.position.set(0, 0.3, 0.6);
+        frontWheelGroup.castShadow = true;
+        this.frontWheel = frontWheelGroup;
+        this.bikeGroup.add(frontWheelGroup);
         
-        this.rearWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-        this.rearWheel.rotation.z = Math.PI / 2;
-        this.rearWheel.position.set(0, 0.3, -0.6);
-        this.rearWheel.castShadow = true;
-        this.bikeGroup.add(this.rearWheel);
-        
-        this.frontWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-        this.frontWheel.rotation.z = Math.PI / 2;
-        this.frontWheel.position.set(0, 0.3, 0.6);
-        this.frontWheel.castShadow = true;
-        this.bikeGroup.add(this.frontWheel);
-        
+        // Frame and tank geometries by style
         let frameGeometry, tankGeometry;
         if (this.style === 'sport') {
             frameGeometry = new THREE.BoxGeometry(0.08, 0.7, 1.0);
-            tankGeometry = new THREE.BoxGeometry(0.25, 0.2, 0.4);
+            tankGeometry = new THREE.BoxGeometry(0.3, 0.24, 0.5, 3, 3, 4);
         } else if (this.style === 'cruiser') {
             frameGeometry = new THREE.BoxGeometry(0.1, 0.5, 1.2);
             tankGeometry = new THREE.BoxGeometry(0.3, 0.25, 0.5);
@@ -892,22 +1017,115 @@ class AIMotorcycle {
             frameGeometry = new THREE.BoxGeometry(0.06, 0.8, 0.9);
             tankGeometry = new THREE.BoxGeometry(0.22, 0.18, 0.35);
         }
-        
-        const frameMaterial = new THREE.MeshStandardMaterial({ 
-            color: this.color, 
-            roughness: 0.25, 
-            metalness: 0.8 
+
+        const frameMaterial = new THREE.MeshStandardMaterial({
+            color: this.color,
+            roughness: 0.18,
+            metalness: 0.85
         });
         this.frame = new THREE.Mesh(frameGeometry, frameMaterial);
         this.frame.position.set(0, 0.55, 0);
         this.frame.castShadow = true;
         this.bikeGroup.add(this.frame);
-        
+
+        // Sculpted tank for sport bikes
+        if (this.style === 'sport') {
+            const tankVertices = tankGeometry.attributes.position;
+            for (let i = 0; i < tankVertices.count; i++) {
+                const x = tankVertices.getX(i);
+                const y = tankVertices.getY(i);
+                const z = tankVertices.getZ(i);
+
+                // Widen middle, taper ends
+                const distFromCenter = Math.abs(z);
+                const taperFactor = Math.max(0, 1 - (distFromCenter / 0.25) * 0.4);
+
+                if (Math.abs(x) > 0.05) {
+                    tankVertices.setX(i, x * (1 + taperFactor * 0.2));
+                }
+
+                // Round the top
+                if (y > 0) {
+                    tankVertices.setY(i, y * (1 + taperFactor * 0.25));
+                }
+            }
+            tankGeometry.computeVertexNormals();
+        }
+
         this.tank = new THREE.Mesh(tankGeometry, frameMaterial);
-        this.tank.position.set(0, 0.75, 0.1);
+        this.tank.position.set(0, 0.72, 0.1);
         this.tank.castShadow = true;
         this.bikeGroup.add(this.tank);
-        
+
+        // Add fairings for sport bikes only
+        if (this.style === 'sport') {
+            // Front fairing
+            const frontFairingGeometry = new THREE.BoxGeometry(0.38, 0.48, 0.3, 2, 3, 2);
+            const fairingVertices = frontFairingGeometry.attributes.position;
+            for (let i = 0; i < fairingVertices.count; i++) {
+                const x = fairingVertices.getX(i);
+                const y = fairingVertices.getY(i);
+                const z = fairingVertices.getZ(i);
+
+                // Taper toward front
+                if (z > 0.08) {
+                    const taperAmount = (z - 0.08) / 0.22;
+                    fairingVertices.setX(i, x * (1 - taperAmount * 0.35));
+                    fairingVertices.setY(i, y * (1 - taperAmount * 0.2));
+                }
+            }
+            frontFairingGeometry.computeVertexNormals();
+
+            this.frontFairing = new THREE.Mesh(frontFairingGeometry, frameMaterial);
+            this.frontFairing.position.set(0, 0.62, 0.65);
+            this.frontFairing.castShadow = true;
+            this.bikeGroup.add(this.frontFairing);
+
+            // Side fairings
+            const sideFairingGeometry = new THREE.BoxGeometry(0.1, 0.36, 0.82, 2, 2, 4);
+            const sideVertices = sideFairingGeometry.attributes.position;
+            for (let i = 0; i < sideVertices.count; i++) {
+                const z = sideVertices.getZ(i);
+                // Slight taper toward rear
+                if (z < -0.2) {
+                    const taperAmount = Math.abs(z + 0.2) / 0.3;
+                    sideVertices.setX(i, sideVertices.getX(i) * (1 - taperAmount * 0.12));
+                }
+            }
+            sideFairingGeometry.computeVertexNormals();
+
+            this.leftSideFairing = new THREE.Mesh(sideFairingGeometry, frameMaterial);
+            this.leftSideFairing.position.set(-0.2, 0.52, 0.05);
+            this.leftSideFairing.castShadow = true;
+            this.bikeGroup.add(this.leftSideFairing);
+
+            this.rightSideFairing = new THREE.Mesh(sideFairingGeometry, frameMaterial);
+            this.rightSideFairing.position.set(0.2, 0.52, 0.05);
+            this.rightSideFairing.castShadow = true;
+            this.bikeGroup.add(this.rightSideFairing);
+
+            // Tail section
+            const tailGeometry = new THREE.BoxGeometry(0.36, 0.3, 0.55, 3, 3, 3);
+            const tailVertices = tailGeometry.attributes.position;
+            for (let i = 0; i < tailVertices.count; i++) {
+                const x = tailVertices.getX(i);
+                const y = tailVertices.getY(i);
+                const z = tailVertices.getZ(i);
+
+                // Pointed tail
+                if (z < -0.12) {
+                    const taperAmount = Math.abs(z + 0.12) / 0.3;
+                    tailVertices.setX(i, x * (1 - taperAmount * 0.6));
+                }
+            }
+            tailGeometry.computeVertexNormals();
+
+            this.tailSection = new THREE.Mesh(tailGeometry, frameMaterial);
+            this.tailSection.position.set(0, 0.65, -0.22);
+            this.tailSection.castShadow = true;
+            this.bikeGroup.add(this.tailSection);
+        }
+
         const seatGeometry = new THREE.BoxGeometry(0.28, 0.1, 0.4);
         const seatMaterial = new THREE.MeshStandardMaterial({ 
             color: 0x1a1a1a, 
@@ -920,21 +1138,21 @@ class AIMotorcycle {
         this.bikeGroup.add(this.seat);
         
         const riderGeometry = new THREE.BoxGeometry(0.25, 0.5, 0.18);
-        const riderMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x2a2a2a, 
-            roughness: 0.7, 
-            metalness: 0.1 
+        const riderMaterial = new THREE.MeshStandardMaterial({
+            color: this.suitColor,  // Use rider's custom suit color
+            roughness: 0.65,
+            metalness: 0.15
         });
         this.rider = new THREE.Mesh(riderGeometry, riderMaterial);
         this.rider.position.set(0, 1.05, -0.1);
         this.rider.castShadow = true;
         this.bikeGroup.add(this.rider);
-        
+
         const helmetGeometry = new THREE.SphereGeometry(0.12, 8, 6);
-        const helmetMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x000000, 
-            roughness: 0.2, 
-            metalness: 0.5 
+        const helmetMaterial = new THREE.MeshStandardMaterial({
+            color: this.helmetColor,  // Use rider's custom helmet color
+            roughness: 0.15,
+            metalness: 0.6
         });
         this.helmet = new THREE.Mesh(helmetGeometry, helmetMaterial);
         this.helmet.position.set(0, 1.32, -0.1);
@@ -1017,6 +1235,11 @@ class AIMotorcycle {
         
         let laneOffset = this.lane === 'left' ? -3 : 3;
         
+        // Add pack lateral offset for natural spread
+        if (this.packLateralOffset) {
+            laneOffset += this.packLateralOffset;
+        }
+        
         if (this.overtaking) {
             const overtakeLaneOffset = Math.sin(this.overtakeProgress * Math.PI) * 2;
             laneOffset += overtakeLaneOffset;
@@ -1031,6 +1254,25 @@ class AIMotorcycle {
         const dx = nextPoint.x - currentPoint.x;
         const dz = nextPoint.z - currentPoint.z;
         const facingAngle = Math.atan2(dx, dz);
+        
+        // Calculate turn rate based on heading change
+        let headingChange = nextPoint.heading - currentPoint.heading;
+        if (headingChange > Math.PI) headingChange -= 2 * Math.PI;
+        if (headingChange < -Math.PI) headingChange += 2 * Math.PI;
+        
+        // Calculate lean angle based on turn rate and speed (motorcycle physics)
+        // Lean = arctan(v² * turnRate / g)
+        const turnRate = Math.abs(headingChange) * 0.5;
+        const speedSquared = this.currentSpeed * this.currentSpeed;
+        const targetLean = -Math.atan((speedSquared * turnRate) / (9.81 * 8)) * Math.sign(headingChange);
+        
+        // Smoothly interpolate to target lean angle
+        const leanSpeed = 3.0;
+        this.leanAngle += (targetLean - this.leanAngle) * leanSpeed * 0.016;
+        
+        // Clamp lean angle to realistic limits
+        const maxLean = Math.PI / 3; // 60 degrees max
+        this.leanAngle = Math.max(-maxLean, Math.min(maxLean, this.leanAngle));
         
         this.bikeGroup.rotation.y = facingAngle;
         this.bikeGroup.rotation.z = this.leanAngle;
@@ -1090,21 +1332,32 @@ class AIMotorcycle {
         if (carAhead) {
             this.currentSpeed = Math.min(this.currentSpeed, this.baseSpeed * 0.7);
         } else if (nearestBikeAhead && minDistanceAhead < 15) {
-            this.currentSpeed = Math.min(this.baseSpeed * 1.3, 55);
+            // Pack riding - match speed with slight increase for drafting effect
+            const draftBoost = minDistanceAhead < 10 ? 1.4 : 1.35;
+            this.currentSpeed = Math.min(this.baseSpeed * draftBoost, 58);
+            
+            // Small lateral variation for pack dynamics
+            if (!this.packLateralOffset) this.packLateralOffset = 0;
+            const targetOffset = (Math.random() - 0.5) * 1.5;
+            this.packLateralOffset += (targetOffset - this.packLateralOffset) * 0.05;
         } else if (playerPosition) {
             const dx = this.bikeGroup.position.x - playerPosition.x;
             const dz = this.bikeGroup.position.z - playerPosition.z;
             const distanceToPlayer = Math.sqrt(dx * dx + dz * dz);
             
+            // More aggressive pursuit when close to player
             if (distanceToPlayer < 30 && distanceToPlayer > 10) {
-                this.currentSpeed = Math.min(this.baseSpeed * 1.2, 50);
+                this.currentSpeed = Math.min(this.baseSpeed * 1.28, 54);
             } else if (distanceToPlayer < 10) {
+                this.currentSpeed = Math.min(this.baseSpeed * 1.35, 56);
                 this.overtaking = true;
             } else {
                 this.currentSpeed = this.baseSpeed;
+                this.packLateralOffset = 0;
             }
         } else {
             this.currentSpeed = this.baseSpeed;
+            this.packLateralOffset = 0;
         }
         
         this.isBraking = this.currentSpeed < previousSpeed;
@@ -1163,7 +1416,7 @@ class AIMotorcycle {
         const dy = this.bikeGroup.position.y - playerPosition.y;
         const dz = this.bikeGroup.position.z - playerPosition.z;
         const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        return distance < 1.5;
+        return distance < 0.8;
     }
     
     onCollision() {

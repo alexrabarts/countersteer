@@ -2,6 +2,16 @@ class Game {
     constructor() {
         console.log('Starting game initialization...');
         
+        // Check if THREE.js is loaded
+        if (typeof THREE === 'undefined') {
+            const errorMsg = 'THREE.js library failed to load. Please check your internet connection and refresh.';
+            console.error(errorMsg);
+            this.showError(errorMsg);
+            throw new Error(errorMsg);
+        }
+        
+        console.log('THREE.js loaded, version:', THREE.REVISION);
+
         // Check for WebGL support
         if (!this.isWebGLAvailable()) {
             const errorMsg = 'WebGL is not available in your browser. Please enable WebGL or try a different browser.';
@@ -9,7 +19,92 @@ class Game {
             this.showError(errorMsg);
             throw new Error(errorMsg);
         }
-        
+
+        // Time-of-Day configurations
+        this.timeOfDay = 'golden';  // Default
+        this.timeConfigs = {
+            golden: {
+                name: 'Golden Hour',
+                skyColor: 0xb8d4e8,
+                fogColor: 0xc8dae8,
+                ambientColor: 0x303030,
+                ambientIntensity: 0.25,
+                hemisphereTop: 0x8ab8d6,
+                hemisphereBottom: 0x2a3f2a,
+                hemisphereIntensity: 0.3,
+                sunColor: 0xfff4e6,
+                sunIntensity: 0.85,
+                fillColor: 0xe6f2ff,
+                fillIntensity: 0.15,
+                rimColor: 0xfff8e1,
+                rimIntensity: 0.25
+            },
+            sunset: {
+                name: 'Sunset',
+                skyColor: 0xff8866,
+                fogColor: 0xffa588,
+                ambientColor: 0x402020,
+                ambientIntensity: 0.3,
+                hemisphereTop: 0xff8844,
+                hemisphereBottom: 0x4a2a1a,
+                hemisphereIntensity: 0.4,
+                sunColor: 0xff6633,
+                sunIntensity: 0.9,
+                fillColor: 0xff9977,
+                fillIntensity: 0.2,
+                rimColor: 0xffaa66,
+                rimIntensity: 0.3
+            },
+            twilight: {
+                name: 'Twilight',
+                skyColor: 0x4466aa,
+                fogColor: 0x5577bb,
+                ambientColor: 0x202040,
+                ambientIntensity: 0.35,
+                hemisphereTop: 0x5577cc,
+                hemisphereBottom: 0x2a2a4a,
+                hemisphereIntensity: 0.35,
+                sunColor: 0x6688cc,
+                sunIntensity: 0.5,
+                fillColor: 0x8899dd,
+                fillIntensity: 0.15,
+                rimColor: 0x99aaee,
+                rimIntensity: 0.2
+            },
+            night: {
+                name: 'Night',
+                skyColor: 0x0a1a2a,
+                fogColor: 0x1a2a3a,
+                ambientColor: 0x101020,
+                ambientIntensity: 0.15,
+                hemisphereTop: 0x1a2a4a,
+                hemisphereBottom: 0x0a0a1a,
+                hemisphereIntensity: 0.2,
+                sunColor: 0x4466aa,  // Moon
+                sunIntensity: 0.3,
+                fillColor: 0x2a3a5a,
+                fillIntensity: 0.1,
+                rimColor: 0x3a4a6a,
+                rimIntensity: 0.15
+            },
+            dawn: {
+                name: 'Dawn',
+                skyColor: 0xffa588,
+                fogColor: 0xffb899,
+                ambientColor: 0x403020,
+                ambientIntensity: 0.28,
+                hemisphereTop: 0xffcc99,
+                hemisphereBottom: 0x4a3a2a,
+                hemisphereIntensity: 0.35,
+                sunColor: 0xffe0bb,
+                sunIntensity: 0.75,
+                fillColor: 0xffddaa,
+                fillIntensity: 0.18,
+                rimColor: 0xffeecc,
+                rimIntensity: 0.25
+            }
+        };
+
         this.init();
         this.setupScene();
         this.setupLighting();
@@ -33,7 +128,10 @@ class Game {
         
         console.log('Creating traffic...');
         this.traffic = new Traffic(this.scene, this.environment);
-        
+
+        console.log('Creating particle system...');
+        this.particles = new ParticleSystem(this.scene);
+
         console.log('Creating vehicle...');
         this.vehicle = new Vehicle(this.scene, (points) => this.addScore(points));
         this.vehicle.environment = this.environment; // Pass environment reference for elevation
@@ -43,27 +141,23 @@ class Game {
             const startY = this.environment.roadPath[0].y || 0;
             this.vehicle.position.y = startY;
             
-            // Now update camera positions to be relative to actual vehicle height
-            // Start camera directly above the bike
-            const cameraStartY = startY + 15; // 15 units above the bike
-            
-            // Calculate where the normal follow camera would be
+            // Initialize camera in follow position behind bike
             const normalCameraOffset = this.baseCameraOffset.clone();
             normalCameraOffset.applyEuler(new THREE.Euler(0, this.vehicle.yawAngle, 0));
             const normalCameraPos = this.vehicle.position.clone().add(normalCameraOffset);
             
-            // Position camera directly above bike
-            this.camera.position.set(0, cameraStartY, 0);
-            this.cameraIntroStartPos.set(0, cameraStartY, 0);
-            // End position matches where the follow camera would naturally be
-            this.cameraIntroEndPos.set(normalCameraPos.x, normalCameraPos.y, normalCameraPos.z);
-            this.currentCameraPos.set(0, cameraStartY, 0);
+            // Position camera in follow position
+            this.camera.position.set(normalCameraPos.x, normalCameraPos.y, normalCameraPos.z);
+            this.cameraIntroStartPos.copy(normalCameraPos);
+            this.cameraIntroEndPos.copy(normalCameraPos);
+            this.currentCameraPos.copy(normalCameraPos);
         }
         
         this.input = new InputHandler();
 
-        // Initialize sound system
+        // Initialize sound system with volume control
         this.soundManager = new SoundManager();
+        this.soundManager.masterVolume = 0.3;
 
         this.clock = new THREE.Clock();
         this.fps = 0;
@@ -103,8 +197,46 @@ class Game {
         // Help flags
         this.hasShownWheelieHelp = false;
 
+        // Setup time-of-day button listeners
+        this.setupTimeOfDayButtons();
+
         console.log('Starting animation loop...');
-        this.animate();
+        // Delay first frame to ensure renderer is fully initialized
+        requestAnimationFrame(() => this.animate());
+    }
+
+    setupTimeOfDayButtons() {
+        const buttons = document.querySelectorAll('.time-button');
+        buttons.forEach(button => {
+            button.addEventListener('click', () => {
+                const timeKey = button.getAttribute('data-time');
+                this.setTimeOfDay(timeKey);
+
+                // Update button states
+                buttons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+            });
+        });
+
+        // Add keyboard shortcut (T key to cycle through times)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 't' || e.key === 'T') {
+                const times = ['golden', 'sunset', 'twilight', 'night', 'dawn'];
+                const currentIndex = times.indexOf(this.timeOfDay);
+                const nextIndex = (currentIndex + 1) % times.length;
+                const nextTime = times[nextIndex];
+
+                this.setTimeOfDay(nextTime);
+
+                // Update button states
+                buttons.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.getAttribute('data-time') === nextTime) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+        });
     }
 
     isWebGLAvailable() {
@@ -173,40 +305,40 @@ class Game {
     }
 
     setupLighting() {
-        // Ambient light - increased for better visibility
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
-        this.scene.add(ambientLight);
+        // Ambient light
+        this.ambientLight = new THREE.AmbientLight(0x303030, 0.25);
+        this.scene.add(this.ambientLight);
 
-        // Hemisphere light for natural sky/ground lighting with warmer sky tone
-        const hemisphereLight = new THREE.HemisphereLight(0xadd8e6, 0x3a5f3a, 0.4);
-        this.scene.add(hemisphereLight);
+        // Hemisphere light for natural sky/ground lighting
+        this.hemisphereLight = new THREE.HemisphereLight(0x8ab8d6, 0x2a3f2a, 0.3);
+        this.scene.add(this.hemisphereLight);
 
         // Directional light (sun) with warmer color for golden hour feel
-        this.directionalLight = new THREE.DirectionalLight(0xfff4e6, 1.0);
+        this.directionalLight = new THREE.DirectionalLight(0xfff4e6, 0.85);
         this.directionalLight.position.set(50, 80, 0);
         this.directionalLight.castShadow = true;
-        this.directionalLight.shadow.mapSize.width = 4096; // Increased resolution
+        this.directionalLight.shadow.mapSize.width = 4096;
         this.directionalLight.shadow.mapSize.height = 4096;
         this.directionalLight.shadow.camera.near = 0.1;
-        this.directionalLight.shadow.camera.far = 300; // Reduced for better precision
-        this.directionalLight.shadow.camera.left = -60; // Tighter frustum
+        this.directionalLight.shadow.camera.far = 300;
+        this.directionalLight.shadow.camera.left = -60;
         this.directionalLight.shadow.camera.right = 60;
         this.directionalLight.shadow.camera.top = 60;
         this.directionalLight.shadow.camera.bottom = -60;
-        this.directionalLight.shadow.bias = -0.0001; // Reduce shadow acne
+        this.directionalLight.shadow.bias = -0.0001;
         this.scene.add(this.directionalLight);
         
         // Store initial light offset from origin
         this.lightOffset = this.directionalLight.position.clone();
         
-        // Secondary directional light for distant shadows (lower quality but wider coverage)
-        this.distantLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        // Secondary directional light for distant shadows
+        this.distantLight = new THREE.DirectionalLight(0xffffff, 0.2);
         this.distantLight.position.set(50, 80, 0);
         this.distantLight.castShadow = true;
-        this.distantLight.shadow.mapSize.width = 1024; // Lower resolution
+        this.distantLight.shadow.mapSize.width = 1024;
         this.distantLight.shadow.mapSize.height = 1024;
-        this.distantLight.shadow.camera.near = 50; // Start where near shadows end
-        this.distantLight.shadow.camera.far = 800; // Much further
+        this.distantLight.shadow.camera.near = 50;
+        this.distantLight.shadow.camera.far = 800;
         this.distantLight.shadow.camera.left = -200;
         this.distantLight.shadow.camera.right = 200;
         this.distantLight.shadow.camera.top = 200;
@@ -214,50 +346,119 @@ class Game {
         this.distantLight.shadow.bias = -0.001;
         this.scene.add(this.distantLight);
 
-        // Fill light from opposite side with cool blue tone for contrast
-        this.fillLight = new THREE.DirectionalLight(0xe6f2ff, 0.25);
+        // Fill light from opposite side with cool blue tone
+        this.fillLight = new THREE.DirectionalLight(0xe6f2ff, 0.15);
         this.fillLight.position.set(-50, 30, 0);
         this.scene.add(this.fillLight);
 
-        // Rim light for vehicle highlighting with warm accent
-        this.rimLight = new THREE.DirectionalLight(0xfff8e1, 0.4);
+        // Rim light for vehicle highlighting
+        this.rimLight = new THREE.DirectionalLight(0xfff8e1, 0.25);
         this.rimLight.position.set(0, 10, -50);
         this.scene.add(this.rimLight);
 
-        // Vehicle headlights
-        this.leftHeadlight = new THREE.SpotLight(0xffffff, 1, 100, Math.PI/6, 0.1, 2);
+        // Vehicle headlights - subtle
+        this.leftHeadlight = new THREE.SpotLight(0xffffff, 0.5, 100, Math.PI/6, 0.1, 2);
         this.leftHeadlight.castShadow = true;
         this.leftHeadlight.shadow.mapSize.width = 1024;
         this.leftHeadlight.shadow.mapSize.height = 1024;
         this.scene.add(this.leftHeadlight);
 
-        this.rightHeadlight = new THREE.SpotLight(0xffffff, 1, 100, Math.PI/6, 0.1, 2);
+        this.rightHeadlight = new THREE.SpotLight(0xffffff, 0.5, 100, Math.PI/6, 0.1, 2);
         this.rightHeadlight.castShadow = true;
         this.rightHeadlight.shadow.mapSize.width = 1024;
         this.rightHeadlight.shadow.mapSize.height = 1024;
         this.scene.add(this.rightHeadlight);
     }
 
+    setTimeOfDay(timeKey) {
+        const config = this.timeConfigs[timeKey];
+        if (!config) {
+            console.error('Invalid time of day:', timeKey);
+            return;
+        }
+
+        this.timeOfDay = timeKey;
+        console.log('Switching to:', config.name);
+
+        // Update scene colors
+        this.scene.background = new THREE.Color(config.skyColor);
+        this.scene.fog.color = new THREE.Color(config.fogColor);
+
+        // Update ambient light
+        this.ambientLight.color = new THREE.Color(config.ambientColor);
+        this.ambientLight.intensity = config.ambientIntensity;
+
+        // Update hemisphere light
+        this.hemisphereLight.color = new THREE.Color(config.hemisphereTop);
+        this.hemisphereLight.groundColor = new THREE.Color(config.hemisphereBottom);
+        this.hemisphereLight.intensity = config.hemisphereIntensity;
+
+        // Update directional light (sun/moon)
+        this.directionalLight.color = new THREE.Color(config.sunColor);
+        this.directionalLight.intensity = config.sunIntensity;
+
+        // Update fill light
+        this.fillLight.color = new THREE.Color(config.fillColor);
+        this.fillLight.intensity = config.fillIntensity;
+
+        // Update rim light
+        this.rimLight.color = new THREE.Color(config.rimColor);
+        this.rimLight.intensity = config.rimIntensity;
+
+        // Enhance headlights for night mode
+        if (timeKey === 'night') {
+            this.leftHeadlight.intensity = 1.5;
+            this.rightHeadlight.intensity = 1.5;
+        } else {
+            this.leftHeadlight.intensity = 0.5;
+            this.rightHeadlight.intensity = 0.5;
+        }
+
+        // Show notification
+        this.showTimeOfDayNotification(config.name);
+    }
+
+    showTimeOfDayNotification(timeName) {
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.textContent = timeName;
+        notification.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 24px;
+            z-index: 1000;
+            animation: fadeInOut 2s ease-out;
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 2000);
+    }
+
     setupCamera() {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
         
-        // Initial camera position - start directly above the bike
-        this.camera.position.set(0, 15, 0); // Directly above
-        this.camera.lookAt(0, 0, 0);
+        // Initial camera position - start in follow position
+        this.camera.position.set(0, 4, -10); // Behind bike
+        this.camera.lookAt(0, 1, 0); // Look at bike center, not ground
         
-        // Camera intro animation state
-        this.cameraIntroActive = true;
+        // Camera intro animation disabled - start directly in follow position
+        this.cameraIntroActive = false;
         this.cameraIntroStartTime = performance.now();
-        this.cameraIntroDuration = 1800; // 1.8 seconds
-        this.cameraIntroStartPos = new THREE.Vector3(0, 15, 0); // Directly above
-        this.cameraIntroEndPos = new THREE.Vector3(0, 4, -10); // Behind bike
+        this.cameraIntroDuration = 1800;
+        this.cameraIntroStartPos = new THREE.Vector3(0, 4, -10);
+        this.cameraIntroEndPos = new THREE.Vector3(0, 4, -10);
         
         // Camera mode system
         this.cameraMode = 0; // 0 = standard, 1 = high/far, 2 = onboard
         this.cameraModes = [
-            { name: 'Standard', offset: new THREE.Vector3(0, 3, -6), lerpFactor: 0.08 },
-            { name: 'High View', offset: new THREE.Vector3(0, 8, -12), lerpFactor: 0.06 },
-            { name: 'Onboard', offset: new THREE.Vector3(0, 1.2, 0.5), lerpFactor: 0.15 }
+            { name: 'Standard', offset: new THREE.Vector3(0, 3, -6), lerpFactor: 0.10 },
+            { name: 'High View', offset: new THREE.Vector3(0, 8, -12), lerpFactor: 0.08 },
+            { name: 'Onboard', offset: new THREE.Vector3(0, 1.2, 0.5), lerpFactor: 0.18 }
         ];
         
         // Dynamic camera offset for mountain roads
@@ -377,16 +578,24 @@ class Game {
         offset.applyEuler(vehicleRotation);
         const cameraPos = vehiclePos.clone().add(offset);
 
-        // Smooth camera movement with lag - faster when falling off cliff
+        // Smooth camera movement with lag - adaptive based on speed and conditions
         let lerpFactor = this.cameraLerpFactor;
+        
         if (this.vehicle.fallingOffCliff) {
-            lerpFactor = 0.4; // Even faster following during fall
+            lerpFactor = 0.45; // Even faster following during fall
             // Add slight camera shake during fall
             const shakeAmount = Math.min(Math.abs(this.vehicle.velocity.y) * 0.01, 0.5);
             cameraPos.x += (Math.random() - 0.5) * shakeAmount;
             cameraPos.y += (Math.random() - 0.5) * shakeAmount;
             cameraPos.z += (Math.random() - 0.5) * shakeAmount;
+        } else if (this.vehicle.isWheelie) {
+            // Slower, more dramatic camera during wheelies
+            lerpFactor *= 0.8;
+        } else if (this.vehicle.speed > 50) {
+            // Slightly faster at high speeds for more responsiveness
+            lerpFactor *= 1.15;
         }
+        
         this.currentCameraPos.lerp(cameraPos, lerpFactor);
         
         // Ensure camera never goes below bike level (bike is at roughly y=2)
@@ -438,15 +647,57 @@ class Game {
         } else {
             // Standard and High View cameras
             const speedFactor = this.vehicle.speed / this.vehicle.maxSpeed;
-            this.camera.fov = (this.cameraMode === 1 ? 65 : 70) + speedFactor * 15; // Wider FOV for high view
+
+            // Dynamic FOV - increases with speed for visceral feel
+            const baseFOV = this.cameraMode === 1 ? 70 : 75;
+            const maxFOVIncrease = 10; // 75° → 85° at max speed
+            const targetFOV = baseFOV + (speedFactor * maxFOVIncrease);
+
+            // Smooth FOV transition
+            if (!this.currentFOV) this.currentFOV = baseFOV;
+            this.currentFOV = THREE.MathUtils.lerp(this.currentFOV, targetFOV, 0.05);
+            this.camera.fov = this.currentFOV;
             this.camera.updateProjectionMatrix();
-            
-            // Camera shake at high speeds
+
+            // Enhanced camera shake with multiple sources
             if (!this.cameraShakeOffset) this.cameraShakeOffset = new THREE.Vector3();
-            const shakeIntensity = speedFactor * 0.08;
-            this.cameraShakeOffset.x = (Math.random() - 0.5) * shakeIntensity;
-            this.cameraShakeOffset.y = (Math.random() - 0.5) * shakeIntensity * 0.5;
-            this.cameraShakeOffset.z = (Math.random() - 0.5) * shakeIntensity;
+
+            // Base speed shake - increases dramatically at high speeds
+            const speedShake = Math.pow(speedFactor, 2) * 0.12;
+
+            // Terrain/roughness shake - simulates bumpy road
+            const terrainShake = Math.sin(performance.now() * 0.02) * 0.015 * speedFactor;
+
+            // Landing impact shake - big jolt when landing from jumps
+            let landingShake = 0;
+            if (this.vehicle.isJumping) {
+                this.lastJumpState = true;
+            } else if (this.lastJumpState) {
+                // Just landed - create impact shake
+                this.landingShakeIntensity = 0.3;
+                this.landingShakeTime = performance.now();
+                this.lastJumpState = false;
+            }
+
+            // Decay landing shake over time
+            if (this.landingShakeIntensity > 0) {
+                const timeSinceLanding = (performance.now() - this.landingShakeTime) / 1000;
+                landingShake = this.landingShakeIntensity * Math.exp(-timeSinceLanding * 8);
+                if (landingShake < 0.01) this.landingShakeIntensity = 0;
+            }
+
+            // Wheelie wobble - adds instability feel during wheelies
+            let wheelieShake = 0;
+            if (this.vehicle.isWheelie) {
+                const wheelieAngle = this.vehicle.wheelieAngle * 180 / Math.PI;
+                wheelieShake = (wheelieAngle / 60) * 0.04 * Math.sin(performance.now() * 0.01);
+            }
+
+            // Combine all shake sources
+            const totalShake = speedShake + terrainShake + landingShake + wheelieShake;
+            this.cameraShakeOffset.x = (Math.random() - 0.5) * totalShake;
+            this.cameraShakeOffset.y = (Math.random() - 0.5) * totalShake * 0.6;
+            this.cameraShakeOffset.z = (Math.random() - 0.5) * totalShake * 0.4;
             
             // Look ahead of vehicle for better anticipation on mountain roads
             const lookAheadDistance = (this.cameraMode === 1 ? 5 : 3) + speedRatio * 7; // Look further in high view
@@ -468,11 +719,28 @@ class Game {
             const bankAmount = this.vehicle.leanAngle * bankFactor; // Positive lean = right lean
             const targetBank = THREE.MathUtils.clamp(bankAmount, -0.3, 0.3); // Max ~17° bank
             this.currentCameraBanking = THREE.MathUtils.lerp(this.currentCameraBanking, targetBank, 0.15);
-            
+
+            // Wheelie camera tilt - pitch camera up to follow bike angle
+            let wheelieTilt = 0;
+            if (this.vehicle.isWheelie && this.vehicle.wheelieAngle) {
+                // Tilt camera up proportional to wheelie angle (max ~15°)
+                wheelieTilt = Math.min(this.vehicle.wheelieAngle * 0.4, 0.26); // ~15° max
+            }
+
+            // Smooth wheelie tilt transition
+            if (!this.currentWheelieTilt) this.currentWheelieTilt = 0;
+            this.currentWheelieTilt = THREE.MathUtils.lerp(this.currentWheelieTilt, wheelieTilt, 0.1);
+
+            // Adjust look target height during wheelies for dramatic upward view
+            if (this.currentWheelieTilt > 0.05) {
+                const tiltInfluence = this.currentWheelieTilt * 5;
+                this.currentLookTarget.y += tiltInfluence;
+            }
+
             // Create custom up vector rotated by banking amount (negative for camera banking opposite to lean)
             const bankMatrix = new THREE.Matrix4().makeRotationZ(this.currentCameraBanking);
             const upVector = new THREE.Vector3(0, 1, 0).applyMatrix4(bankMatrix);
-            
+
             // Apply banking through custom up vector, then lookAt
             this.camera.up.copy(upVector);
             this.camera.lookAt(this.currentLookTarget);
@@ -524,9 +792,18 @@ class Game {
             speedElement.style.textShadow = '0 0 15px rgba(0, 255, 0, 0.8)';
         }
 
+        // Update speed vignette - tunnel vision effect at high speeds
+        const speedVignette = document.getElementById('speedVignette');
+        if (speedVignette) {
+            const speedRatio = this.vehicle.speed / this.vehicle.maxSpeed;
+            // Vignette kicks in at 50% speed, full effect at max speed
+            const vignetteOpacity = Math.max(0, (speedRatio - 0.5) * 2);
+            speedVignette.style.opacity = vignetteOpacity;
+        }
+
         // Update FPS
         document.getElementById('fps').textContent = `FPS: ${this.fps}`;
-        
+
         // Update wheelie indicator
         this.updateWheelieIndicator();
         
@@ -688,14 +965,32 @@ class Game {
     }
 
     updateRacePosition() {
-        if (!this.traffic || !this.traffic.motorcycles) return;
+        if (!this.traffic || !this.traffic.motorcycles || !this.vehicle || !this.environment || !this.environment.roadPath) return;
         
-        const playerZ = this.vehicle.position.z;
+        const playerSegment = Math.floor(this.vehicle.currentRoadSegment || 0);
+        const playerProgress = this.vehicle.segmentProgress || 0;
+        const totalSegments = this.environment.roadPath.length;
+        const playerTotalProgress = playerSegment + playerProgress;
+        
         let position = 1;
         
         this.traffic.motorcycles.forEach(bike => {
-            if (bike.bikeGroup && bike.bikeGroup.position.z > playerZ) {
-                position++;
+            if (bike.currentSegment !== undefined && bike.currentSegment !== null) {
+                const bikeSegment = Math.floor(bike.currentSegment);
+                const bikeProgress = bike.segmentProgress || 0;
+                const bikeTotalProgress = bikeSegment + bikeProgress;
+                
+                // Handle wrap-around for looping track
+                let progressDiff = bikeTotalProgress - playerTotalProgress;
+                if (progressDiff > totalSegments / 2) {
+                    progressDiff -= totalSegments;
+                } else if (progressDiff < -totalSegments / 2) {
+                    progressDiff += totalSegments;
+                }
+                
+                if (progressDiff > 0) {
+                    position++;
+                }
             }
         });
         
@@ -713,18 +1008,6 @@ class Game {
         const totalElement = document.getElementById('totalRacers');
         if (totalElement) {
             totalElement.textContent = this.traffic.motorcycles.length + 1;
-        }
-        
-        const distanceElement = document.getElementById('distanceTraveled');
-        if (distanceElement && this.vehicle) {
-            const distance = Math.floor(this.vehicle.getDistanceTraveled());
-            distanceElement.textContent = distance;
-        }
-        
-        const distanceToFinishElement = document.getElementById('distanceToFinish');
-        if (distanceToFinishElement && this.vehicle && this.environment.finishLinePosition) {
-            const distToFinish = Math.floor(this.vehicle.position.distanceTo(this.environment.finishLinePosition));
-            distanceToFinishElement.textContent = distToFinish + 'm';
         }
     }
     
@@ -927,6 +1210,18 @@ class Game {
                 }
                 
                 console.log('CRASHED! Hit a car at', (this.vehicle.speed * 2.237).toFixed(1) + ' mph');
+
+                // Spawn collision sparks at impact point
+                if (this.particles && car && car.carGroup) {
+                    const impactPoint = this.vehicle.position.clone();
+                    const impactDir = new THREE.Vector3(
+                        car.carGroup.position.x - this.vehicle.position.x,
+                        0,
+                        car.carGroup.position.z - this.vehicle.position.z
+                    );
+                    const sparkIntensity = Math.min(this.vehicle.speed / 40, 1.5);
+                    this.particles.createCollisionSparks(impactPoint, impactDir, sparkIntensity);
+                }
             }
         }
         
@@ -937,7 +1232,36 @@ class Game {
         
         this.updateCamera();
         this.updateUI();
-        
+
+        // Update particle system and spawn particles based on vehicle state
+        if (this.particles && !this.vehicle.crashed) {
+            this.particles.update(deltaTime);
+
+            // Tire smoke on braking/drifting
+            if (brakeInput > 0.3 && this.vehicle.speed > 30) {
+                const smokeIntensity = brakeInput * Math.min(this.vehicle.speed / 50, 1.0);
+                // Spawn from rear wheel position
+                const rearWheelPos = this.vehicle.position.clone();
+                rearWheelPos.z -= 0.7; // Rear wheel offset
+                this.particles.createTireSmoke(rearWheelPos, this.vehicle.velocity, smokeIntensity);
+            }
+
+            // Speed trails at extreme speeds (90%+ max speed)
+            if (this.vehicle.speed > this.vehicle.maxSpeed * 0.9) {
+                // Spawn less frequently for performance
+                if (Math.random() < 0.3) {
+                    this.particles.createSpeedTrail(this.vehicle.position.clone(), this.vehicle.velocity);
+                }
+            }
+
+            // Landing dust clouds - detect when landing from jump
+            if (this.lastJumpState && !this.vehicle.isJumping) {
+                const dustIntensity = Math.min(Math.abs(this.vehicle.velocity.y) / 10, 1.5);
+                this.particles.createDustCloud(this.vehicle.position.clone(), dustIntensity);
+            }
+            this.lastJumpState = this.vehicle.isJumping;
+        }
+
         // Update directional light to follow vehicle
         this.directionalLight.position.x = this.vehicle.position.x + 50;
         this.directionalLight.position.z = this.vehicle.position.z;

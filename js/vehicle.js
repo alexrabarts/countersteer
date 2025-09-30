@@ -9,10 +9,10 @@ class Vehicle {
         
         // Vehicle parameters
         this.speed = 20; // m/s (starts at ~72 km/h)
-        this.minSpeed = 5; // m/s (~18 km/h) - below this, bike falls
-        this.maxSpeed = 65; // m/s (~234 km/h) - increased for more thrill
-        this.acceleration = 14; // m/s² - snappier acceleration
-        this.brakeForce = 18; // m/s² - better braking
+        this.minSpeed = 4; // m/s (~14 km/h) - below this, bike falls
+        this.maxSpeed = 68; // m/s (~245 km/h) - increased for more thrill
+        this.acceleration = 15; // m/s² - snappier acceleration
+        this.brakeForce = 20; // m/s² - better braking
         this.wheelbase = 1.4; // metres
         this.cgHeight = 0.6; // centre of gravity height
         this.mass = 200; // kg
@@ -68,9 +68,9 @@ class Vehicle {
         this.lastPerpDistance = 0; // For hysteresis calculations
 
          // Physics tuning
-        this.steeringForce = 9; // How much force steering creates - more responsive
-        this.leanDamping = 0.018; // Natural damping - slightly less for more agility
-        this.maxLeanAngle = Math.PI / 2.8; // ~64 degrees before crash - slightly more forgiving
+        this.steeringForce = 9.5; // How much force steering creates - more responsive
+        this.leanDamping = 0.016; // Natural damping - slightly less for more agility
+        this.maxLeanAngle = Math.PI / 2.7; // ~67 degrees before crash - slightly more forgiving
         
         this.createMesh();
     }
@@ -78,14 +78,50 @@ class Vehicle {
     createMesh() {
         this.group = new THREE.Group();
         
-        // Rear wheel
-        const rearWheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.15, 16);
-        const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.95, metalness: 0.0 });
-        this.rearWheel = new THREE.Mesh(rearWheelGeometry, wheelMaterial);
-        this.rearWheel.rotation.z = Math.PI / 2;
-        this.rearWheel.position.set(0, 0.3, -0.7);
-        this.rearWheel.castShadow = true;
-        this.rearWheel.receiveShadow = true;
+        // Rear wheel with racing spokes
+        const rearWheelGroup = new THREE.Group();
+
+        // Tire
+        const rearTireGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.15, 20);
+        const tireMaterial = new THREE.MeshStandardMaterial({
+            color: 0x1a1a1a,
+            roughness: 0.95,
+            metalness: 0.0
+        });
+        const rearTire = new THREE.Mesh(rearTireGeometry, tireMaterial);
+        rearTire.rotation.z = Math.PI / 2;
+        rearWheelGroup.add(rearTire);
+
+        // Racing rim - outer ring
+        const rearRimOuterGeometry = new THREE.CylinderGeometry(0.18, 0.18, 0.16, 16);
+        const rimMaterial = new THREE.MeshStandardMaterial({
+            color: 0xb0b0b0,  // Chrome silver
+            roughness: 0.2,
+            metalness: 0.9
+        });
+        const rearRimOuter = new THREE.Mesh(rearRimOuterGeometry, rimMaterial);
+        rearRimOuter.rotation.z = Math.PI / 2;
+        rearWheelGroup.add(rearRimOuter);
+
+        // Hub center
+        const rearHubGeometry = new THREE.CylinderGeometry(0.06, 0.06, 0.17, 12);
+        const rearHub = new THREE.Mesh(rearHubGeometry, rimMaterial);
+        rearHub.rotation.z = Math.PI / 2;
+        rearWheelGroup.add(rearHub);
+
+        // Racing spokes - 6 thin spokes
+        const rearSpokeGeometry = new THREE.BoxGeometry(0.02, 0.17, 0.12);
+        for (let i = 0; i < 6; i++) {
+            const spoke = new THREE.Mesh(rearSpokeGeometry, rimMaterial);
+            spoke.rotation.z = Math.PI / 2;
+            spoke.rotation.y = (i * Math.PI * 2) / 6;
+            rearWheelGroup.add(spoke);
+        }
+
+        rearWheelGroup.position.set(0, 0.3, -0.7);
+        rearWheelGroup.castShadow = true;
+        rearWheelGroup.receiveShadow = true;
+        this.rearWheel = rearWheelGroup;
         
         // Rear disc brake
         const discGeometry = new THREE.CylinderGeometry(0.25, 0.25, 0.02, 20);
@@ -116,12 +152,40 @@ class Vehicle {
         this.rightFork.castShadow = true;
         this.rightFork.receiveShadow = true;
 
-        // Front wheel
-        this.frontWheel = new THREE.Mesh(rearWheelGeometry, wheelMaterial);
-        this.frontWheel.rotation.z = Math.PI / 2;
-        this.frontWheel.position.set(0, 0.3, 0.7);
-        this.frontWheel.castShadow = true;
-        this.frontWheel.receiveShadow = true;
+        // Front wheel with racing spokes
+        const frontWheelGroup = new THREE.Group();
+
+        // Tire
+        const frontTireGeometry = new THREE.CylinderGeometry(0.28, 0.28, 0.12, 20);
+        const frontTire = new THREE.Mesh(frontTireGeometry, tireMaterial);
+        frontTire.rotation.z = Math.PI / 2;
+        frontWheelGroup.add(frontTire);
+
+        // Racing rim - outer ring (slightly smaller for front)
+        const frontRimOuterGeometry = new THREE.CylinderGeometry(0.17, 0.17, 0.13, 16);
+        const frontRimOuter = new THREE.Mesh(frontRimOuterGeometry, rimMaterial);
+        frontRimOuter.rotation.z = Math.PI / 2;
+        frontWheelGroup.add(frontRimOuter);
+
+        // Hub center
+        const frontHubGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.14, 12);
+        const frontHub = new THREE.Mesh(frontHubGeometry, rimMaterial);
+        frontHub.rotation.z = Math.PI / 2;
+        frontWheelGroup.add(frontHub);
+
+        // Racing spokes - 6 thin spokes
+        const frontSpokeGeometry = new THREE.BoxGeometry(0.02, 0.14, 0.12);
+        for (let i = 0; i < 6; i++) {
+            const spoke = new THREE.Mesh(frontSpokeGeometry, rimMaterial);
+            spoke.rotation.z = Math.PI / 2;
+            spoke.rotation.y = (i * Math.PI * 2) / 6;
+            frontWheelGroup.add(spoke);
+        }
+
+        frontWheelGroup.position.set(0, 0.3, 0.7);
+        frontWheelGroup.castShadow = true;
+        frontWheelGroup.receiveShadow = true;
+        this.frontWheel = frontWheelGroup;
         
         // Front disc brake
         this.frontDisc = new THREE.Mesh(discGeometry, discMaterial);
@@ -145,9 +209,43 @@ class Vehicle {
         this.frame.castShadow = true;
         this.frame.receiveShadow = true;
         
-        // Fuel tank - wider in the middle
-        const tankGeometry = new THREE.BoxGeometry(0.3, 0.25, 0.5);
-        const tankMaterial = new THREE.MeshStandardMaterial({ color: bikeColorHex, roughness: 0.2, metalness: 0.8 });
+        // Fuel tank - sculpted with realistic contours
+        const tankGeometry = new THREE.BoxGeometry(0.35, 0.28, 0.6, 4, 3, 4);
+
+        // Sculpt the tank with vertex manipulation for realistic shape
+        const tankVertices = tankGeometry.attributes.position;
+        for (let i = 0; i < tankVertices.count; i++) {
+            const x = tankVertices.getX(i);
+            const y = tankVertices.getY(i);
+            const z = tankVertices.getZ(i);
+
+            // Create wider middle, tapered front/rear
+            const distFromCenter = Math.abs(z);
+            const taperFactor = Math.max(0, 1 - (distFromCenter / 0.3) * 0.5);
+
+            // Widen the middle of the tank
+            if (Math.abs(x) > 0.05) {
+                tankVertices.setX(i, x * (1 + taperFactor * 0.25));
+            }
+
+            // Round the top surface
+            if (y > 0) {
+                const roundingFactor = 1 - (distFromCenter / 0.3) * 0.15;
+                tankVertices.setY(i, y * (1 + roundingFactor * 0.3));
+            }
+
+            // Create knee grip indents on the sides
+            if (Math.abs(x) > 0.15 && Math.abs(z) < 0.15 && Math.abs(y) < 0.1) {
+                tankVertices.setX(i, x * 0.88);
+            }
+        }
+        tankGeometry.computeVertexNormals();
+
+        const tankMaterial = new THREE.MeshStandardMaterial({
+            color: bikeColorHex,
+            roughness: 0.15,  // Glossy racing finish
+            metalness: 0.85
+        });
         this.fuelTank = new THREE.Mesh(tankGeometry, tankMaterial);
         this.fuelTank.position.set(0, 0.85, 0.2);
         this.fuelTank.castShadow = true;
@@ -168,20 +266,122 @@ class Vehicle {
         this.tankStripe.position.set(0, 0.86, 0.2);
         this.tankStripe.castShadow = true;
 
-        // Headlight
-        const headlightGeometry = new THREE.CylinderGeometry(0.08, 0.1, 0.08, 12);
-        const headlightMaterial = new THREE.MeshStandardMaterial({ 
+        // Front fairing - sculpted aerodynamic nose
+        const frontFairingGeometry = new THREE.BoxGeometry(0.42, 0.55, 0.35, 3, 3, 3);
+
+        // Sculpt the front fairing for aerodynamic shape
+        const fairingVertices = frontFairingGeometry.attributes.position;
+        for (let i = 0; i < fairingVertices.count; i++) {
+            const x = fairingVertices.getX(i);
+            const y = fairingVertices.getY(i);
+            const z = fairingVertices.getZ(i);
+
+            // Create pointed nose (taper toward front)
+            if (z > 0.1) {
+                const taperAmount = (z - 0.1) / 0.25;
+                fairingVertices.setX(i, x * (1 - taperAmount * 0.4));
+                fairingVertices.setY(i, y * (1 - taperAmount * 0.25));
+            }
+
+            // Round the top edges
+            if (y > 0.2) {
+                fairingVertices.setY(i, y * 1.1);
+            }
+
+            // Create headlight cavity (indent in front)
+            if (z > 0.12 && Math.abs(y) < 0.15) {
+                fairingVertices.setZ(i, z * 0.92);
+            }
+        }
+        frontFairingGeometry.computeVertexNormals();
+
+        const fairingMaterial = new THREE.MeshStandardMaterial({
+            color: bikeColorHex,
+            roughness: 0.15,
+            metalness: 0.85
+        });
+        this.frontFairing = new THREE.Mesh(frontFairingGeometry, fairingMaterial);
+        this.frontFairing.position.set(0, 0.68, 0.72);
+        this.frontFairing.castShadow = true;
+        this.frontFairing.receiveShadow = true;
+
+        // Integrated headlight (sits in fairing cavity)
+        const headlightGeometry = new THREE.BoxGeometry(0.22, 0.15, 0.08);
+        const headlightMaterial = new THREE.MeshStandardMaterial({
             color: 0xffffff,
             emissive: 0xffffee,
-            emissiveIntensity: 0.7,
-            roughness: 0.1,
-            metalness: 0.5
+            emissiveIntensity: 0.8,
+            roughness: 0.05,
+            metalness: 0.3
         });
         this.headlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
-        this.headlight.rotation.z = Math.PI / 2;
-        this.headlight.position.set(0, 0.7, 0.65);
+        this.headlight.position.set(0, 0.68, 0.86);
         this.headlight.castShadow = true;
         this.headlight.receiveShadow = true;
+
+        // Ram air intakes (small dark vents on fairing)
+        const intakeGeometry = new THREE.BoxGeometry(0.08, 0.12, 0.04);
+        const intakeMaterial = new THREE.MeshStandardMaterial({
+            color: 0x0a0a0a,
+            roughness: 0.9,
+            metalness: 0.1
+        });
+
+        this.leftIntake = new THREE.Mesh(intakeGeometry, intakeMaterial);
+        this.leftIntake.position.set(-0.15, 0.62, 0.82);
+        this.leftIntake.castShadow = true;
+
+        this.rightIntake = new THREE.Mesh(intakeGeometry, intakeMaterial);
+        this.rightIntake.position.set(0.15, 0.62, 0.82);
+        this.rightIntake.castShadow = true;
+
+        // Side fairings - connecting front to tail
+        const sideFairingGeometry = new THREE.BoxGeometry(0.12, 0.42, 0.95, 2, 3, 5);
+
+        // Sculpt side fairings for smooth flow
+        const sideFairingVertices = sideFairingGeometry.attributes.position;
+        for (let i = 0; i < sideFairingVertices.count; i++) {
+            const x = sideFairingVertices.getX(i);
+            const y = sideFairingVertices.getY(i);
+            const z = sideFairingVertices.getZ(i);
+
+            // Taper toward rear slightly
+            if (z < -0.2) {
+                const taperAmount = Math.abs(z + 0.2) / 0.35;
+                sideFairingVertices.setX(i, x * (1 - taperAmount * 0.15));
+            }
+
+            // Curve outward in middle for aerodynamics
+            if (Math.abs(z) < 0.25) {
+                const bulgeFactor = 1 - Math.abs(z) / 0.25;
+                if (Math.abs(x) > 0.03) {
+                    sideFairingVertices.setX(i, x * (1 + bulgeFactor * 0.15));
+                }
+            }
+
+            // Flow smoothly from top to bottom
+            if (y < -0.1) {
+                const flowFactor = Math.abs(y + 0.1) / 0.2;
+                sideFairingVertices.setY(i, y * (1 + flowFactor * 0.08));
+            }
+        }
+        sideFairingGeometry.computeVertexNormals();
+
+        const sideFairingMaterial = new THREE.MeshStandardMaterial({
+            color: bikeColorHex,
+            roughness: 0.15,
+            metalness: 0.85
+        });
+
+        this.leftSideFairing = new THREE.Mesh(sideFairingGeometry, sideFairingMaterial);
+        this.leftSideFairing.position.set(-0.22, 0.58, 0.08);
+        this.leftSideFairing.castShadow = true;
+        this.leftSideFairing.receiveShadow = true;
+
+        this.rightSideFairing = new THREE.Mesh(sideFairingGeometry, sideFairingMaterial);
+        this.rightSideFairing.position.set(0.22, 0.58, 0.08);
+        this.rightSideFairing.castShadow = true;
+        this.rightSideFairing.receiveShadow = true;
 
         // Brake light
         const brakeGeometry = new THREE.BoxGeometry(0.05, 0.05, 0.05);
@@ -202,18 +402,48 @@ class Vehicle {
         this.numberPlate.position.set(0, 0.65, -0.72);
         this.numberPlate.castShadow = true;
         
-        // Windscreen/fairing
-        const windscreenGeometry = new THREE.BoxGeometry(0.35, 0.3, 0.02);
+        // Racing windscreen with double-bubble profile
+        const windscreenGeometry = new THREE.BoxGeometry(0.38, 0.42, 0.04, 4, 4, 2);
+
+        // Sculpt the windscreen for double-bubble racing profile
+        const windscreenVertices = windscreenGeometry.attributes.position;
+        for (let i = 0; i < windscreenVertices.count; i++) {
+            const x = windscreenVertices.getX(i);
+            const y = windscreenVertices.getY(i);
+            const z = windscreenVertices.getZ(i);
+
+            // Create double-bubble (two peaks for aerodynamics)
+            if (y > 0.12) {
+                const distFromCenter = Math.abs(x);
+                const bubbleFactor = distFromCenter < 0.12 ?
+                    (1 - distFromCenter / 0.12) * 0.18 : 0;
+                windscreenVertices.setZ(i, z + bubbleFactor);
+            }
+
+            // Curve the top edge backward
+            if (y > 0.15) {
+                const curveFactor = (y - 0.15) / 0.25;
+                windscreenVertices.setZ(i, z - curveFactor * 0.08);
+            }
+
+            // Widen toward the top for better coverage
+            if (y > 0.1 && Math.abs(x) > 0.12) {
+                const widenFactor = (y - 0.1) / 0.3;
+                windscreenVertices.setX(i, x * (1 + widenFactor * 0.12));
+            }
+        }
+        windscreenGeometry.computeVertexNormals();
+
         const windscreenMaterial = new THREE.MeshStandardMaterial({
-            color: 0x1a1a3a,
-            roughness: 0.05,
-            metalness: 0.1,
+            color: 0x1a2a3a,
+            roughness: 0.02,
+            metalness: 0.05,
             transparent: true,
-            opacity: 0.4
+            opacity: 0.3
         });
         this.windscreen = new THREE.Mesh(windscreenGeometry, windscreenMaterial);
-        this.windscreen.position.set(0, 0.95, 0.5);
-        this.windscreen.rotation.x = -0.2;
+        this.windscreen.position.set(0, 1.05, 0.52);
+        this.windscreen.rotation.x = -0.28;
         this.windscreen.castShadow = true;
 
         // Handlebars
@@ -236,11 +466,69 @@ class Vehicle {
         this.rightMirror.castShadow = true;
         this.rightMirror.receiveShadow = true;
 
-        // Seat
-        const seatGeometry = new THREE.BoxGeometry(0.35, 0.12, 0.5);
-        const seatMaterial = new THREE.MeshStandardMaterial({ color: 0x2a1810, roughness: 0.85, metalness: 0.0 });
+        // Racing tail section / rear cowl (replaces simple seat)
+        const tailGeometry = new THREE.BoxGeometry(0.42, 0.35, 0.65, 3, 3, 4);
+
+        // Sculpt the tail for race-style pointed rear
+        const tailVertices = tailGeometry.attributes.position;
+        for (let i = 0; i < tailVertices.count; i++) {
+            const x = tailVertices.getX(i);
+            const y = tailVertices.getY(i);
+            const z = tailVertices.getZ(i);
+
+            // Create pointed tail (taper toward rear)
+            if (z < -0.15) {
+                const taperAmount = Math.abs(z + 0.15) / 0.35;
+                tailVertices.setX(i, x * (1 - taperAmount * 0.65));
+                tailVertices.setY(i, y * (1 - taperAmount * 0.3));
+            }
+
+            // Upswept rear section (racing style)
+            if (z < -0.1) {
+                const liftAmount = Math.abs(z + 0.1) / 0.3;
+                tailVertices.setY(i, y + liftAmount * 0.12);
+            }
+
+            // Rounded top surface
+            if (y > 0) {
+                tailVertices.setY(i, y * 1.15);
+            }
+        }
+        tailGeometry.computeVertexNormals();
+
+        const tailMaterial = new THREE.MeshStandardMaterial({
+            color: bikeColorHex,
+            roughness: 0.15,
+            metalness: 0.85
+        });
+        this.tailSection = new THREE.Mesh(tailGeometry, tailMaterial);
+        this.tailSection.position.set(0, 0.72, -0.25);
+        this.tailSection.castShadow = true;
+        this.tailSection.receiveShadow = true;
+
+        // Seat (sits on top of tail section)
+        const seatGeometry = new THREE.BoxGeometry(0.32, 0.08, 0.38, 3, 2, 3);
+
+        // Sculpt seat with rider depression
+        const seatVertices = seatGeometry.attributes.position;
+        for (let i = 0; i < seatVertices.count; i++) {
+            const y = seatVertices.getY(i);
+            const z = seatVertices.getZ(i);
+
+            // Create dip in middle for rider
+            if (Math.abs(z) < 0.12 && y > -0.02) {
+                seatVertices.setY(i, y * 0.7);
+            }
+        }
+        seatGeometry.computeVertexNormals();
+
+        const seatMaterial = new THREE.MeshStandardMaterial({
+            color: 0x1a1a1a,
+            roughness: 0.9,
+            metalness: 0.0
+        });
         this.seat = new THREE.Mesh(seatGeometry, seatMaterial);
-        this.seat.position.set(0, 0.65, -0.1);
+        this.seat.position.set(0, 0.88, -0.15);
         this.seat.castShadow = true;
         this.seat.receiveShadow = true;
 
@@ -339,6 +627,12 @@ class Vehicle {
         this.group.add(this.frame);
         this.group.add(this.fuelTank);
         this.group.add(this.tankStripe);
+        this.group.add(this.frontFairing);
+        this.group.add(this.leftIntake);
+        this.group.add(this.rightIntake);
+        this.group.add(this.leftSideFairing);
+        this.group.add(this.rightSideFairing);
+        this.group.add(this.tailSection);
         this.group.add(this.seat);
         this.group.add(this.leftFootpeg);
         this.group.add(this.rightFootpeg);
@@ -800,19 +1094,22 @@ class Vehicle {
             
             const angleDegrees = this.wheelieAngle * 180 / Math.PI;
             
-            // Natural gravity - wheelie wants to fall back down (slightly harder)
-            const gravityPull = 2.5 + (angleDegrees / 45) * 1.8; // 2.5-4.1 based on angle
+            // Natural gravity - wheelie wants to fall back down with progressive difficulty
+            const gravityPull = 2.3 + (angleDegrees / 45) * 1.6; // 2.3-3.9 based on angle
             this.wheelieVelocity -= gravityPull * deltaTime;
             
             // Throttle control - main way to control wheelie after initiation
             if (throttleInput > 0) {
-                // Consistent lift when holding throttle - be careful not to flip!
-                this.wheelieVelocity += throttleInput * 5.5 * deltaTime; // Increased for more risk
+                // Progressive throttle response - more sensitive at higher angles
+                const throttleSensitivity = 5.2 + (angleDegrees / 60) * 0.8;
+                this.wheelieVelocity += throttleInput * throttleSensitivity * deltaTime;
             }
             
             // Brake brings it down - useful to save from crash
             if (brakeInput > 0) {
-                this.wheelieVelocity -= brakeInput * 6.0 * deltaTime; // Reduced from 12.0
+                // Progressive brake response - more effective at higher angles
+                const brakePower = 5.5 + (angleDegrees / 60) * 1.5;
+                this.wheelieVelocity -= brakeInput * brakePower * deltaTime;
             }
             
             // Note: Wheelie key (Space/Shift) is only used to START the wheelie
@@ -821,8 +1118,10 @@ class Vehicle {
             // Update wheelie angle
             this.wheelieAngle += this.wheelieVelocity * deltaTime;
             
-            // Check for backwards flip crash
-            const crashAngleDegrees = 75; // Easier to flip - crash at 75 degrees
+            // Check for backwards flip crash with warning zone
+            const dangerAngleDegrees = 70; // Warning zone
+            const crashAngleDegrees = 77; // Crash threshold
+            
             if (angleDegrees >= crashAngleDegrees) {
                 // CRASHED! Went too far back
                 this.crashed = true;
@@ -831,6 +1130,9 @@ class Vehicle {
                 this.wheelieVelocity = 0;
                 console.log('WHEELIE CRASH! Flipped backwards at', angleDegrees.toFixed(1) + '°');
                 return;
+            } else if (angleDegrees >= dangerAngleDegrees) {
+                // In danger zone - provide extra gravity assistance
+                this.wheelieVelocity -= 0.5 * deltaTime;
             }
             
             // Don't clamp the angle - let it go all the way to crash

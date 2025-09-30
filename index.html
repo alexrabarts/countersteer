@@ -65,6 +65,65 @@
             color: #FFD700;
             margin-top: 5px;
         }
+
+        /* Speed vignette - tunnel vision effect at high speeds */
+        #speedVignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            box-shadow: inset 0 0 250px rgba(0, 0, 0, 0.8);
+            opacity: 0;
+            transition: opacity 0.2s ease-out;
+            z-index: 50;
+        }
+
+        /* Time of Day Menu */
+        .time-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #4a9eff;
+            border-radius: 8px;
+            padding: 10px;
+            z-index: 100;
+        }
+
+        .time-menu h4 {
+            margin: 0 0 8px 0;
+            color: #4a9eff;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .time-button {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            margin: 4px 0;
+            background: rgba(74, 158, 255, 0.2);
+            border: 1px solid #4a9eff;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .time-button:hover {
+            background: rgba(74, 158, 255, 0.4);
+            transform: scale(1.05);
+        }
+
+        .time-button.active {
+            background: rgba(74, 158, 255, 0.6);
+            border-color: #00ff00;
+            font-weight: bold;
+        }
+
         body {
             margin: 0;
             padding: 0;
@@ -181,68 +240,6 @@
             letter-spacing: 2px;
         }
         
-        .customize-menu {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            border: 2px solid #FFD700;
-            border-radius: 10px;
-            padding: 30px;
-            color: white;
-            z-index: 1000;
-            display: none;
-        }
-        
-        .customize-menu.visible {
-            display: block;
-        }
-        
-        .customize-menu h2 {
-            margin-top: 0;
-            color: #FFD700;
-            text-align: center;
-        }
-        
-        .color-option {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            margin: 5px;
-            border: 2px solid #666;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        
-        .color-option:hover {
-            border-color: #FFD700;
-            transform: scale(1.1);
-        }
-        
-        .color-option.selected {
-            border-color: #FFD700;
-            border-width: 3px;
-        }
-        
-        .customize-btn {
-            position: absolute;
-            top: 90px;
-            left: 20px;
-            padding: 10px 15px;
-            background: rgba(255, 215, 0, 0.2);
-            border: 2px solid #FFD700;
-            color: #FFD700;
-            cursor: pointer;
-            border-radius: 5px;
-            font-size: 14px;
-            z-index: 100;
-        }
-        
-        .customize-btn:hover {
-            background: rgba(255, 215, 0, 0.4);
-        }
-        
         .position-indicator {
             position: absolute;
             top: 120px;
@@ -284,44 +281,10 @@
             font-size: 12px;
         }
         
-        .distance-display {
-            position: absolute;
-            bottom: 120px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid #0088ff;
-            border-radius: 10px;
-            padding: 15px;
-            color: white;
-            font-family: monospace;
-            z-index: 100;
-            min-width: 180px;
-        }
-        
-        .distance-display h3 {
-            margin: 0 0 10px 0;
-            color: #0088ff;
-            font-size: 14px;
-            text-align: center;
-        }
-        
-        .distance-value {
-            font-size: 28px;
-            font-weight: bold;
-            color: #0088ff;
-            text-align: center;
-            text-shadow: 0 0 10px rgba(0, 136, 255, 0.5);
-        }
-        
-        .distance-unit {
-            font-size: 14px;
-            color: #88ccff;
-        }
+
     </style>
 </head>
 <body>
-    <button class="customize-btn" onclick="toggleCustomizeMenu()">🎨 Customize Bike</button>
-    
     <div class="position-indicator">
         <h3>POSITION</h3>
         <div class="position-value">
@@ -330,29 +293,6 @@
         <div class="total-racers">of <span id="totalRacers">5</span> racers</div>
     </div>
     
-    <div class="distance-display">
-        <h3>DISTANCE</h3>
-        <div class="distance-value">
-            <span id="distanceTraveled">0</span><span class="distance-unit">m</span>
-        </div>
-        <div style="text-align: center; color: #aaa; font-size: 11px; margin-top: 5px;">
-            to finish: <span id="distanceToFinish" style="color: #0088ff;">0m</span>
-        </div>
-    </div>
-    
-    <div id="customizeMenu" class="customize-menu">
-        <h2>Customize Your Bike</h2>
-        <div>
-            <h3>Bike Color</h3>
-            <div id="bikeColors"></div>
-        </div>
-        <div style="margin-top: 20px;">
-            <h3>Stripe Color</h3>
-            <div id="stripeColors"></div>
-        </div>
-        <button onclick="applyCustomization()" style="margin-top: 20px; padding: 10px 20px; background: #FFD700; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Apply & Reload</button>
-        <button onclick="toggleCustomizeMenu()" style="margin-left: 10px; padding: 10px 20px; background: #666; color: white; border: none; border-radius: 5px; cursor: pointer;">Cancel</button>
-    </div>
     <!-- Simplified controls hint - mobile controls provide the actual interface -->
     <div class="controls">
     </div>
@@ -376,7 +316,20 @@
         <div id="wheelieZone">WHEELIE!</div>
         <div id="wheelieCombo" class="wheelie-combo"></div>
     </div>
-    
+
+    <!-- Speed Vignette - darkens edges at high speed -->
+    <div id="speedVignette"></div>
+
+    <!-- Time of Day Menu -->
+    <div class="time-menu">
+        <h4>TIME OF DAY (T)</h4>
+        <button class="time-button active" data-time="golden">Golden Hour</button>
+        <button class="time-button" data-time="sunset">Sunset</button>
+        <button class="time-button" data-time="twilight">Twilight</button>
+        <button class="time-button" data-time="night">Night</button>
+        <button class="time-button" data-time="dawn">Dawn</button>
+    </div>
+
     <!-- Motorcycle Speedometer -->
     <div class="speedometer">
         <div class="speedo-ring">
@@ -388,89 +341,23 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/build/three.min.js"></script>
+    <script>
+        // Wait for THREE.js to load before loading game scripts
+        if (typeof THREE === 'undefined') {
+            console.error('THREE.js failed to load');
+            alert('THREE.js failed to load. Please refresh the page.');
+        } else {
+            console.log('THREE.js loaded successfully, version:', THREE.REVISION);
+        }
+    </script>
     <script src="js/virtualcontrols.js"></script>
     <script src="js/input.js"></script>
+    <script src="js/particles.js"></script>
     <script src="js/vehicle.js"></script>
     <script src="js/environment.js"></script>
     <script src="js/cones.js"></script>
     <script src="js/traffic.js"></script>
     <script src="js/main.js"></script>
-    <script>
-        const bikeColorOptions = [
-            { name: 'Blue', hex: '0x1a4db3' },
-            { name: 'Red', hex: '0xcc0000' },
-            { name: 'Green', hex: '0x00aa00' },
-            { name: 'Orange', hex: '0xff6600' },
-            { name: 'Purple', hex: '0x8800ff' },
-            { name: 'Yellow', hex: '0xffdd00' },
-            { name: 'Black', hex: '0x1a1a1a' },
-            { name: 'White', hex: '0xf0f0f0' }
-        ];
-        
-        const stripeColorOptions = [
-            { name: 'White', hex: '0xffffff' },
-            { name: 'Black', hex: '0x000000' },
-            { name: 'Red', hex: '0xff0000' },
-            { name: 'Yellow', hex: '0xffff00' },
-            { name: 'Orange', hex: '0xff8800' },
-            { name: 'Green', hex: '0x00ff00' },
-            { name: 'Blue', hex: '0x0088ff' }
-        ];
-        
-        function initCustomizeMenu() {
-            const bikeColorsDiv = document.getElementById('bikeColors');
-            const stripeColorsDiv = document.getElementById('stripeColors');
-            
-            const currentBikeColor = localStorage.getItem('playerBikeColor') || '0x1a4db3';
-            const currentStripeColor = localStorage.getItem('playerStripeColor') || '0xffffff';
-            
-            bikeColorOptions.forEach(color => {
-                const div = document.createElement('div');
-                div.className = 'color-option' + (color.hex === currentBikeColor ? ' selected' : '');
-                div.style.background = '#' + parseInt(color.hex).toString(16).padStart(6, '0');
-                div.title = color.name;
-                div.onclick = () => selectBikeColor(color.hex, div);
-                bikeColorsDiv.appendChild(div);
-            });
-            
-            stripeColorOptions.forEach(color => {
-                const div = document.createElement('div');
-                div.className = 'color-option' + (color.hex === currentStripeColor ? ' selected' : '');
-                div.style.background = '#' + parseInt(color.hex).toString(16).padStart(6, '0');
-                div.title = color.name;
-                div.onclick = () => selectStripeColor(color.hex, div);
-                stripeColorsDiv.appendChild(div);
-            });
-        }
-        
-        let selectedBikeColor = localStorage.getItem('playerBikeColor') || '0x1a4db3';
-        let selectedStripeColor = localStorage.getItem('playerStripeColor') || '0xffffff';
-        
-        function selectBikeColor(hex, element) {
-            selectedBikeColor = hex;
-            document.querySelectorAll('#bikeColors .color-option').forEach(el => el.classList.remove('selected'));
-            element.classList.add('selected');
-        }
-        
-        function selectStripeColor(hex, element) {
-            selectedStripeColor = hex;
-            document.querySelectorAll('#stripeColors .color-option').forEach(el => el.classList.remove('selected'));
-            element.classList.add('selected');
-        }
-        
-        function toggleCustomizeMenu() {
-            const menu = document.getElementById('customizeMenu');
-            menu.classList.toggle('visible');
-        }
-        
-        function applyCustomization() {
-            localStorage.setItem('playerBikeColor', selectedBikeColor);
-            localStorage.setItem('playerStripeColor', selectedStripeColor);
-            location.reload();
-        }
-        
-        initCustomizeMenu();
-    </script>
 </body>
 </html>
