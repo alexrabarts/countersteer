@@ -5,9 +5,9 @@ class Traffic {
         this.cars = [];
         this.motorcycles = [];
         this.maxCars = 1;
-        this.maxMotorcycles = 2;
+        this.maxMotorcycles = 4;
         this.carSpacing = 250;
-        this.motorcycleSpacing = 200;
+        this.motorcycleSpacing = 150;
         
         this.initializeCars();
         this.initializeMotorcycles();
@@ -31,15 +31,17 @@ class Traffic {
     
     initializeMotorcycles() {
         const totalSegments = this.environment.roadPath.length;
+        const spacing = Math.floor(totalSegments / this.maxMotorcycles);
         
         for (let i = 0; i < this.maxMotorcycles; i++) {
-            const startSegment = Math.floor(Math.random() * totalSegments);
+            const startSegment = (i * spacing + Math.floor(Math.random() * spacing * 0.3)) % totalSegments;
             const motorcycle = new AIMotorcycle(this.scene, this.environment, {
                 direction: 1,
                 speed: 30 + Math.random() * 15,
                 startSegment: startSegment,
                 lane: 'left',
-                color: this.getRandomBikeColor()
+                color: this.getRandomBikeColor(),
+                style: this.getRandomBikeStyle()
             });
             this.motorcycles.push(motorcycle);
         }
@@ -57,6 +59,11 @@ class Traffic {
             0x8800ff
         ];
         return colors[Math.floor(Math.random() * colors.length)];
+    }
+    
+    getRandomBikeStyle() {
+        const styles = ['sport', 'cruiser', 'naked'];
+        return styles[Math.floor(Math.random() * styles.length)];
     }
     
     getRandomCarColor() {
@@ -807,6 +814,7 @@ class AIMotorcycle {
         this.currentSegment = options.startSegment || 0;
         this.lane = options.lane || 'left';
         this.color = options.color || 0xff0000;
+        this.style = options.style || 'sport';
         this.segmentProgress = 0;
         this.leanAngle = 0;
         this.overtaking = false;
@@ -841,7 +849,18 @@ class AIMotorcycle {
         this.frontWheel.castShadow = true;
         this.bikeGroup.add(this.frontWheel);
         
-        const frameGeometry = new THREE.BoxGeometry(0.08, 0.7, 1.0);
+        let frameGeometry, tankGeometry;
+        if (this.style === 'sport') {
+            frameGeometry = new THREE.BoxGeometry(0.08, 0.7, 1.0);
+            tankGeometry = new THREE.BoxGeometry(0.25, 0.2, 0.4);
+        } else if (this.style === 'cruiser') {
+            frameGeometry = new THREE.BoxGeometry(0.1, 0.5, 1.2);
+            tankGeometry = new THREE.BoxGeometry(0.3, 0.25, 0.5);
+        } else {
+            frameGeometry = new THREE.BoxGeometry(0.06, 0.8, 0.9);
+            tankGeometry = new THREE.BoxGeometry(0.22, 0.18, 0.35);
+        }
+        
         const frameMaterial = new THREE.MeshStandardMaterial({ 
             color: this.color, 
             roughness: 0.25, 
@@ -852,7 +871,6 @@ class AIMotorcycle {
         this.frame.castShadow = true;
         this.bikeGroup.add(this.frame);
         
-        const tankGeometry = new THREE.BoxGeometry(0.25, 0.2, 0.4);
         this.tank = new THREE.Mesh(tankGeometry, frameMaterial);
         this.tank.position.set(0, 0.75, 0.1);
         this.tank.castShadow = true;
@@ -902,6 +920,35 @@ class AIMotorcycle {
         this.exhaust.position.set(0.12, 0.35, -0.4);
         this.exhaust.castShadow = true;
         this.bikeGroup.add(this.exhaust);
+        
+        const brakeLightGeometry = new THREE.BoxGeometry(0.08, 0.04, 0.03);
+        const brakeLightMaterial = new THREE.MeshStandardMaterial({
+            color: 0xff0000,
+            emissive: 0x000000,
+            emissiveIntensity: 0,
+            roughness: 0.3,
+            metalness: 0.2
+        });
+        this.brakeLight = new THREE.Mesh(brakeLightGeometry, brakeLightMaterial);
+        this.brakeLight.position.set(0, 0.7, -0.62);
+        this.brakeLight.castShadow = true;
+        this.bikeGroup.add(this.brakeLight);
+        
+        const headlightGeometry = new THREE.CylinderGeometry(0.06, 0.08, 0.06, 10);
+        const headlightMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            emissive: 0xffffee,
+            emissiveIntensity: 0.6,
+            roughness: 0.1,
+            metalness: 0.4
+        });
+        this.headlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+        this.headlight.rotation.z = Math.PI / 2;
+        this.headlight.position.set(0, 0.6, 0.62);
+        this.headlight.castShadow = true;
+        this.bikeGroup.add(this.headlight);
+        
+        this.isBraking = false;
         
         this.scene.add(this.bikeGroup);
     }
@@ -957,6 +1004,8 @@ class AIMotorcycle {
         this.rearWheel.rotation.x = this.wheelRotation;
         this.frontWheel.rotation.x = this.wheelRotation;
         
+        const previousSpeed = this.currentSpeed;
+        
         if (playerPosition) {
             const dx = this.bikeGroup.position.x - playerPosition.x;
             const dz = this.bikeGroup.position.z - playerPosition.z;
@@ -969,6 +1018,15 @@ class AIMotorcycle {
             } else {
                 this.currentSpeed = this.baseSpeed;
             }
+        }
+        
+        this.isBraking = this.currentSpeed < previousSpeed;
+        if (this.isBraking) {
+            this.brakeLight.material.emissive.setHex(0xff0000);
+            this.brakeLight.material.emissiveIntensity = 1.0;
+        } else {
+            this.brakeLight.material.emissive.setHex(0x000000);
+            this.brakeLight.material.emissiveIntensity = 0;
         }
         
         if (this.overtaking) {
