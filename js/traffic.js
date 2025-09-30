@@ -33,15 +33,28 @@ class Traffic {
         const totalSegments = this.environment.roadPath.length;
         const spacing = Math.floor(totalSegments / this.maxMotorcycles);
         
+        const skillLevels = ['slow', 'average', 'fast', 'expert'];
+        
         for (let i = 0; i < this.maxMotorcycles; i++) {
             const startSegment = (i * spacing + Math.floor(Math.random() * spacing * 0.3)) % totalSegments;
+            const skill = skillLevels[i % skillLevels.length];
+            let baseSpeed;
+            
+            switch(skill) {
+                case 'slow': baseSpeed = 28 + Math.random() * 5; break;
+                case 'average': baseSpeed = 33 + Math.random() * 5; break;
+                case 'fast': baseSpeed = 38 + Math.random() * 5; break;
+                case 'expert': baseSpeed = 43 + Math.random() * 7; break;
+            }
+            
             const motorcycle = new AIMotorcycle(this.scene, this.environment, {
                 direction: 1,
-                speed: 30 + Math.random() * 15,
+                speed: baseSpeed,
                 startSegment: startSegment,
                 lane: 'left',
                 color: this.getRandomBikeColor(),
-                style: this.getRandomBikeStyle()
+                style: this.getRandomBikeStyle(),
+                skill: skill
             });
             this.motorcycles.push(motorcycle);
         }

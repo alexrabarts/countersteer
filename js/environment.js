@@ -3942,12 +3942,27 @@ class Environment {
             });
 
             const leftPole = new THREE.Mesh(poleGeometry, poleMaterial);
-            leftPole.position.set(-6, 2.5, 0); // Closer together, lower height
+            leftPole.position.set(-6, 2.5, 0);
             gateGroup.add(leftPole);
 
             const rightPole = new THREE.Mesh(poleGeometry, poleMaterial);
-            rightPole.position.set(6, 2.5, 0); // Closer together, lower height
+            rightPole.position.set(6, 2.5, 0);
             gateGroup.add(rightPole);
+            
+            // Add glowing banner across checkpoint
+            const bannerGeometry = new THREE.PlaneGeometry(12, 0.5);
+            const bannerMaterial = new THREE.MeshStandardMaterial({
+                color: 0x00ff00,
+                emissive: 0x00ff00,
+                emissiveIntensity: 0.5,
+                transparent: true,
+                opacity: 0.6,
+                side: THREE.DoubleSide
+            });
+            const banner = new THREE.Mesh(bannerGeometry, bannerMaterial);
+            banner.position.set(0, 4, 0);
+            banner.rotation.y = Math.PI / 2;
+            gateGroup.add(banner);
             
             // Position and orient the checkpoint
             gateGroup.position.set(point.x, point.y, point.z);

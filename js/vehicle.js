@@ -29,6 +29,8 @@ class Vehicle {
         this.hitGround = false;
         this.fallStartY = 0;
         this.groundHitLogged = false;
+        this.crashRecoveryTime = 0;
+        this.crashPenaltyApplied = false;
         
         // Jump state
         this.isJumping = false;
@@ -1122,7 +1124,12 @@ class Vehicle {
         this.hitGround = false;
         this.fallStartY = 0;
         this.groundHitLogged = false;
-        this.frame.material.color.setHex(0x0066cc); // Reset to blue
+        this.crashRecoveryTime = 0;
+        this.crashPenaltyApplied = false;
+        
+        const bikeColorHex = parseInt(this.bikeColor);
+        this.frame.material.color.setHex(bikeColorHex);
+        this.fuelTank.material.color.setHex(bikeColorHex);
         this.group.rotation.set(0, 0, 0);
         this.updateMesh();
     }

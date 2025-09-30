@@ -132,8 +132,12 @@ class Game {
     init() {
         this.scene = new THREE.Scene();
         
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            powerPreference: 'high-performance'
+        });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.shadowMap.autoUpdate = true;
@@ -382,6 +386,14 @@ class Game {
         }
         
         this.camera.position.copy(this.currentCameraPos);
+        
+        // Additional camera shake at high speeds (outside onboard mode)
+        if (this.cameraMode !== 2) {
+            const speedFactor = this.vehicle.speed / this.vehicle.maxSpeed;
+            const shakeIntensity = speedFactor * 0.05;
+            this.camera.position.x += (Math.random() - 0.5) * shakeIntensity;
+            this.camera.position.y += (Math.random() - 0.5) * shakeIntensity * 0.3;
+        }
 
         // Mode-specific FOV and look target
         const speedRatio = this.vehicle.speed / this.vehicle.maxSpeed;
@@ -418,6 +430,13 @@ class Game {
             const speedFactor = this.vehicle.speed / this.vehicle.maxSpeed;
             this.camera.fov = (this.cameraMode === 1 ? 65 : 70) + speedFactor * 15; // Wider FOV for high view
             this.camera.updateProjectionMatrix();
+            
+            // Camera shake at high speeds
+            if (!this.cameraShakeOffset) this.cameraShakeOffset = new THREE.Vector3();
+            const shakeIntensity = speedFactor * 0.08;
+            this.cameraShakeOffset.x = (Math.random() - 0.5) * shakeIntensity;
+            this.cameraShakeOffset.y = (Math.random() - 0.5) * shakeIntensity * 0.5;
+            this.cameraShakeOffset.z = (Math.random() - 0.5) * shakeIntensity;
             
             // Look ahead of vehicle for better anticipation on mountain roads
             const lookAheadDistance = (this.cameraMode === 1 ? 5 : 3) + speedRatio * 7; // Look further in high view
