@@ -248,6 +248,10 @@ class Game {
         this.cameraLerpFactor = this.cameraModes[0].lerpFactor;
         this.cameraLateralOffset = 0; // Track lateral offset for smooth side movement
         this.previousYawAngle = 0; // Track yaw changes for lateral movement
+        
+        // Camera banking state - persists across frames to prevent jumps
+        this.currentCameraBanking = 0;
+        
         console.log('Camera setup complete - starting intro animation');
     }
 
@@ -284,10 +288,20 @@ class Game {
                 this.currentLookTarget.copy(this.vehicle.position);
                 this.currentLookTarget.y += 1;
                 
+                // Reset banking state
+                this.currentCameraBanking = 0;
+                
                 console.log('Camera intro complete - smooth transition to follow camera');
             }
             
             return; // Skip normal camera update during intro
+        }
+        
+        // Safety check - if vehicle doesn't exist or lean angle is extreme, reset banking
+        if (!this.vehicle || Math.abs(this.vehicle.leanAngle) > Math.PI) {
+            this.currentCameraBanking = THREE.MathUtils.lerp(this.currentCameraBanking, 0, 0.2);
+            this.camera.rotation.z = this.currentCameraBanking;
+            return;
         }
         
         // Normal camera follow behavior
@@ -377,19 +391,26 @@ class Game {
             
             const lookTarget = this.vehicle.position.clone().add(lookAhead);
             
-            // Add bike lean to camera rotation for immersive feel
-            this.camera.rotation.z = -this.vehicle.leanAngle * 0.5;
-            
             this.currentLookTarget.lerp(lookTarget, 0.3); // Fast response for onboard
+            
+            // Onboard camera banking - calculate BEFORE lookAt with custom up vector
+            // Onboard view banks WITH the bike - aggressive tilt for immersive feel
+            const onboardBankAmount = this.vehicle.leanAngle * 0.9; // 90% banking, same direction
+            const targetOnboardBank = THREE.MathUtils.clamp(onboardBankAmount, -0.7, 0.7); // Max ~40° bank
+            this.currentCameraBanking = THREE.MathUtils.lerp(this.currentCameraBanking, targetOnboardBank, 0.2);
+            
+            // Create custom up vector rotated by banking amount
+            const bankMatrix = new THREE.Matrix4().makeRotationZ(this.currentCameraBanking);
+            const upVector = new THREE.Vector3(0, 1, 0).applyMatrix4(bankMatrix);
+            
+            // Apply banking through custom up vector, then lookAt
+            this.camera.up.copy(upVector);
             this.camera.lookAt(this.currentLookTarget);
         } else {
             // Standard and High View cameras
             const speedFactor = this.vehicle.speed / this.vehicle.maxSpeed;
             this.camera.fov = (this.cameraMode === 1 ? 65 : 70) + speedFactor * 15; // Wider FOV for high view
             this.camera.updateProjectionMatrix();
-            
-            // Reset any Z rotation from onboard mode
-            this.camera.rotation.z = 0;
             
             // Look ahead of vehicle for better anticipation on mountain roads
             const lookAheadDistance = (this.cameraMode === 1 ? 5 : 3) + speedRatio * 7; // Look further in high view
@@ -405,6 +426,19 @@ class Game {
             lateralVector.applyEuler(vehicleRotation);
             lookTarget.add(lateralVector);
             this.currentLookTarget.lerp(lookTarget, this.cameraLerpFactor * 1.5);
+            
+            // Camera banking BEFORE lookAt - subtle lean feedback
+            const bankFactor = this.cameraMode === 1 ? 0.15 : 0.25; // High view more subtle
+            const bankAmount = this.vehicle.leanAngle * bankFactor; // Positive lean = right lean
+            const targetBank = THREE.MathUtils.clamp(bankAmount, -0.3, 0.3); // Max ~17° bank
+            this.currentCameraBanking = THREE.MathUtils.lerp(this.currentCameraBanking, targetBank, 0.15);
+            
+            // Create custom up vector rotated by banking amount (negative for camera banking opposite to lean)
+            const bankMatrix = new THREE.Matrix4().makeRotationZ(this.currentCameraBanking);
+            const upVector = new THREE.Vector3(0, 1, 0).applyMatrix4(bankMatrix);
+            
+            // Apply banking through custom up vector, then lookAt
+            this.camera.up.copy(upVector);
             this.camera.lookAt(this.currentLookTarget);
         }
         
