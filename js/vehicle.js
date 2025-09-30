@@ -10,9 +10,9 @@ class Vehicle {
         // Vehicle parameters
         this.speed = 20; // m/s (starts at ~72 km/h)
         this.minSpeed = 5; // m/s (~18 km/h) - below this, bike falls
-        this.maxSpeed = 60; // m/s (~216 km/h)
-        this.acceleration = 12; // m/s²
-        this.brakeForce = 15; // m/s²
+        this.maxSpeed = 65; // m/s (~234 km/h) - increased for more thrill
+        this.acceleration = 14; // m/s² - snappier acceleration
+        this.brakeForce = 18; // m/s² - better braking
         this.wheelbase = 1.4; // metres
         this.cgHeight = 0.6; // centre of gravity height
         this.mass = 200; // kg
@@ -66,9 +66,9 @@ class Vehicle {
         this.lastPerpDistance = 0; // For hysteresis calculations
 
          // Physics tuning
-        this.steeringForce = 8; // How much force steering creates
-        this.leanDamping = 0.02; // Natural damping
-        this.maxLeanAngle = Math.PI / 3; // 60 degrees before crash
+        this.steeringForce = 9; // How much force steering creates - more responsive
+        this.leanDamping = 0.018; // Natural damping - slightly less for more agility
+        this.maxLeanAngle = Math.PI / 2.8; // ~64 degrees before crash - slightly more forgiving
         
         this.createMesh();
     }
@@ -199,6 +199,20 @@ class Vehicle {
         this.numberPlate = new THREE.Mesh(numberPlateGeometry, numberPlateMaterial);
         this.numberPlate.position.set(0, 0.65, -0.72);
         this.numberPlate.castShadow = true;
+        
+        // Windscreen/fairing
+        const windscreenGeometry = new THREE.BoxGeometry(0.35, 0.3, 0.02);
+        const windscreenMaterial = new THREE.MeshStandardMaterial({
+            color: 0x1a1a3a,
+            roughness: 0.05,
+            metalness: 0.1,
+            transparent: true,
+            opacity: 0.4
+        });
+        this.windscreen = new THREE.Mesh(windscreenGeometry, windscreenMaterial);
+        this.windscreen.position.set(0, 0.95, 0.5);
+        this.windscreen.rotation.x = -0.2;
+        this.windscreen.castShadow = true;
 
         // Handlebars
         const handlebarGeometry = new THREE.BoxGeometry(0.6, 0.05, 0.05);
@@ -327,6 +341,7 @@ class Vehicle {
         this.group.add(this.leftFootpeg);
         this.group.add(this.rightFootpeg);
         this.group.add(this.handlebar);
+        this.group.add(this.windscreen);
         this.group.add(this.rider);
         this.group.add(this.headlight);
         this.group.add(this.brakeLight);

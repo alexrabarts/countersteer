@@ -634,6 +634,24 @@ class Car {
         
         // Move along the road
         const segmentLength = 20;
+        
+        // Store previous speed for brake light logic
+        if (!this.previousSpeed) this.previousSpeed = this.currentSpeed;
+        const speedChange = this.currentSpeed - this.previousSpeed;
+        
+        // Brake lights when decelerating
+        if (speedChange < -0.5) {
+            this.leftRearIndicator.material.emissive.setHex(0xff0000);
+            this.leftRearIndicator.material.emissiveIntensity = 1.0;
+            this.rightRearIndicator.material.emissive.setHex(0xff0000);
+            this.rightRearIndicator.material.emissiveIntensity = 1.0;
+        } else if (this.indicatorState === 'off') {
+            this.leftRearIndicator.material.emissiveIntensity = 0;
+            this.rightRearIndicator.material.emissiveIntensity = 0;
+        }
+        
+        this.previousSpeed = this.currentSpeed;
+        
         const distanceToMove = this.currentSpeed * deltaTime;
         const segmentsToMove = distanceToMove / segmentLength;
         
@@ -947,6 +965,17 @@ class AIMotorcycle {
         this.headlight.position.set(0, 0.6, 0.62);
         this.headlight.castShadow = true;
         this.bikeGroup.add(this.headlight);
+        
+        const numberPlateGeometry = new THREE.BoxGeometry(0.12, 0.06, 0.01);
+        const numberPlateMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.7,
+            metalness: 0.1
+        });
+        this.numberPlate = new THREE.Mesh(numberPlateGeometry, numberPlateMaterial);
+        this.numberPlate.position.set(0, 0.58, -0.64);
+        this.numberPlate.castShadow = true;
+        this.bikeGroup.add(this.numberPlate);
         
         this.isBraking = false;
         
