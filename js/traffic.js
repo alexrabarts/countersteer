@@ -29,16 +29,18 @@ class Traffic {
     
     getRandomCarColor() {
         const colors = [
-            0xff0000, // Red
-            0x0000ff, // Blue
-            0xffff00, // Yellow
-            0x00ff00, // Green
-            0xffa500, // Orange
-            0x800080, // Purple
-            0xffffff, // White
-            0x333333, // Dark gray
-            0x00ffff, // Cyan
-            0x8b4513  // Brown
+            0xf5f5f5, // White
+            0xc0c0c0, // Silver
+            0x1a1a1a, // Black
+            0x404040, // Dark gray
+            0x606060, // Medium gray
+            0x8b0000, // Dark red
+            0x1a3a6b, // Navy blue
+            0x1b4d1b, // Forest green
+            0x2a2a2a, // Charcoal
+            0x8b4513, // Saddle brown
+            0xd4af6a, // Champagne gold
+            0x4a4a4a  // Slate gray
         ];
         return colors[Math.floor(Math.random() * colors.length)];
     }
@@ -154,6 +156,15 @@ class Car {
         }
         bodyGeometry.computeVertexNormals();
         
+        // Decide if this car should be two-tone
+        const isTwoTone = Math.random() < 0.25;
+        let roofColor = this.color;
+        
+        if (isTwoTone) {
+            const twoToneOptions = [0x1a1a1a, 0xf5f5f5, 0xc0c0c0];
+            roofColor = twoToneOptions[Math.floor(Math.random() * twoToneOptions.length)];
+        }
+        
         const bodyMaterial = new THREE.MeshStandardMaterial({ 
             color: this.color,
             roughness: 0.25,
@@ -186,7 +197,7 @@ class Car {
         cabinGeometry.computeVertexNormals();
         
         const cabinMaterial = new THREE.MeshStandardMaterial({ 
-            color: this.color,
+            color: roofColor,
             roughness: 0.3,
             metalness: 0.7
         });
@@ -199,10 +210,10 @@ class Car {
         
         // Windows - using planes for cleaner look
         const windowMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x224466,
-            roughness: 0.1,
-            metalness: 0.5,
-            opacity: 0.7,
+            color: 0x1a2a3a,
+            roughness: 0.05,
+            metalness: 0.6,
+            opacity: 0.5,
             transparent: true
         });
         
@@ -244,12 +255,35 @@ class Car {
         rightRearWindow.rotation.y = -Math.PI / 2;
         this.carGroup.add(rightRearWindow);
         
+        // Chrome window trim
+        const chromeMaterial = new THREE.MeshStandardMaterial({
+            color: 0xc0c0c0,
+            roughness: 0.15,
+            metalness: 0.95
+        });
+        
+        // Window trim strips
+        const trimGeometry = new THREE.BoxGeometry(1.8, 0.02, 0.02);
+        
+        // Left side trim
+        const leftTrim = new THREE.Mesh(trimGeometry, chromeMaterial);
+        leftTrim.position.set(0, 1.22, -0.3);
+        leftTrim.rotation.y = Math.PI / 2;
+        this.carGroup.add(leftTrim);
+        
+        // Right side trim
+        const rightTrim = new THREE.Mesh(trimGeometry, chromeMaterial);
+        rightTrim.position.set(0, 1.22, -0.3);
+        rightTrim.rotation.y = Math.PI / 2;
+        rightTrim.position.x = 0;
+        this.carGroup.add(rightTrim);
+        
         // Wheels with better detail
         const wheelGeometry = new THREE.CylinderGeometry(0.32, 0.32, 0.28, 20);
         const wheelMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0x1a1a1a,
-            roughness: 0.95,
-            metalness: 0.05
+            color: 0x0d0d0d,
+            roughness: 0.98,
+            metalness: 0.0
         });
         
         // Rim with spokes pattern
@@ -271,6 +305,7 @@ class Car {
             { x: -0.85, z: -1.35 }
         ];
         
+        this.wheels = [];
         wheelPositions.forEach(pos => {
             const wheelGroup = new THREE.Group();
             
@@ -301,6 +336,7 @@ class Car {
             wheelGroup.castShadow = true;
             wheelGroup.receiveShadow = true;
             this.carGroup.add(wheelGroup);
+            this.wheels.push(wheelGroup);
         });
         
         // Headlights - circular for more realistic look
@@ -308,7 +344,7 @@ class Car {
         const headlightMaterial = new THREE.MeshStandardMaterial({ 
             color: 0xffffff,
             emissive: 0xffffee,
-            emissiveIntensity: 0.5,
+            emissiveIntensity: 0.8,
             roughness: 0.05,
             metalness: 0.5
         });
@@ -383,6 +419,34 @@ class Car {
         const rightMirror = new THREE.Mesh(mirrorGeometry, mirrorMaterial);
         rightMirror.position.set(-0.98, 1.0, 0.3);
         this.carGroup.add(rightMirror);
+        
+        // License plates
+        const plateMaterial = new THREE.MeshStandardMaterial({
+            color: 0xf5f5f5,
+            roughness: 0.6,
+            metalness: 0.1
+        });
+        
+        const frontPlateGeometry = new THREE.BoxGeometry(0.4, 0.12, 0.02);
+        const frontPlate = new THREE.Mesh(frontPlateGeometry, plateMaterial);
+        frontPlate.position.set(0, 0.15, 2.18);
+        this.carGroup.add(frontPlate);
+        
+        const rearPlateGeometry = new THREE.BoxGeometry(0.4, 0.12, 0.02);
+        const rearPlate = new THREE.Mesh(rearPlateGeometry, plateMaterial);
+        rearPlate.position.set(0, 0.15, -2.18);
+        this.carGroup.add(rearPlate);
+        
+        // Antenna on roof
+        const antennaMaterial = new THREE.MeshStandardMaterial({
+            color: 0x1a1a1a,
+            roughness: 0.5,
+            metalness: 0.3
+        });
+        const antennaGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.15, 8);
+        const antenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+        antenna.position.set(0.7, 1.31, -0.8);
+        this.carGroup.add(antenna);
         
         this.scene.add(this.carGroup);
     }
@@ -461,6 +525,18 @@ class Car {
         const segmentLength = 20; // Match environment segment length
         const distanceToMove = this.currentSpeed * deltaTime;
         const segmentsToMove = distanceToMove / segmentLength;
+        
+        // Rotate wheels based on speed
+        if (!this.wheelRotation) this.wheelRotation = 0;
+        const wheelCircumference = 2 * Math.PI * 0.32;
+        const rotationSpeed = this.currentSpeed / wheelCircumference;
+        this.wheelRotation += rotationSpeed * deltaTime * this.direction;
+        
+        if (this.wheels) {
+            this.wheels.forEach(wheel => {
+                wheel.rotation.x = this.wheelRotation;
+            });
+        }
         
         this.segmentProgress += segmentsToMove * this.direction;
         

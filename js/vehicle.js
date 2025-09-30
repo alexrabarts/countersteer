@@ -78,12 +78,41 @@ class Vehicle {
         
         // Rear wheel
         const rearWheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.15, 16);
-        const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.7, metalness: 0.0 });
+        const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.95, metalness: 0.0 });
         this.rearWheel = new THREE.Mesh(rearWheelGeometry, wheelMaterial);
         this.rearWheel.rotation.z = Math.PI / 2;
         this.rearWheel.position.set(0, 0.3, -0.7);
         this.rearWheel.castShadow = true;
         this.rearWheel.receiveShadow = true;
+        
+        // Rear disc brake
+        const discGeometry = new THREE.CylinderGeometry(0.25, 0.25, 0.02, 20);
+        const discMaterial = new THREE.MeshStandardMaterial({ color: 0x808080, roughness: 0.3, metalness: 0.9 });
+        this.rearDisc = new THREE.Mesh(discGeometry, discMaterial);
+        this.rearDisc.rotation.z = Math.PI / 2;
+        this.rearDisc.position.set(0.09, 0.3, -0.7);
+        this.rearDisc.castShadow = true;
+        this.rearDisc.receiveShadow = true;
+        
+        // Rear brake caliper
+        const caliperGeometry = new THREE.BoxGeometry(0.06, 0.12, 0.08);
+        const caliperMaterial = new THREE.MeshStandardMaterial({ color: 0xcc0000, roughness: 0.5, metalness: 0.3 });
+        this.rearCaliper = new THREE.Mesh(caliperGeometry, caliperMaterial);
+        this.rearCaliper.position.set(0.12, 0.22, -0.7);
+        this.rearCaliper.castShadow = true;
+
+        // Front forks - suspension
+        const forkMaterial = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.4, metalness: 0.9 });
+        const leftForkGeometry = new THREE.CylinderGeometry(0.025, 0.025, 0.5, 12);
+        this.leftFork = new THREE.Mesh(leftForkGeometry, forkMaterial);
+        this.leftFork.position.set(-0.1, 0.55, 0.7);
+        this.leftFork.castShadow = true;
+        this.leftFork.receiveShadow = true;
+        
+        this.rightFork = new THREE.Mesh(leftForkGeometry, forkMaterial);
+        this.rightFork.position.set(0.1, 0.55, 0.7);
+        this.rightFork.castShadow = true;
+        this.rightFork.receiveShadow = true;
 
         // Front wheel
         this.frontWheel = new THREE.Mesh(rearWheelGeometry, wheelMaterial);
@@ -91,14 +120,62 @@ class Vehicle {
         this.frontWheel.position.set(0, 0.3, 0.7);
         this.frontWheel.castShadow = true;
         this.frontWheel.receiveShadow = true;
+        
+        // Front disc brake
+        this.frontDisc = new THREE.Mesh(discGeometry, discMaterial);
+        this.frontDisc.rotation.z = Math.PI / 2;
+        this.frontDisc.position.set(0.09, 0.3, 0.7);
+        this.frontDisc.castShadow = true;
+        this.frontDisc.receiveShadow = true;
+        
+        // Front brake caliper
+        this.frontCaliper = new THREE.Mesh(caliperGeometry, caliperMaterial);
+        this.frontCaliper.position.set(0.12, 0.22, 0.7);
+        this.frontCaliper.castShadow = true;
 
-        // Frame
+        // Frame - improved shape with fuel tank
         const frameGeometry = new THREE.BoxGeometry(0.1, 0.8, 1.2);
-        const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x0066cc, roughness: 0.3, metalness: 0.8 });
+        const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x1a4db3, roughness: 0.3, metalness: 0.7 });
         this.frame = new THREE.Mesh(frameGeometry, frameMaterial);
         this.frame.position.set(0, 0.6, 0);
         this.frame.castShadow = true;
         this.frame.receiveShadow = true;
+        
+        // Fuel tank - wider in the middle
+        const tankGeometry = new THREE.BoxGeometry(0.3, 0.25, 0.5);
+        const tankMaterial = new THREE.MeshStandardMaterial({ color: 0x1a4db3, roughness: 0.2, metalness: 0.8 });
+        this.fuelTank = new THREE.Mesh(tankGeometry, tankMaterial);
+        this.fuelTank.position.set(0, 0.85, 0.2);
+        this.fuelTank.castShadow = true;
+        this.fuelTank.receiveShadow = true;
+        
+        // Racing stripes on tank
+        const stripeGeometry = new THREE.BoxGeometry(0.08, 0.26, 0.52);
+        const stripeMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffffff, 
+            roughness: 0.15, 
+            metalness: 0.9,
+            emissive: 0xffffff,
+            emissiveIntensity: 0.05
+        });
+        this.tankStripe = new THREE.Mesh(stripeGeometry, stripeMaterial);
+        this.tankStripe.position.set(0, 0.86, 0.2);
+        this.tankStripe.castShadow = true;
+
+        // Headlight
+        const headlightGeometry = new THREE.CylinderGeometry(0.08, 0.1, 0.08, 12);
+        const headlightMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffffff,
+            emissive: 0xffffee,
+            emissiveIntensity: 0.7,
+            roughness: 0.1,
+            metalness: 0.5
+        });
+        this.headlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+        this.headlight.rotation.z = Math.PI / 2;
+        this.headlight.position.set(0, 0.7, 0.65);
+        this.headlight.castShadow = true;
+        this.headlight.receiveShadow = true;
 
         // Brake light
         const brakeGeometry = new THREE.BoxGeometry(0.05, 0.05, 0.05);
@@ -107,6 +184,17 @@ class Vehicle {
         this.brakeLight.position.set(0, 0.8, -0.6);
         this.brakeLight.castShadow = true;
         this.brakeLight.receiveShadow = true;
+        
+        // Rear number plate
+        const numberPlateGeometry = new THREE.BoxGeometry(0.15, 0.08, 0.01);
+        const numberPlateMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xf5f5f5,
+            roughness: 0.6,
+            metalness: 0.1
+        });
+        this.numberPlate = new THREE.Mesh(numberPlateGeometry, numberPlateMaterial);
+        this.numberPlate.position.set(0, 0.65, -0.72);
+        this.numberPlate.castShadow = true;
 
         // Handlebars
         const handlebarGeometry = new THREE.BoxGeometry(0.6, 0.05, 0.05);
@@ -128,25 +216,35 @@ class Vehicle {
         this.rightMirror.castShadow = true;
         this.rightMirror.receiveShadow = true;
 
+        // Seat
+        const seatGeometry = new THREE.BoxGeometry(0.35, 0.12, 0.5);
+        const seatMaterial = new THREE.MeshStandardMaterial({ color: 0x2a1810, roughness: 0.85, metalness: 0.0 });
+        this.seat = new THREE.Mesh(seatGeometry, seatMaterial);
+        this.seat.position.set(0, 0.65, -0.1);
+        this.seat.castShadow = true;
+        this.seat.receiveShadow = true;
+
         // Rider
         const riderGeometry = new THREE.BoxGeometry(0.3, 0.6, 0.2);
-        const riderMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.8, metalness: 0.0 });
+        const riderMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6, metalness: 0.1 });
         this.rider = new THREE.Mesh(riderGeometry, riderMaterial);
         this.rider.position.set(0, 1.2, 0);
         this.rider.castShadow = true;
         this.rider.receiveShadow = true;
 
-        // Legs
+        // Legs - positioned more realistically on footpegs
         const legGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.4, 8);
-        const legMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff, roughness: 0.8, metalness: 0.0 });
+        const legMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a4a, roughness: 0.7, metalness: 0.1 });
         this.leftLeg = new THREE.Mesh(legGeometry, legMaterial);
-        this.leftLeg.position.set(-0.1, -0.5, 0);
+        this.leftLeg.position.set(-0.12, -0.45, -0.05);
+        this.leftLeg.rotation.z = 0.15;
         this.leftLeg.castShadow = true;
         this.leftLeg.receiveShadow = true;
         this.rider.add(this.leftLeg);
 
         this.rightLeg = new THREE.Mesh(legGeometry, legMaterial);
-        this.rightLeg.position.set(0.1, -0.5, 0);
+        this.rightLeg.position.set(0.12, -0.45, -0.05);
+        this.rightLeg.rotation.z = -0.15;
         this.rightLeg.castShadow = true;
         this.rightLeg.receiveShadow = true;
         this.rider.add(this.rightLeg);
@@ -159,15 +257,80 @@ class Vehicle {
         this.helmet.castShadow = true;
         this.helmet.receiveShadow = true;
         this.rider.add(this.helmet);
+        
+        // Helmet visor
+        const visorGeometry = new THREE.SphereGeometry(0.16, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+        const visorMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x1a1a1a, 
+            roughness: 0.1, 
+            metalness: 0.3,
+            transparent: true,
+            opacity: 0.6
+        });
+        this.visor = new THREE.Mesh(visorGeometry, visorMaterial);
+        this.visor.position.set(0, 0.25, 0);
+        this.visor.rotation.x = -0.1;
+        this.rider.add(this.visor);
+
+        // Footpegs
+        const footpegGeometry = new THREE.BoxGeometry(0.08, 0.02, 0.04);
+        const footpegMaterial = new THREE.MeshStandardMaterial({ color: 0x808080, roughness: 0.4, metalness: 0.8 });
+        
+        this.leftFootpeg = new THREE.Mesh(footpegGeometry, footpegMaterial);
+        this.leftFootpeg.position.set(-0.2, 0.35, -0.2);
+        this.leftFootpeg.castShadow = true;
+        
+        this.rightFootpeg = new THREE.Mesh(footpegGeometry, footpegMaterial);
+        this.rightFootpeg.position.set(0.2, 0.35, -0.2);
+        this.rightFootpeg.castShadow = true;
+
+        // Exhaust pipes - chrome
+        const exhaustGeometry = new THREE.CylinderGeometry(0.04, 0.05, 0.6, 12);
+        const exhaustMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xc0c0c0, 
+            roughness: 0.1, 
+            metalness: 1.0,
+            emissive: 0x331100,
+            emissiveIntensity: 0.1
+        });
+        
+        this.leftExhaust = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
+        this.leftExhaust.rotation.x = Math.PI / 2;
+        this.leftExhaust.rotation.z = -0.2;
+        this.leftExhaust.position.set(-0.15, 0.4, -0.5);
+        this.leftExhaust.castShadow = true;
+        this.leftExhaust.receiveShadow = true;
+        
+        this.rightExhaust = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
+        this.rightExhaust.rotation.x = Math.PI / 2;
+        this.rightExhaust.rotation.z = 0.2;
+        this.rightExhaust.position.set(0.15, 0.4, -0.5);
+        this.rightExhaust.castShadow = true;
+        this.rightExhaust.receiveShadow = true;
 
         this.group.add(this.rearWheel);
+        this.group.add(this.rearDisc);
+        this.group.add(this.rearCaliper);
+        this.group.add(this.leftFork);
+        this.group.add(this.rightFork);
         this.group.add(this.frontWheel);
+        this.group.add(this.frontDisc);
+        this.group.add(this.frontCaliper);
         this.group.add(this.frame);
+        this.group.add(this.fuelTank);
+        this.group.add(this.tankStripe);
+        this.group.add(this.seat);
+        this.group.add(this.leftFootpeg);
+        this.group.add(this.rightFootpeg);
         this.group.add(this.handlebar);
         this.group.add(this.rider);
+        this.group.add(this.headlight);
         this.group.add(this.brakeLight);
+        this.group.add(this.numberPlate);
         this.group.add(this.leftMirror);
         this.group.add(this.rightMirror);
+        this.group.add(this.leftExhaust);
+        this.group.add(this.rightExhaust);
         
         this.scene.add(this.group);
     }
@@ -813,6 +976,16 @@ class Vehicle {
     updateMesh() {
         this.group.position.copy(this.position);
         this.group.rotation.y = this.yawAngle;
+        
+        // Rotate wheels and discs based on speed
+        if (!this.wheelRotation) this.wheelRotation = 0;
+        const wheelCircumference = 2 * Math.PI * 0.3; // 2πr where r=0.3
+        const rotationSpeed = this.speed / wheelCircumference;
+        this.wheelRotation += rotationSpeed * (1/60); // Approximate frame time
+        this.rearWheel.rotation.x = this.wheelRotation;
+        this.frontWheel.rotation.x = this.wheelRotation;
+        this.rearDisc.rotation.x = this.wheelRotation;
+        this.frontDisc.rotation.x = this.wheelRotation;
         
         if (this.crashed) {
             // Fall over animation
