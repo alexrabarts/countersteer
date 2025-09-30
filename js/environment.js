@@ -18,14 +18,50 @@ class Environment {
         this.createCheckpoints(); // Add scoring checkpoints
     }
     
+    displaceVertices(geometry, amount) {
+        const positions = geometry.attributes.position;
+        const vertex = new THREE.Vector3();
+        
+        // Use noise-like function for continuous surface deformation
+        const noise = (x, y, z) => {
+            // Multiple octaves of sine waves for pseudo-noise
+            const scale1 = 2.0;
+            const scale2 = 5.0;
+            const scale3 = 10.0;
+            
+            return (
+                Math.sin(x * scale1 + y * scale1) * Math.cos(z * scale1) * 0.5 +
+                Math.sin(x * scale2 - z * scale2) * Math.cos(y * scale2) * 0.3 +
+                Math.sin(y * scale3 + z * scale3) * Math.cos(x * scale3) * 0.2
+            );
+        };
+        
+        for (let i = 0; i < positions.count; i++) {
+            vertex.fromBufferAttribute(positions, i);
+            const distance = vertex.length();
+            
+            // Use position-based noise for continuous displacement
+            const noiseValue = noise(vertex.x, vertex.y, vertex.z);
+            const displacement = noiseValue * amount;
+            
+            vertex.normalize().multiplyScalar(distance + displacement);
+            positions.setXYZ(i, vertex.x, vertex.y, vertex.z);
+        }
+        
+        positions.needsUpdate = true;
+        geometry.computeVertexNormals();
+        return geometry;
+    }
+    
     createRoad() {
         // Create road texture
         const roadTexture = this.createRoadTexture();
         const roadMaterial = new THREE.MeshStandardMaterial({
             map: roadTexture,
             side: THREE.DoubleSide,
-            roughness: 0.9,
-            metalness: 0.0
+            roughness: 0.85,
+            metalness: 0.0,
+            envMapIntensity: 0.3
         });
         
         const roadWidth = 16;
@@ -149,11 +185,11 @@ class Environment {
     }
 
     addRockFormations() {
-        // Create rock materials with variation
+        // Create rock materials with smooth weathered appearance matching cliffs
         const rockMaterials = [
-            new THREE.MeshStandardMaterial({ color: 0x808080, roughness: 0.95, metalness: 0.0 }),
-            new THREE.MeshStandardMaterial({ color: 0x696969, roughness: 0.95, metalness: 0.0 }),
-            new THREE.MeshStandardMaterial({ color: 0x5c5c5c, roughness: 0.95, metalness: 0.0 })
+            new THREE.MeshStandardMaterial({ color: 0xa0a0a0, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false }),
+            new THREE.MeshStandardMaterial({ color: 0x959595, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false }),
+            new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false })
         ];
         
         // NOTE: Most rock formations are now handled by the faceted cliff walls
@@ -170,8 +206,12 @@ class Environment {
                 // Create irregular rock shape using multiple merged geometries
                 const rockGroup = new THREE.Group();
                 
-                // Main rock body - more reasonable size
-                const mainRockGeometry = new THREE.DodecahedronGeometry(2 + Math.random() * 2, 0);
+                // Main rock body - smooth with natural angular variation
+                const size = 2 + Math.random() * 2;
+                const mainRockGeometry = this.displaceVertices(
+                    new THREE.IcosahedronGeometry(size, 4),
+                    size * 0.3
+                );
                 const mainRock = new THREE.Mesh(
                     mainRockGeometry, 
                     rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
@@ -191,9 +231,13 @@ class Environment {
                 mainRock.receiveShadow = true;
                 rockGroup.add(mainRock);
                 
-                // Additional rock chunks for detail
+                // Additional rock chunks for detail - smooth spheres with irregular scaling
                 for (let j = 0; j < 2 + Math.floor(Math.random() * 2); j++) {
-                    const chunkGeometry = new THREE.TetrahedronGeometry(1 + Math.random() * 2, 0);
+                    const chunkSize = 1 + Math.random() * 2;
+                    const chunkGeometry = this.displaceVertices(
+                        new THREE.IcosahedronGeometry(chunkSize, 3),
+                        chunkSize * 0.35
+                    );
                     const chunk = new THREE.Mesh(
                         chunkGeometry,
                         rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
@@ -207,6 +251,11 @@ class Environment {
                         Math.random() * Math.PI,
                         Math.random() * Math.PI,
                         Math.random() * Math.PI
+                    );
+                    chunk.scale.set(
+                        1 + Math.random() * 0.4,
+                        0.6 + Math.random() * 0.5,
+                        1 + Math.random() * 0.4
                     );
                     chunk.castShadow = true;
                     chunk.receiveShadow = true;
@@ -225,10 +274,9 @@ class Environment {
                 const boulderY = point.y - 0.8;  // More deeply embedded
 
                 const boulderRadius = 0.5 + Math.random() * 1.5;
-                const boulderGeometry = new THREE.SphereGeometry(
-                    boulderRadius,
-                    6 + Math.floor(Math.random() * 3),
-                    5 + Math.floor(Math.random() * 3)
+                const boulderGeometry = this.displaceVertices(
+                    new THREE.IcosahedronGeometry(boulderRadius, 3),
+                    boulderRadius * 0.25
                 );
                 const boulder = new THREE.Mesh(
                     boulderGeometry,
@@ -401,12 +449,13 @@ class Environment {
             // Rock material with smooth shading for realistic weathered appearance
             const cliffMaterial = new THREE.MeshStandardMaterial({ 
                 map: rockTexture,
-                color: 0xffffff, // White base to let vertex colors show through
+                color: 0xffffff,
                 vertexColors: true,
-                roughness: 0.98, 
+                roughness: 0.92,
                 metalness: 0.0,
-                flatShading: false, // Smooth shading for natural rock surface
-                side: THREE.DoubleSide
+                flatShading: false,
+                side: THREE.DoubleSide,
+                envMapIntensity: 0.2
             });
             
             // Create main cliff face geometry
@@ -728,7 +777,10 @@ class Environment {
                 for (let r = 0; r < numRocks; r++) {
                     if (Math.random() > 0.2) { // 80% chance for variety
                         const rockSize = 0.8 + Math.random() * 2.5;
-                        const rockGeometry = new THREE.DodecahedronGeometry(rockSize, 0);
+                        const rockGeometry = this.displaceVertices(
+                            new THREE.IcosahedronGeometry(rockSize, 3),
+                            rockSize * 0.3
+                        );
                         const rock = new THREE.Mesh(
                             rockGeometry,
                             rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
@@ -801,7 +853,10 @@ class Environment {
                     for (let b = 0; b < numBoulders; b++) {
                         const baseBoulderSize = 0.8 + Math.random() * 3.0; // More varied sizes (0.8-3.8)
                         const baseBoulder = new THREE.Mesh(
-                            new THREE.DodecahedronGeometry(baseBoulderSize, 0),
+                            this.displaceVertices(
+                                new THREE.IcosahedronGeometry(baseBoulderSize, 3),
+                                baseBoulderSize * 0.3
+                            ),
                             rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
                         );
 
@@ -1549,7 +1604,11 @@ class Environment {
             const rockX = 350 + Math.cos(angle) * distance;
             const rockZ = 100 + Math.sin(angle) * distance;
             
-            const rockGeometry = new THREE.DodecahedronGeometry(15 + Math.random() * 10, 0);
+            const rockSize = 15 + Math.random() * 10;
+            const rockGeometry = this.displaceVertices(
+                new THREE.IcosahedronGeometry(rockSize, 3),
+                rockSize * 0.25
+            );
             const rock = new THREE.Mesh(rockGeometry, rockMaterial);
             rock.position.set(rockX, -70, rockZ); // Just above water level
             rock.rotation.set(
@@ -2060,20 +2119,30 @@ class Environment {
     
     createRoadTexture() {
         const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 512;
+        canvas.width = 512;
+        canvas.height = 1024;
         const ctx = canvas.getContext('2d');
         
         // Asphalt base
         ctx.fillStyle = '#3a3a3a';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Texture variation
-        for (let i = 0; i < 300; i++) {
-            const gray = Math.random() * 20 + 40;
-            ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, 0.5)`;
-            ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 
-                        Math.random() * 3 + 1, Math.random() * 3 + 1);
+        // Fine aggregate texture (small stones)
+        for (let i = 0; i < 1200; i++) {
+            const gray = Math.random() * 30 + 35;
+            ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, ${0.3 + Math.random() * 0.4})`;
+            const size = Math.random() * 2 + 0.5;
+            ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, size, size);
+        }
+        
+        // Coarse aggregate (larger stones)
+        for (let i = 0; i < 150; i++) {
+            const gray = Math.random() * 25 + 45;
+            ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, 0.6)`;
+            const size = Math.random() * 4 + 2;
+            ctx.beginPath();
+            ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, size/2, 0, Math.PI * 2);
+            ctx.fill();
         }
         
         // Tire tracks and wear marks

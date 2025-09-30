@@ -145,11 +145,10 @@ class Game {
     }
 
     setupScene() {
-        // Misty mountain atmosphere with layered fog effect
-        this.scene.background = new THREE.Color(0x9db4c8);
-        // Use exponential fog for more realistic mountain haze
-        // Reduced density to better show layered mountains
-        this.scene.fog = new THREE.FogExp2(0x9db4c8, 0.0015);
+        // Atmospheric mountain scene with warm lighting
+        this.scene.background = new THREE.Color(0xb8d4e8);
+        // Enhanced fog with warmer tone for golden hour atmosphere
+        this.scene.fog = new THREE.FogExp2(0xc8dae8, 0.0018);
     }
 
     setupLighting() {
@@ -157,12 +156,12 @@ class Game {
         const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
         this.scene.add(ambientLight);
 
-        // Hemisphere light for natural sky/ground lighting
-        const hemisphereLight = new THREE.HemisphereLight(0x87CEEB, 0x3a5f3a, 0.3);
+        // Hemisphere light for natural sky/ground lighting with warmer sky tone
+        const hemisphereLight = new THREE.HemisphereLight(0xadd8e6, 0x3a5f3a, 0.4);
         this.scene.add(hemisphereLight);
 
-        // Directional light (sun)
-        this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        // Directional light (sun) with warmer color for golden hour feel
+        this.directionalLight = new THREE.DirectionalLight(0xfff4e6, 1.0);
         this.directionalLight.position.set(50, 80, 0);
         this.directionalLight.castShadow = true;
         this.directionalLight.shadow.mapSize.width = 4096; // Increased resolution
@@ -194,13 +193,13 @@ class Game {
         this.distantLight.shadow.bias = -0.001;
         this.scene.add(this.distantLight);
 
-        // Fill light from opposite side for softer shadows
-        this.fillLight = new THREE.DirectionalLight(0xffffff, 0.2);
+        // Fill light from opposite side with cool blue tone for contrast
+        this.fillLight = new THREE.DirectionalLight(0xe6f2ff, 0.25);
         this.fillLight.position.set(-50, 30, 0);
         this.scene.add(this.fillLight);
 
-        // Rim light for vehicle highlighting
-        this.rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        // Rim light for vehicle highlighting with warm accent
+        this.rimLight = new THREE.DirectionalLight(0xfff8e1, 0.4);
         this.rimLight.position.set(0, 10, -50);
         this.scene.add(this.rimLight);
 

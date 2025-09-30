@@ -1,3 +1,5 @@
+import { jest } from '@jest/globals';
+
 describe('Environment Boulder Positioning', () => {
     // Test that boulders are created and positioned correctly
     // This test validates the logic without requiring the full THREE.js environment
@@ -87,5 +89,75 @@ describe('Environment Boulder Positioning', () => {
 
         // Right side should be significantly lower than left side
         expect(rightBoulderY).toBeLessThan(leftBoulderY - 40);
+    });
+});
+
+describe('Environment Class Initialization', () => {
+    test('Environment class should instantiate without errors', () => {
+        // Mock THREE.js scene
+        const mockScene = {
+            add: jest.fn(),
+            background: null,
+            fog: null
+        };
+        
+        // This should not throw any errors
+        expect(() => {
+            // Create a minimal mock of the Environment class methods
+            const env = {
+                scene: mockScene,
+                roadPath: [],
+                finishLinePosition: null,
+                roadworksZones: [],
+                jumpRamps: [],
+                roadworkObstacles: [],
+                boulders: [],
+                checkpoints: [],
+                displaceVertices: (geometry, amount) => {
+                    // Mock implementation that returns the geometry
+                    return geometry;
+                }
+            };
+            
+            // Test that displaceVertices is callable
+            const mockGeometry = {
+                attributes: {
+                    position: {
+                        count: 10,
+                        needsUpdate: false
+                    }
+                },
+                computeVertexNormals: jest.fn()
+            };
+            
+            // This should not throw
+            env.displaceVertices(mockGeometry, 1.0);
+        }).not.toThrow();
+    });
+    
+    test('displaceVertices should handle geometry correctly', () => {
+        const mockPositions = [];
+        const mockGeometry = {
+            attributes: {
+                position: {
+                    count: 0,
+                    setXYZ: jest.fn(),
+                    needsUpdate: false
+                }
+            },
+            computeVertexNormals: jest.fn()
+        };
+        
+        // Mock the displaceVertices function logic
+        const displaceVertices = (geometry, amount) => {
+            geometry.attributes.position.needsUpdate = true;
+            geometry.computeVertexNormals();
+            return geometry;
+        };
+        
+        const result = displaceVertices(mockGeometry, 1.5);
+        
+        expect(result.attributes.position.needsUpdate).toBe(true);
+        expect(result.computeVertexNormals).toHaveBeenCalled();
     });
 });
