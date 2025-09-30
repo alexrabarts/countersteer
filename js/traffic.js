@@ -3,28 +3,60 @@ class Traffic {
         this.scene = scene;
         this.environment = environment;
         this.cars = [];
-        this.maxCars = 1; // Reduced to 1 total car
-        this.carSpacing = 250; // Increased spacing between cars
+        this.motorcycles = [];
+        this.maxCars = 1;
+        this.maxMotorcycles = 2;
+        this.carSpacing = 250;
+        this.motorcycleSpacing = 200;
         
         this.initializeCars();
+        this.initializeMotorcycles();
     }
     
     initializeCars() {
-        // Create cars going both directions
         const totalSegments = this.environment.roadPath.length;
         
-        // Cars going opposite direction - RIGHT SIDE for left-hand drive
-        for (let i = 0; i < 1; i++) { // 1 car opposite direction
+        for (let i = 0; i < 1; i++) {
             const startSegment = Math.floor(Math.random() * totalSegments);
             const car = new Car(this.scene, this.environment, {
                 direction: -1,
-                speed: 15 + Math.random() * 10, // 15-25 m/s
+                speed: 15 + Math.random() * 10,
                 startSegment: startSegment,
-                lane: 'right', // Opposite traffic on right for left-hand drive
+                lane: 'right',
                 color: this.getRandomCarColor()
             });
             this.cars.push(car);
         }
+    }
+    
+    initializeMotorcycles() {
+        const totalSegments = this.environment.roadPath.length;
+        
+        for (let i = 0; i < this.maxMotorcycles; i++) {
+            const startSegment = Math.floor(Math.random() * totalSegments);
+            const motorcycle = new AIMotorcycle(this.scene, this.environment, {
+                direction: 1,
+                speed: 30 + Math.random() * 15,
+                startSegment: startSegment,
+                lane: 'left',
+                color: this.getRandomBikeColor()
+            });
+            this.motorcycles.push(motorcycle);
+        }
+    }
+    
+    getRandomBikeColor() {
+        const colors = [
+            0xff0000,
+            0x00ff00,
+            0x0000ff,
+            0xffff00,
+            0xff00ff,
+            0x00ffff,
+            0xff8800,
+            0x8800ff
+        ];
+        return colors[Math.floor(Math.random() * colors.length)];
     }
     
     getRandomCarColor() {
@@ -52,11 +84,19 @@ class Traffic {
         this.cars.forEach(car => {
             car.update(deltaTime);
             
-            // Check for collision with player
             if (!collisionResult && car.checkCollision(playerPosition)) {
-                // Flash the car on impact
                 car.onCollision();
-                collisionResult = { hit: true, car: car };
+                collisionResult = { hit: true, vehicle: car };
+            }
+        });
+        
+        // Update all motorcycles
+        this.motorcycles.forEach(motorcycle => {
+            motorcycle.update(deltaTime, playerPosition);
+            
+            if (!collisionResult && motorcycle.checkCollision(playerPosition)) {
+                motorcycle.onCollision();
+                collisionResult = { hit: true, vehicle: motorcycle };
             }
         });
         
@@ -103,10 +143,12 @@ class Traffic {
     
 
     reset() {
-        // Remove all cars and recreate
         this.cars.forEach(car => car.remove());
+        this.motorcycles.forEach(motorcycle => motorcycle.remove());
         this.cars = [];
+        this.motorcycles = [];
         this.initializeCars();
+        this.initializeMotorcycles();
     }
 }
 
@@ -677,13 +719,9 @@ class Car {
             this.inDetour = true;
             this.detourSide = newLane;
             console.log(`Car entering detour, moving from ${this.lane} to ${newLane} lane`);
-            
-            // Slow down significantly when entering construction zone
             this.currentSpeed = Math.min(this.currentSpeed, this.baseSpeed * 0.4);
         } else if (this.detourSide !== newLane) {
-            // Update detour lane if needed
             this.detourSide = newLane;
-            // Maintain slow speed
             this.currentSpeed = Math.min(this.currentSpeed, this.baseSpeed * 0.4);
         }
     }
@@ -694,5 +732,239 @@ class Car {
             this.inDetour = false;
             this.detourSide = null;
         }
+    }
+}
+
+class AIMotorcycle {
+    constructor(scene, environment, options) {
+        this.scene = scene;
+        this.environment = environment;
+        this.direction = options.direction || 1;
+        this.baseSpeed = options.speed || 35;
+        this.currentSpeed = this.baseSpeed;
+        this.currentSegment = options.startSegment || 0;
+        this.lane = options.lane || 'left';
+        this.color = options.color || 0xff0000;
+        this.segmentProgress = 0;
+        this.leanAngle = 0;
+        this.overtaking = false;
+        this.overtakeProgress = 0;
+        
+        this.createBikeModel();
+        
+        if (this.environment && this.environment.roadPath && this.environment.roadPath.length > 0) {
+            this.updatePosition();
+        }
+    }
+    
+    createBikeModel() {
+        this.bikeGroup = new THREE.Group();
+        
+        const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.12, 12);
+        const wheelMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x0d0d0d, 
+            roughness: 0.98, 
+            metalness: 0.0 
+        });
+        
+        this.rearWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+        this.rearWheel.rotation.z = Math.PI / 2;
+        this.rearWheel.position.set(0, 0.3, -0.6);
+        this.rearWheel.castShadow = true;
+        this.bikeGroup.add(this.rearWheel);
+        
+        this.frontWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+        this.frontWheel.rotation.z = Math.PI / 2;
+        this.frontWheel.position.set(0, 0.3, 0.6);
+        this.frontWheel.castShadow = true;
+        this.bikeGroup.add(this.frontWheel);
+        
+        const frameGeometry = new THREE.BoxGeometry(0.08, 0.7, 1.0);
+        const frameMaterial = new THREE.MeshStandardMaterial({ 
+            color: this.color, 
+            roughness: 0.25, 
+            metalness: 0.8 
+        });
+        this.frame = new THREE.Mesh(frameGeometry, frameMaterial);
+        this.frame.position.set(0, 0.55, 0);
+        this.frame.castShadow = true;
+        this.bikeGroup.add(this.frame);
+        
+        const tankGeometry = new THREE.BoxGeometry(0.25, 0.2, 0.4);
+        this.tank = new THREE.Mesh(tankGeometry, frameMaterial);
+        this.tank.position.set(0, 0.75, 0.1);
+        this.tank.castShadow = true;
+        this.bikeGroup.add(this.tank);
+        
+        const seatGeometry = new THREE.BoxGeometry(0.28, 0.1, 0.4);
+        const seatMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x1a1a1a, 
+            roughness: 0.8, 
+            metalness: 0.0 
+        });
+        this.seat = new THREE.Mesh(seatGeometry, seatMaterial);
+        this.seat.position.set(0, 0.6, -0.2);
+        this.seat.castShadow = true;
+        this.bikeGroup.add(this.seat);
+        
+        const riderGeometry = new THREE.BoxGeometry(0.25, 0.5, 0.18);
+        const riderMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x2a2a2a, 
+            roughness: 0.7, 
+            metalness: 0.1 
+        });
+        this.rider = new THREE.Mesh(riderGeometry, riderMaterial);
+        this.rider.position.set(0, 1.05, -0.1);
+        this.rider.castShadow = true;
+        this.bikeGroup.add(this.rider);
+        
+        const helmetGeometry = new THREE.SphereGeometry(0.12, 8, 6);
+        const helmetMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x000000, 
+            roughness: 0.2, 
+            metalness: 0.5 
+        });
+        this.helmet = new THREE.Mesh(helmetGeometry, helmetMaterial);
+        this.helmet.position.set(0, 1.32, -0.1);
+        this.helmet.castShadow = true;
+        this.bikeGroup.add(this.helmet);
+        
+        const exhaustGeometry = new THREE.CylinderGeometry(0.03, 0.04, 0.5, 10);
+        const exhaustMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xc0c0c0, 
+            roughness: 0.1, 
+            metalness: 1.0 
+        });
+        this.exhaust = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
+        this.exhaust.rotation.x = Math.PI / 2;
+        this.exhaust.position.set(0.12, 0.35, -0.4);
+        this.exhaust.castShadow = true;
+        this.bikeGroup.add(this.exhaust);
+        
+        this.scene.add(this.bikeGroup);
+    }
+    
+    updatePosition() {
+        const totalSegments = this.environment.roadPath.length;
+        const safeCurrentSegment = Math.floor(this.currentSegment) % totalSegments;
+        const actualCurrentSegment = safeCurrentSegment < 0 ? safeCurrentSegment + totalSegments : safeCurrentSegment;
+        
+        const currentPoint = this.environment.roadPath[actualCurrentSegment];
+        const nextSegment = (actualCurrentSegment + 1) % totalSegments;
+        const nextPoint = this.environment.roadPath[nextSegment];
+        
+        const t = this.segmentProgress;
+        const x = currentPoint.x + (nextPoint.x - currentPoint.x) * t;
+        const y = currentPoint.y + (nextPoint.y - currentPoint.y) * t;
+        const z = currentPoint.z + (nextPoint.z - currentPoint.z) * t;
+        
+        let headingDiff = nextPoint.heading - currentPoint.heading;
+        if (headingDiff > Math.PI) headingDiff -= 2 * Math.PI;
+        if (headingDiff < -Math.PI) headingDiff += 2 * Math.PI;
+        const interpolatedHeading = currentPoint.heading + headingDiff * t;
+        
+        let laneOffset = this.lane === 'left' ? -3 : 3;
+        
+        if (this.overtaking) {
+            laneOffset += (1 - this.lane === 'left' ? 1 : -1) * this.overtakeProgress * 2;
+        }
+        
+        const perpX = Math.cos(interpolatedHeading) * laneOffset;
+        const perpZ = -Math.sin(interpolatedHeading) * laneOffset;
+        
+        const roadElevation = y || 0;
+        this.bikeGroup.position.set(x + perpX, roadElevation, z + perpZ);
+        
+        const dx = nextPoint.x - currentPoint.x;
+        const dz = nextPoint.z - currentPoint.z;
+        const facingAngle = Math.atan2(dx, dz);
+        
+        this.bikeGroup.rotation.y = facingAngle;
+        this.bikeGroup.rotation.z = this.leanAngle;
+    }
+    
+    update(deltaTime, playerPosition) {
+        const segmentLength = 20;
+        const distanceToMove = this.currentSpeed * deltaTime;
+        const segmentsToMove = distanceToMove / segmentLength;
+        
+        if (!this.wheelRotation) this.wheelRotation = 0;
+        const wheelCircumference = 2 * Math.PI * 0.3;
+        const rotationSpeed = this.currentSpeed / wheelCircumference;
+        this.wheelRotation += rotationSpeed * deltaTime;
+        this.rearWheel.rotation.x = this.wheelRotation;
+        this.frontWheel.rotation.x = this.wheelRotation;
+        
+        if (playerPosition) {
+            const dx = this.bikeGroup.position.x - playerPosition.x;
+            const dz = this.bikeGroup.position.z - playerPosition.z;
+            const distanceToPlayer = Math.sqrt(dx * dx + dz * dz);
+            
+            if (distanceToPlayer < 30 && distanceToPlayer > 10) {
+                this.currentSpeed = Math.min(this.baseSpeed * 1.2, 50);
+            } else if (distanceToPlayer < 10) {
+                this.overtaking = true;
+            } else {
+                this.currentSpeed = this.baseSpeed;
+            }
+        }
+        
+        if (this.overtaking) {
+            this.overtakeProgress = Math.min(1, this.overtakeProgress + deltaTime * 0.5);
+            this.leanAngle = Math.sin(this.overtakeProgress * Math.PI) * 0.15;
+            
+            if (this.overtakeProgress >= 1) {
+                this.overtaking = false;
+                this.overtakeProgress = 0;
+                this.leanAngle = 0;
+            }
+        }
+        
+        this.segmentProgress += segmentsToMove * this.direction;
+        
+        while (this.segmentProgress >= 1) {
+            this.segmentProgress -= 1;
+            this.currentSegment += 1;
+        }
+        
+        while (this.segmentProgress < 0) {
+            this.segmentProgress += 1;
+            this.currentSegment -= 1;
+        }
+        
+        const totalSegments = this.environment.roadPath.length;
+        if (this.currentSegment >= totalSegments || this.currentSegment < 0) {
+            this.bikeGroup.visible = false;
+            this.currentSegment = ((this.currentSegment % totalSegments) + totalSegments) % totalSegments;
+            setTimeout(() => {
+                this.bikeGroup.visible = true;
+            }, 100);
+        } else {
+            if (!this.bikeGroup.visible) {
+                this.bikeGroup.visible = true;
+            }
+        }
+        
+        this.updatePosition();
+    }
+    
+    checkCollision(playerPosition) {
+        const dx = this.bikeGroup.position.x - playerPosition.x;
+        const dy = this.bikeGroup.position.y - playerPosition.y;
+        const dz = this.bikeGroup.position.z - playerPosition.z;
+        const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        return distance < 1.5;
+    }
+    
+    onCollision() {
+        const originalColor = this.frame.material.color.getHex();
+        this.frame.material.color.setHex(0xff0000);
+        setTimeout(() => {
+            this.frame.material.color.setHex(originalColor);
+        }, 200);
+    }
+    
+    remove() {
+        this.scene.remove(this.bikeGroup);
     }
 }
