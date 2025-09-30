@@ -283,6 +283,40 @@
             color: #aaa;
             font-size: 12px;
         }
+        
+        .distance-display {
+            position: absolute;
+            bottom: 120px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #0088ff;
+            border-radius: 10px;
+            padding: 15px;
+            color: white;
+            font-family: monospace;
+            z-index: 100;
+            min-width: 180px;
+        }
+        
+        .distance-display h3 {
+            margin: 0 0 10px 0;
+            color: #0088ff;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .distance-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #0088ff;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(0, 136, 255, 0.5);
+        }
+        
+        .distance-unit {
+            font-size: 14px;
+            color: #88ccff;
+        }
     </style>
 </head>
 <body>
@@ -294,6 +328,16 @@
             <span id="position">1</span><span class="position-suffix">st</span>
         </div>
         <div class="total-racers">of <span id="totalRacers">5</span> racers</div>
+    </div>
+    
+    <div class="distance-display">
+        <h3>DISTANCE</h3>
+        <div class="distance-value">
+            <span id="distanceTraveled">0</span><span class="distance-unit">m</span>
+        </div>
+        <div style="text-align: center; color: #aaa; font-size: 11px; margin-top: 5px;">
+            to finish: <span id="distanceToFinish" style="color: #0088ff;">0m</span>
+        </div>
     </div>
     
     <div id="customizeMenu" class="customize-menu">

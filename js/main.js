@@ -656,6 +656,18 @@ class Game {
         if (totalElement) {
             totalElement.textContent = this.traffic.motorcycles.length + 1;
         }
+        
+        const distanceElement = document.getElementById('distanceTraveled');
+        if (distanceElement && this.vehicle) {
+            const distance = Math.floor(this.vehicle.getDistanceTraveled());
+            distanceElement.textContent = distance;
+        }
+        
+        const distanceToFinishElement = document.getElementById('distanceToFinish');
+        if (distanceToFinishElement && this.vehicle && this.environment.finishLinePosition) {
+            const distToFinish = Math.floor(this.vehicle.position.distanceTo(this.environment.finishLinePosition));
+            distanceToFinishElement.textContent = distToFinish + 'm';
+        }
     }
     
     animate() {

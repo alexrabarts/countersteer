@@ -97,9 +97,9 @@ class Traffic {
             }
         });
         
-        // Update all motorcycles
+        // Update all motorcycles with pack dynamics
         this.motorcycles.forEach(motorcycle => {
-            motorcycle.update(deltaTime, playerPosition);
+            motorcycle.update(deltaTime, playerPosition, this.motorcycles);
             
             if (!collisionResult && motorcycle.checkCollision(playerPosition)) {
                 motorcycle.onCollision();
@@ -220,6 +220,7 @@ class Car {
             metalness: 0.75
         });
         this.body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        this.body.name = 'carBody';
         this.body.position.y = 0.18;
         this.body.castShadow = true;
         this.body.receiveShadow = true;
@@ -1021,7 +1022,7 @@ class AIMotorcycle {
         this.bikeGroup.rotation.z = this.leanAngle;
     }
     
-    update(deltaTime, playerPosition) {
+    update(deltaTime, playerPosition, allBikes) {
         const segmentLength = 20;
         const distanceToMove = this.currentSpeed * deltaTime;
         const segmentsToMove = distanceToMove / segmentLength;
@@ -1035,7 +1036,48 @@ class AIMotorcycle {
         
         const previousSpeed = this.currentSpeed;
         
-        if (playerPosition) {
+        // Check for nearby bikes (pack dynamics)
+        let nearestBikeAhead = null;
+        let minDistanceAhead = Infinity;
+        
+        if (allBikes) {
+            allBikes.forEach(otherBike => {
+                if (otherBike !== this && otherBike.bikeGroup) {
+                    const dx = otherBike.bikeGroup.position.x - this.bikeGroup.position.x;
+                    const dz = otherBike.bikeGroup.position.z - this.bikeGroup.position.z;
+                    const distance = Math.sqrt(dx * dx + dz * dz);
+                    
+                    // Check if ahead
+                    if (otherBike.bikeGroup.position.z > this.bikeGroup.position.z && distance < minDistanceAhead) {
+                        minDistanceAhead = distance;
+                        nearestBikeAhead = otherBike;
+                    }
+                }
+            });
+        }
+        
+        // Check for cars ahead and avoid
+        let carAhead = false;
+        if (this.scene) {
+            this.scene.traverse((obj) => {
+                if (obj.name === 'carBody' && obj.parent) {
+                    const carPos = obj.parent.position;
+                    const dx = carPos.x - this.bikeGroup.position.x;
+                    const dz = carPos.z - this.bikeGroup.position.z;
+                    const distance = Math.sqrt(dx * dx + dz * dz);
+                    
+                    if (dz > 0 && distance < 25) {
+                        carAhead = true;
+                    }
+                }
+            });
+        }
+        
+        if (carAhead) {
+            this.currentSpeed = Math.min(this.currentSpeed, this.baseSpeed * 0.7);
+        } else if (nearestBikeAhead && minDistanceAhead < 15) {
+            this.currentSpeed = Math.min(this.baseSpeed * 1.3, 55);
+        } else if (playerPosition) {
             const dx = this.bikeGroup.position.x - playerPosition.x;
             const dz = this.bikeGroup.position.z - playerPosition.z;
             const distanceToPlayer = Math.sqrt(dx * dx + dz * dz);
@@ -1047,6 +1089,8 @@ class AIMotorcycle {
             } else {
                 this.currentSpeed = this.baseSpeed;
             }
+        } else {
+            this.currentSpeed = this.baseSpeed;
         }
         
         this.isBraking = this.currentSpeed < previousSpeed;
