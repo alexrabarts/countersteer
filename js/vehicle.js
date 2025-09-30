@@ -135,7 +135,9 @@ class Vehicle {
 
         // Frame - improved shape with fuel tank
         const frameGeometry = new THREE.BoxGeometry(0.1, 0.8, 1.2);
-        const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x1a4db3, roughness: 0.3, metalness: 0.7 });
+        this.bikeColor = localStorage.getItem('playerBikeColor') || '0x1a4db3';
+        const bikeColorHex = parseInt(this.bikeColor);
+        const frameMaterial = new THREE.MeshStandardMaterial({ color: bikeColorHex, roughness: 0.3, metalness: 0.7 });
         this.frame = new THREE.Mesh(frameGeometry, frameMaterial);
         this.frame.position.set(0, 0.6, 0);
         this.frame.castShadow = true;
@@ -143,7 +145,7 @@ class Vehicle {
         
         // Fuel tank - wider in the middle
         const tankGeometry = new THREE.BoxGeometry(0.3, 0.25, 0.5);
-        const tankMaterial = new THREE.MeshStandardMaterial({ color: 0x1a4db3, roughness: 0.2, metalness: 0.8 });
+        const tankMaterial = new THREE.MeshStandardMaterial({ color: bikeColorHex, roughness: 0.2, metalness: 0.8 });
         this.fuelTank = new THREE.Mesh(tankGeometry, tankMaterial);
         this.fuelTank.position.set(0, 0.85, 0.2);
         this.fuelTank.castShadow = true;
@@ -151,11 +153,13 @@ class Vehicle {
         
         // Racing stripes on tank
         const stripeGeometry = new THREE.BoxGeometry(0.08, 0.26, 0.52);
+        this.stripeColor = localStorage.getItem('playerStripeColor') || '0xffffff';
+        const stripeColorHex = parseInt(this.stripeColor);
         const stripeMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0xffffff, 
+            color: stripeColorHex, 
             roughness: 0.15, 
             metalness: 0.9,
-            emissive: 0xffffff,
+            emissive: stripeColorHex,
             emissiveIntensity: 0.05
         });
         this.tankStripe = new THREE.Mesh(stripeGeometry, stripeMaterial);

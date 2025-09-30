@@ -176,95 +176,90 @@
         }
 
         .speedo-label {
-            position: absolute;
-            bottom: 5px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 8px;
+            font-size: 10px;
             color: #666;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
         }
         
-        .gauge-value.warning {
-            color: #FFD700;
-        }
-        
-        .gauge-value.danger {
-            color: #FF0000;
-        }
-        
-        /* Checkpoint notification */
-        .checkpoint-notification {
+        .customize-menu {
             position: absolute;
-            top: 40%;
+            top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 36px;
-            font-weight: bold;
-            color: #00FF00;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-            z-index: 101;
-            animation: checkpointPulse 1s ease-out;
-            pointer-events: none;
-        }
-        
-        @keyframes checkpointPulse {
-            0% { 
-                transform: translate(-50%, -50%) scale(0.5);
-                opacity: 0;
-            }
-            50% { 
-                transform: translate(-50%, -50%) scale(1.2);
-                opacity: 1;
-            }
-            100% { 
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 0;
-            }
-        }
-        
-        .info {
-            position: absolute;
-            top: 20px;
-            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #FFD700;
+            border-radius: 10px;
+            padding: 30px;
             color: white;
-            font-size: 12px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .customize-menu.visible {
+            display: block;
+        }
+        
+        .customize-menu h2 {
+            margin-top: 0;
+            color: #FFD700;
+            text-align: center;
+        }
+        
+        .color-option {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            margin: 5px;
+            border: 2px solid #666;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        
+        .color-option:hover {
+            border-color: #FFD700;
+            transform: scale(1.1);
+        }
+        
+        .color-option.selected {
+            border-color: #FFD700;
+            border-width: 3px;
+        }
+        
+        .customize-btn {
+            position: absolute;
+            top: 90px;
+            left: 20px;
+            padding: 10px 15px;
+            background: rgba(255, 215, 0, 0.2);
+            border: 2px solid #FFD700;
+            color: #FFD700;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 14px;
             z-index: 100;
-            text-align: right;
         }
         
-        @media (max-width: 768px) {
-            .controls {
-                font-size: 11px;
-                max-width: 40%;
-            }
-            .controls h3 {
-                font-size: 14px;
-                margin: 5px 0;
-            }
-            .controls p {
-                margin: 3px 0;
-                line-height: 1.2;
-            }
-            .info {
-                font-size: 11px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .controls {
-                display: none;
-            }
-            .info {
-                top: 10px;
-                right: 10px;
-                font-size: 10px;
-            }
+        .customize-btn:hover {
+            background: rgba(255, 215, 0, 0.4);
         }
     </style>
 </head>
 <body>
+    <button class="customize-btn" onclick="toggleCustomizeMenu()">🎨 Customize Bike</button>
+    
+    <div id="customizeMenu" class="customize-menu">
+        <h2>Customize Your Bike</h2>
+        <div>
+            <h3>Bike Color</h3>
+            <div id="bikeColors"></div>
+        </div>
+        <div style="margin-top: 20px;">
+            <h3>Stripe Color</h3>
+            <div id="stripeColors"></div>
+        </div>
+        <button onclick="applyCustomization()" style="margin-top: 20px; padding: 10px 20px; background: #FFD700; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Apply & Reload</button>
+        <button onclick="toggleCustomizeMenu()" style="margin-left: 10px; padding: 10px 20px; background: #666; color: white; border: none; border-radius: 5px; cursor: pointer;">Cancel</button>
+    </div>
     <!-- Simplified controls hint - mobile controls provide the actual interface -->
     <div class="controls">
     </div>
@@ -308,5 +303,81 @@
     <script src="js/cones.js"></script>
     <script src="js/traffic.js"></script>
     <script src="js/main.js"></script>
+    <script>
+        const bikeColorOptions = [
+            { name: 'Blue', hex: '0x1a4db3' },
+            { name: 'Red', hex: '0xcc0000' },
+            { name: 'Green', hex: '0x00aa00' },
+            { name: 'Orange', hex: '0xff6600' },
+            { name: 'Purple', hex: '0x8800ff' },
+            { name: 'Yellow', hex: '0xffdd00' },
+            { name: 'Black', hex: '0x1a1a1a' },
+            { name: 'White', hex: '0xf0f0f0' }
+        ];
+        
+        const stripeColorOptions = [
+            { name: 'White', hex: '0xffffff' },
+            { name: 'Black', hex: '0x000000' },
+            { name: 'Red', hex: '0xff0000' },
+            { name: 'Yellow', hex: '0xffff00' },
+            { name: 'Orange', hex: '0xff8800' },
+            { name: 'Green', hex: '0x00ff00' },
+            { name: 'Blue', hex: '0x0088ff' }
+        ];
+        
+        function initCustomizeMenu() {
+            const bikeColorsDiv = document.getElementById('bikeColors');
+            const stripeColorsDiv = document.getElementById('stripeColors');
+            
+            const currentBikeColor = localStorage.getItem('playerBikeColor') || '0x1a4db3';
+            const currentStripeColor = localStorage.getItem('playerStripeColor') || '0xffffff';
+            
+            bikeColorOptions.forEach(color => {
+                const div = document.createElement('div');
+                div.className = 'color-option' + (color.hex === currentBikeColor ? ' selected' : '');
+                div.style.background = '#' + parseInt(color.hex).toString(16).padStart(6, '0');
+                div.title = color.name;
+                div.onclick = () => selectBikeColor(color.hex, div);
+                bikeColorsDiv.appendChild(div);
+            });
+            
+            stripeColorOptions.forEach(color => {
+                const div = document.createElement('div');
+                div.className = 'color-option' + (color.hex === currentStripeColor ? ' selected' : '');
+                div.style.background = '#' + parseInt(color.hex).toString(16).padStart(6, '0');
+                div.title = color.name;
+                div.onclick = () => selectStripeColor(color.hex, div);
+                stripeColorsDiv.appendChild(div);
+            });
+        }
+        
+        let selectedBikeColor = localStorage.getItem('playerBikeColor') || '0x1a4db3';
+        let selectedStripeColor = localStorage.getItem('playerStripeColor') || '0xffffff';
+        
+        function selectBikeColor(hex, element) {
+            selectedBikeColor = hex;
+            document.querySelectorAll('#bikeColors .color-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+        
+        function selectStripeColor(hex, element) {
+            selectedStripeColor = hex;
+            document.querySelectorAll('#stripeColors .color-option').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+        
+        function toggleCustomizeMenu() {
+            const menu = document.getElementById('customizeMenu');
+            menu.classList.toggle('visible');
+        }
+        
+        function applyCustomization() {
+            localStorage.setItem('playerBikeColor', selectedBikeColor);
+            localStorage.setItem('playerStripeColor', selectedStripeColor);
+            location.reload();
+        }
+        
+        initCustomizeMenu();
+    </script>
 </body>
 </html>
