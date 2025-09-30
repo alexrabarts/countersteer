@@ -16,37 +16,51 @@ class VirtualControls {
         const viewportWidth = window.innerWidth;
         const isMobileLandscape = viewportWidth > viewportHeight && viewportHeight < 500;
 
-        // Adjust button size based on screen size - smaller for desktop
-        const buttonSize = isMobileLandscape ? 50 : Math.min(50, viewportHeight * 0.06);
-        const gap = 5;
-        const controlsHeight = (buttonSize + gap) * 2;
-        const controlsWidth = (buttonSize + gap) * 4; // Increased width for Space button
+        // Split-hand motorcycle layout: Left = Steering, Right = Throttle/Brake
+        const buttonSize = isMobileLandscape ? 60 : Math.min(70, viewportHeight * 0.08);
+        const gap = 10;
+        const tallButtonHeight = buttonSize * 2 + gap; // For W/S buttons
 
-        // Calculate safe bottom position to ensure controls fit in viewport
+        // Calculate safe margins
         const safeBottomMargin = Math.min(20, viewportHeight * 0.02);
         const bottomPosition = safeBottomMargin;
         
-        // Create container for controls
-        const container = document.createElement('div');
-        container.className = 'virtual-controls';
-        container.style.cssText = `
+        // LEFT SIDE - Steering buttons (A/D)
+        const leftContainer = document.createElement('div');
+        leftContainer.className = 'virtual-controls-left';
+        leftContainer.style.cssText = `
             position: fixed;
             bottom: ${bottomPosition}px;
             left: ${safeBottomMargin}px;
             z-index: 1000;
             touch-action: none;
             user-select: none;
-            height: ${controlsHeight}px;
-            width: ${controlsWidth}px;
         `;
         
-        // WASD + Space layout positions - Y coordinates inverted (bottom-up positioning)
+        // RIGHT SIDE - Throttle/Brake buttons (W/S) - SWAPPED FOR MOTORCYCLE STYLE
+        const rightContainer = document.createElement('div');
+        rightContainer.className = 'virtual-controls-right';
+        rightContainer.style.cssText = `
+            position: fixed;
+            bottom: ${bottomPosition}px;
+            right: ${safeBottomMargin}px;
+            z-index: 1000;
+            touch-action: none;
+            user-select: none;
+        `;
+        
+        // Button definitions with new split layout
         const buttons = [
-            { key: 'KeyW', label: 'W', x: buttonSize + gap, y: buttonSize + gap },
-            { key: 'KeyA', label: 'A', x: 0, y: 0 },
-            { key: 'KeyS', label: 'S', x: buttonSize + gap, y: 0 },
-            { key: 'KeyD', label: 'D', x: (buttonSize + gap) * 2, y: 0 },
-            { key: 'Space', label: 'SPACE', x: (buttonSize + gap) * 3, y: 0 } // Space for clutch pop
+            // LEFT SIDE - Steering
+            { key: 'KeyA', label: '← STEER', container: leftContainer, x: 0, y: 0, width: buttonSize, height: buttonSize },
+            { key: 'KeyD', label: 'STEER →', container: leftContainer, x: buttonSize + gap, y: 0, width: buttonSize, height: buttonSize },
+            
+            // RIGHT SIDE - Throttle/Brake
+            { key: 'KeyW', label: '↑ THROTTLE', container: rightContainer, x: 0, y: tallButtonHeight/2 + gap/2, width: buttonSize, height: tallButtonHeight/2 - gap/2 },
+            { key: 'KeyS', label: '↓ BRAKE', container: rightContainer, x: 0, y: 0, width: buttonSize, height: tallButtonHeight/2 - gap/2 },
+            
+            // UTILITY - Wheelie button (right side, above throttle)
+            { key: 'Space', label: 'WHEELIE', container: rightContainer, x: 0, y: tallButtonHeight + gap * 2, width: buttonSize, height: buttonSize * 0.7 }
         ];
         
         buttons.forEach(btn => {
@@ -54,28 +68,62 @@ class VirtualControls {
             button.className = 'virtual-button';
             button.innerHTML = btn.label;
             
-            // Special styling for Space button
+            // Determine button styling based on type
             const isSpaceButton = btn.key === 'Space';
-            const buttonHeight = isSpaceButton ? buttonSize * 2 + gap : buttonSize;
+            const isThrottleButton = btn.label.includes('THROTTLE');
+            const isBrakeButton = btn.label.includes('BRAKE');
+            const isSteerButton = btn.label.includes('STEER');
             
+            // Colors
+            let bgColor, borderColor, textColor, fontSize;
+            if (isSpaceButton) {
+                bgColor = 'rgba(255, 200, 0, 0.15)';
+                borderColor = 'rgba(255, 200, 0, 0.5)';
+                textColor = '#ffc800';
+                fontSize = Math.floor(btn.height * 0.2);
+            } else if (isThrottleButton) {
+                bgColor = 'rgba(0, 255, 100, 0.15)';
+                borderColor = 'rgba(0, 255, 100, 0.5)';
+                textColor = '#00ff66';
+                fontSize = Math.floor(btn.height * 0.18);
+            } else if (isBrakeButton) {
+                bgColor = 'rgba(255, 50, 50, 0.15)';
+                borderColor = 'rgba(255, 50, 50, 0.5)';
+                textColor = '#ff5555';
+                fontSize = Math.floor(btn.height * 0.18);
+            } else if (isSteerButton) {
+                bgColor = 'rgba(100, 150, 255, 0.15)';
+                borderColor = 'rgba(100, 150, 255, 0.5)';
+                textColor = '#6096ff';
+                fontSize = Math.floor(btn.height * 0.2);
+            } else {
+                bgColor = 'rgba(255, 255, 255, 0.1)';
+                borderColor = 'rgba(255, 255, 255, 0.3)';
+                textColor = 'white';
+                fontSize = Math.floor(btn.height * 0.25);
+            }
+            
+            const isRightContainer = btn.container === rightContainer;
             button.style.cssText = `
                 position: absolute;
-                width: ${buttonSize}px;
-                height: ${buttonHeight}px;
-                left: ${btn.x}px;
+                width: ${btn.width}px;
+                height: ${btn.height}px;
+                ${isRightContainer ? `right: ${btn.x}px;` : `left: ${btn.x}px;`}
                 bottom: ${btn.y}px;
-                background: ${isSpaceButton ? 'rgba(255, 200, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'};
-                border: 2px solid ${isSpaceButton ? 'rgba(255, 200, 0, 0.4)' : 'rgba(255, 255, 255, 0.3)'};
-                border-radius: 10px;
-                color: ${isSpaceButton ? '#ffc800' : 'white'};
+                background: ${bgColor};
+                border: 3px solid ${borderColor};
+                border-radius: ${isSpaceButton ? '8px' : '12px'};
+                color: ${textColor};
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: ${isSpaceButton ? Math.floor(buttonSize * 0.22) : Math.floor(buttonSize * 0.35)}px;
+                font-size: ${fontSize}px;
                 font-weight: bold;
                 font-family: monospace;
                 cursor: pointer;
-                transition: background 0.1s;
+                transition: all 0.1s;
+                text-align: center;
+                line-height: 1.2;
             `;
 
             // Store button reference
@@ -139,19 +187,20 @@ class VirtualControls {
                 button.style.borderColor = 'rgba(255, 255, 255, 0.3)';
             });
             
-            container.appendChild(button);
+            btn.container.appendChild(button);
         });
         
         // Camera button (Z) - position it above the reset button
         const cameraButtonSize = isMobileLandscape ? 60 : Math.min(80, viewportHeight * 0.09);
         const resetButtonSize = isMobileLandscape ? 60 : Math.min(80, viewportHeight * 0.09);
+        const utilityButtonsOffset = buttonSize + gap + safeBottomMargin;
         const cameraButton = document.createElement('div');
         cameraButton.className = 'virtual-button-camera';
         cameraButton.innerHTML = 'Z';
         cameraButton.style.cssText = `
             position: fixed;
             bottom: ${bottomPosition + resetButtonSize + 10}px;
-            right: ${safeBottomMargin}px;
+            right: ${utilityButtonsOffset}px;
             width: ${cameraButtonSize}px;
             height: ${cameraButtonSize}px;
             background: rgba(100, 200, 255, 0.2);
@@ -221,7 +270,7 @@ class VirtualControls {
         resetButton.style.cssText = `
             position: fixed;
             bottom: ${bottomPosition}px;
-            right: ${safeBottomMargin}px;
+            right: ${utilityButtonsOffset}px;
             width: ${resetButtonSize}px;
             height: ${resetButtonSize}px;
             background: rgba(255, 100, 100, 0.2);
@@ -284,11 +333,13 @@ class VirtualControls {
             }, 100);
         });
         
-        document.body.appendChild(container);
+        document.body.appendChild(leftContainer);
+        document.body.appendChild(rightContainer);
         document.body.appendChild(cameraButton);
         document.body.appendChild(resetButton);
         
         // Instructions - position above controls
+        const controlsHeight = tallButtonHeight;
         const instructionsBottom = bottomPosition + controlsHeight + 10;
         const instructions = document.createElement('div');
         instructions.style.cssText = `
@@ -303,7 +354,7 @@ class VirtualControls {
             font-family: monospace;
             pointer-events: none;
         `;
-        instructions.innerHTML = 'W: Throttle | S: Brake<br>A/D: Steering | R: Reset | Z: Camera';
+        instructions.innerHTML = 'Left: Steering | Right: ↓Throttle ↑Brake<br>R: Reset | Z: Camera';
         document.body.appendChild(instructions);
         
         // Handle orientation changes
