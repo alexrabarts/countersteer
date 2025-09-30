@@ -86,8 +86,13 @@ class Game {
         this.lastSpeedCheck = 0;
         this.highSpeedThreshold = 50;
         
+        // Near miss tracking
+        this.lastNearMissTime = 0;
+        this.nearMissCheckedBikes = new Set();
+        
         // High score tracking
         this.highScore = parseInt(localStorage.getItem('motorcycleHighScore') || '0');
+        this.bestTime = parseFloat(localStorage.getItem('motorcycleBestTime') || '999999');
         this.updateHighScoreDisplay();
 
         // Finish state
@@ -630,6 +635,14 @@ class Game {
 
         const positionColor = finalPosition === 1 ? '#FFD700' : finalPosition === 2 ? '#C0C0C0' : finalPosition === 3 ? '#CD7F32' : '#95a5a6';
         
+        // Check for best time
+        let bestTimeMessage = '';
+        if (timeSeconds < this.bestTime) {
+            this.bestTime = timeSeconds;
+            localStorage.setItem('motorcycleBestTime', timeSeconds.toString());
+            bestTimeMessage = '<div style="color: #FFD700; font-size: 22px; margin-top: 10px;">🏆 NEW BEST TIME! 🏆</div>';
+        }
+        
         finishBanner.innerHTML = `
             <h1 style="color: #f39c12; margin: 0 0 20px 0; font-size: 48px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
                 COURSE COMPLETE!
@@ -641,6 +654,8 @@ class Game {
             <div style="font-size: 24px; margin-bottom: 20px;">
                 <div style="margin-bottom: 10px;">Distance: <span style="color: #3498db;">${distance.toFixed(0)} meters</span></div>
                 <div style="margin-bottom: 10px;">Time: <span style="color: #e74c3c;">${timeSeconds.toFixed(1)} seconds</span></div>
+                ${bestTimeMessage}
+                <div style="margin-bottom: 10px;">Best Time: <span style="color: #2ecc71;">${this.bestTime < 999999 ? this.bestTime.toFixed(1) + 's' : 'N/A'}</span></div>
                 <div style="margin-bottom: 10px;">Average Speed: <span style="color: #9b59b6;">${averageSpeed.toFixed(1)} mph</span></div>
             </div>
             <div style="font-size: 36px; font-weight: bold; color: #f39c12; margin-bottom: 20px;">
@@ -849,6 +864,7 @@ class Game {
             this.checkCheckpoints();
             this.checkJumpScoring();
             this.checkSpeedStreak(deltaTime);
+            this.checkNearMisses();
         }
 
         // Check for finish line crossing
@@ -882,7 +898,8 @@ class Game {
             if (collision && collision.hit && !this.vehicle.crashed && !inRoadworksZone) {
                 this.vehicle.crashed = true;
                 this.vehicle.crashAngle = this.vehicle.leanAngle || 0.5;
-                this.vehicle.frame.material.color.setHex(0xff00ff); // Magenta for traffic collision
+                this.vehicle.frame.material.color.setHex(0xff00ff);
+                this.showCollisionWarning();
                 
                 // Calculate impact direction based on car position
                 const car = collision.car;
@@ -1070,6 +1087,84 @@ class Game {
         document.body.appendChild(notification);
         
         setTimeout(() => notification.remove(), 1000);
+    }
+    
+    checkNearMisses() {
+        if (!this.traffic || !this.traffic.motorcycles) return;
+        
+        const playerPos = this.vehicle.position;
+        const currentTime = performance.now();
+        
+        this.traffic.motorcycles.forEach((bike, index) => {
+            if (!bike.bikeGroup) return;
+            
+            const bikePos = bike.bikeGroup.position;
+            const dx = bikePos.x - playerPos.x;
+            const dy = bikePos.y - playerPos.y;
+            const dz = bikePos.z - playerPos.z;
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            
+            // Near miss if within 3 units and moving past
+            if (distance < 3 && distance > 1.5 && Math.abs(dz) < 5) {
+                const bikeKey = `${index}_${Math.floor(playerPos.z / 10)}`;
+                
+                if (!this.nearMissCheckedBikes.has(bikeKey)) {
+                    this.nearMissCheckedBikes.add(bikeKey);
+                    this.addScore(100);
+                    this.showNearMissBonus();
+                    
+                    // Clean up old entries
+                    if (this.nearMissCheckedBikes.size > 20) {
+                        const keysArray = Array.from(this.nearMissCheckedBikes);
+                        this.nearMissCheckedBikes.delete(keysArray[0]);
+                    }
+                }
+            }
+        });
+    }
+    
+    showNearMissBonus() {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 35%;
+            right: 50px;
+            background: rgba(255, 215, 0, 0.9);
+            color: black;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 500;
+            animation: slideInRight 0.3s ease-out;
+        `;
+        notification.textContent = 'NEAR MISS! +100';
+        document.body.appendChild(notification);
+        
+        setTimeout(() => notification.remove(), 800);
+    }
+    
+    showCollisionWarning() {
+        const warning = document.createElement('div');
+        warning.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 30px 50px;
+            border-radius: 15px;
+            font-size: 36px;
+            font-weight: bold;
+            z-index: 600;
+            border: 4px solid white;
+            animation: shake 0.5s ease-out;
+        `;
+        warning.textContent = 'COLLISION!';
+        document.body.appendChild(warning);
+        
+        setTimeout(() => warning.remove(), 1500);
     }
     
     checkJumpScoring() {
