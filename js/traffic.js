@@ -1018,7 +1018,8 @@ class AIMotorcycle {
         let laneOffset = this.lane === 'left' ? -3 : 3;
         
         if (this.overtaking) {
-            laneOffset += (1 - this.lane === 'left' ? 1 : -1) * this.overtakeProgress * 2;
+            const overtakeLaneOffset = Math.sin(this.overtakeProgress * Math.PI) * 2;
+            laneOffset += overtakeLaneOffset;
         }
         
         const perpX = Math.cos(interpolatedHeading) * laneOffset;
@@ -1116,8 +1117,11 @@ class AIMotorcycle {
         }
         
         if (this.overtaking) {
-            this.overtakeProgress = Math.min(1, this.overtakeProgress + deltaTime * 0.5);
-            this.leanAngle = Math.sin(this.overtakeProgress * Math.PI) * 0.15;
+            this.overtakeProgress = Math.min(1, this.overtakeProgress + deltaTime * 0.8);
+            this.leanAngle = Math.sin(this.overtakeProgress * Math.PI) * 0.2;
+            
+            // Move to side during overtake
+            const overtakeLaneOffset = Math.sin(this.overtakeProgress * Math.PI) * 2;
             
             if (this.overtakeProgress >= 1) {
                 this.overtaking = false;

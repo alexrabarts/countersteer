@@ -76,10 +76,15 @@ class Game {
         this.comboMultiplier = 1;
         this.checkpointsPassed = 0;
         this.lastCheckpointIndex = -1;
-        this.checkpointTimes = []; // Track when each checkpoint was passed
-        this.lastCheckpointPosition = null; // Store last checkpoint position for restart
+        this.checkpointTimes = [];
+        this.lastCheckpointPosition = null;
         this.lastCheckpointHeading = 0;
         this.checkpointRestartPressed = false;
+        
+        // Speed streak bonus
+        this.speedStreakTime = 0;
+        this.lastSpeedCheck = 0;
+        this.highSpeedThreshold = 50;
         
         // High score tracking
         this.highScore = parseInt(localStorage.getItem('motorcycleHighScore') || '0');
@@ -584,6 +589,19 @@ class Game {
         const timeSeconds = this.finishTime / 1000;
         const averageSpeed = distance / timeSeconds * 3.6 * 0.621371; // mph
         
+        // Calculate final position
+        let finalPosition = 1;
+        if (this.traffic && this.traffic.motorcycles) {
+            const playerZ = this.vehicle.position.z;
+            this.traffic.motorcycles.forEach(bike => {
+                if (bike.bikeGroup && bike.bikeGroup.position.z > playerZ) {
+                    finalPosition++;
+                }
+            });
+        }
+        const totalRacers = this.traffic ? this.traffic.motorcycles.length + 1 : 1;
+        const positionSuffix = finalPosition === 1 ? 'st' : finalPosition === 2 ? 'nd' : finalPosition === 3 ? 'rd' : 'th';
+        
         // Add finish bonus to current score
         const finishBonus = 1000 * this.comboMultiplier;
         this.addScore(finishBonus);
@@ -610,10 +628,16 @@ class Game {
             animation: fadeIn 0.5s ease-out;
         `;
 
+        const positionColor = finalPosition === 1 ? '#FFD700' : finalPosition === 2 ? '#C0C0C0' : finalPosition === 3 ? '#CD7F32' : '#95a5a6';
+        
         finishBanner.innerHTML = `
             <h1 style="color: #f39c12; margin: 0 0 20px 0; font-size: 48px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
                 COURSE COMPLETE!
             </h1>
+            <div style="font-size: 48px; font-weight: bold; margin-bottom: 20px; color: ${positionColor}; text-shadow: 0 0 20px ${positionColor};">
+                ${finalPosition}${positionSuffix} PLACE
+                <div style="font-size: 20px; color: #95a5a6; margin-top: 5px;">out of ${totalRacers} racers</div>
+            </div>
             <div style="font-size: 24px; margin-bottom: 20px;">
                 <div style="margin-bottom: 10px;">Distance: <span style="color: #3498db;">${distance.toFixed(0)} meters</span></div>
                 <div style="margin-bottom: 10px;">Time: <span style="color: #e74c3c;">${timeSeconds.toFixed(1)} seconds</span></div>
@@ -824,6 +848,7 @@ class Game {
         if (!this.vehicle.crashed && !this.finished) {
             this.checkCheckpoints();
             this.checkJumpScoring();
+            this.checkSpeedStreak(deltaTime);
         }
 
         // Check for finish line crossing
@@ -1006,6 +1031,45 @@ class Game {
                 }
             }
         }
+    }
+    
+    checkSpeedStreak(deltaTime) {
+        if (this.vehicle.speed >= this.highSpeedThreshold) {
+            this.speedStreakTime += deltaTime;
+            
+            // Award bonus every 5 seconds of high speed
+            if (this.speedStreakTime - this.lastSpeedCheck >= 5) {
+                const bonus = 250;
+                this.addScore(bonus);
+                this.showSpeedBonus();
+                this.lastSpeedCheck = this.speedStreakTime;
+            }
+        } else {
+            this.speedStreakTime = 0;
+            this.lastSpeedCheck = 0;
+        }
+    }
+    
+    showSpeedBonus() {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 140, 0, 0.9);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            font-size: 28px;
+            font-weight: bold;
+            z-index: 500;
+            animation: speedPulse 1s ease-out;
+        `;
+        notification.textContent = 'SPEED STREAK! +250';
+        document.body.appendChild(notification);
+        
+        setTimeout(() => notification.remove(), 1000);
     }
     
     checkJumpScoring() {
