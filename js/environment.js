@@ -398,14 +398,14 @@ class Environment {
             // Create rock texture
             const rockTexture = this.createRockTexture();
             
-            // Rock material with flat shading for faceted appearance
+            // Rock material with smooth shading for realistic weathered appearance
             const cliffMaterial = new THREE.MeshStandardMaterial({ 
                 map: rockTexture,
                 color: 0xffffff, // White base to let vertex colors show through
                 vertexColors: true,
                 roughness: 0.98, 
                 metalness: 0.0,
-                flatShading: true, // Enable flat shading for faceted look
+                flatShading: false, // Smooth shading for natural rock surface
                 side: THREE.DoubleSide
             });
             
@@ -417,8 +417,8 @@ class Environment {
             const uvs = [];
             
             // Higher resolution for detailed faceting
-            const horizontalSubdivisions = 2; // Subdivide between road segments
-            const verticalSegments = 20; // More vertical detail for facets
+            const horizontalSubdivisions = 4; // Increased from 2 for finer horizontal detail
+            const verticalSegments = 35; // Increased from 20 for finer vertical detail
             
             // Create dense vertex grid with multi-layer displacement
             for (let i = 0; i < this.roadPath.length; i++) {
@@ -507,11 +507,11 @@ class Environment {
                          const totalDisplacement = primary + secondary + tertiary + micro;
 
                           // Apply faceting by quantizing displacement - smaller facets for more angular look
-                          const facetSize = 1.2 + Math.sin(idx * 0.3) * 0.4; // Smaller variable facet size for sharper angles
+                          const facetSize = 0.7 + Math.sin(idx * 0.3) * 0.3; // Reduced from 1.2±0.4 to 0.7±0.3 for sharper angles
                           const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
 
                            // Calculate base final distance
-                           const displacementScale = verticalProgress === 0 ? 0.15 : 0.55; // Further increased displacement scale for more pronounced faceting
+                           const displacementScale = verticalProgress === 0 ? 0.15 : 0.70; // Increased from 0.55 to 0.70 for more pronounced faceting
                            let finalDistance = baseDistance + facetedDisplacement * displacementScale;
 
                           // Apply slope for overhang
