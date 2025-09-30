@@ -242,10 +242,59 @@
         .customize-btn:hover {
             background: rgba(255, 215, 0, 0.4);
         }
+        
+        .position-indicator {
+            position: absolute;
+            top: 120px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 15px;
+            color: white;
+            font-family: monospace;
+            z-index: 100;
+            min-width: 180px;
+        }
+        
+        .position-indicator h3 {
+            margin: 0 0 10px 0;
+            color: #00ff00;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .position-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #00ff00;
+            text-align: center;
+            margin: 5px 0;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+        
+        .position-suffix {
+            font-size: 16px;
+            color: #88ff88;
+        }
+        
+        .total-racers {
+            text-align: center;
+            color: #aaa;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
     <button class="customize-btn" onclick="toggleCustomizeMenu()">🎨 Customize Bike</button>
+    
+    <div class="position-indicator">
+        <h3>POSITION</h3>
+        <div class="position-value">
+            <span id="position">1</span><span class="position-suffix">st</span>
+        </div>
+        <div class="total-racers">of <span id="totalRacers">5</span> racers</div>
+    </div>
     
     <div id="customizeMenu" class="customize-menu">
         <h2>Customize Your Bike</h2>

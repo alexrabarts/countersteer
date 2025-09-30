@@ -2752,16 +2752,15 @@ class Environment {
         // Small cones for track detail (not guard rails)
         const coneGeometry = new THREE.ConeGeometry(0.15, 0.5, 8);
         const coneMaterial = new THREE.MeshStandardMaterial({ color: 0xff4500, roughness: 0.8, metalness: 0.0 });
+        
         this.roadPath.forEach((point, index) => {
-            if (index % 8 === 0 && index > 30 && index < this.roadPath.length - 5) { // Sparse placement
+            if (index % 8 === 0 && index > 30 && index < this.roadPath.length - 5) {
                 const coneY = point.y !== undefined ? point.y + 0.25 : 0.25;
                 
-                // Only on straights
                 const nextIndex = Math.min(index + 1, this.roadPath.length - 1);
                 const headingChange = Math.abs(this.roadPath[nextIndex].heading - point.heading);
                 
                 if (headingChange < 0.01) {
-                    // Left side cone
                     const leftX = point.x - 8.5 * Math.cos(point.heading);
                     const leftZ = point.z + 8.5 * Math.sin(point.heading);
                     const leftCone = new THREE.Mesh(coneGeometry, coneMaterial);
@@ -2770,7 +2769,6 @@ class Environment {
                     leftCone.receiveShadow = true;
                     this.scene.add(leftCone);
 
-                    // Right side cone
                     const rightX = point.x + 8.5 * Math.cos(point.heading);
                     const rightZ = point.z - 8.5 * Math.sin(point.heading);
                     const rightCone = new THREE.Mesh(coneGeometry, coneMaterial);

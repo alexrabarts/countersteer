@@ -629,6 +629,35 @@ class Game {
         console.log(`COURSE FINISHED! Distance: ${distance.toFixed(0)}m, Time: ${timeSeconds.toFixed(1)}s, Score: ${totalScore}`);
     }
 
+    updateRacePosition() {
+        if (!this.traffic || !this.traffic.motorcycles) return;
+        
+        const playerZ = this.vehicle.position.z;
+        let position = 1;
+        
+        this.traffic.motorcycles.forEach(bike => {
+            if (bike.bikeGroup && bike.bikeGroup.position.z > playerZ) {
+                position++;
+            }
+        });
+        
+        const positionElement = document.getElementById('position');
+        const suffix = position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th';
+        
+        if (positionElement) {
+            positionElement.textContent = position;
+        }
+        const suffixElement = document.querySelector('.position-suffix');
+        if (suffixElement) {
+            suffixElement.textContent = suffix;
+        }
+        
+        const totalElement = document.getElementById('totalRacers');
+        if (totalElement) {
+            totalElement.textContent = this.traffic.motorcycles.length + 1;
+        }
+    }
+    
     animate() {
         requestAnimationFrame(() => this.animate());
 
@@ -647,6 +676,8 @@ class Game {
         const throttleInput = this.input.getThrottleInput();
         const brakeInput = this.input.getBrakeInput();
         const wheelieInput = this.input.getWheelieInput();
+        
+        this.updateRacePosition();
         
         // Check for reset
         if (this.input.checkReset()) {
