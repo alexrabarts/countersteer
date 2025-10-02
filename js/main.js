@@ -127,6 +127,8 @@ class Game {
         this.clock = new THREE.Clock();
         this.fps = 0;
         this.frameCount = 0;
+        this.deltaTimeHistory = []; // Track recent deltaTime values for smoothing
+        this.smoothedDeltaTime = 0.016; // Start at 60 FPS equivalent
         this.lastTime = performance.now();
 
         // Scoring system
@@ -1470,8 +1472,18 @@ class Game {
             document.getElementById('fps').textContent = `FPS: ${this.fps}`;
         }
 
-        // Cap deltaTime to prevent physics jumps on mobile with variable frame rates
-        const deltaTime = Math.min(this.clock.getDelta(), 0.05); // Max 50ms (20 FPS minimum)
+        // Get raw deltaTime and cap it
+        const rawDeltaTime = Math.min(this.clock.getDelta(), 0.05); // Max 50ms (20 FPS minimum)
+
+        // Smooth deltaTime over last 5 frames to prevent jittering at high speeds
+        this.deltaTimeHistory.push(rawDeltaTime);
+        if (this.deltaTimeHistory.length > 5) {
+            this.deltaTimeHistory.shift(); // Keep only last 5 frames
+        }
+
+        // Use smoothed average for consistent movement
+        const avgDeltaTime = this.deltaTimeHistory.reduce((a, b) => a + b, 0) / this.deltaTimeHistory.length;
+        const deltaTime = avgDeltaTime;
 
         // Check for pause toggle
         if (this.input.checkPause()) {
