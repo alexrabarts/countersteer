@@ -195,7 +195,8 @@ class Game {
         console.log('Creating environment...');
         try {
             // Create environment with lazy generation for the selected leg
-            this.environment = new Environment(this.scene, leg.startSegment, leg.endSegment);
+            const legIndex = this.tourSystem.getCurrentLegIndex();
+            this.environment = new Environment(this.scene, leg.startSegment, leg.endSegment, legIndex);
             console.log('Environment created successfully');
 
             // Apply landscape configuration for the leg
@@ -276,6 +277,7 @@ class Game {
         this.score = 0;
         this.checkpointsPassed = 0;
         this.finished = false;
+        this.vehicle.finished = false;
         this.startTime = performance.now();
 
         // Start leaderboard session
@@ -1665,6 +1667,7 @@ class Game {
             const distanceToFinish = this.vehicle.position.distanceTo(this.environment.finishLinePosition);
             if (distanceToFinish < 5) { // Within 5 units of finish line
                 this.finished = true;
+                this.vehicle.finished = true; // Prevent crashes after finishing
                 this.finishTime = performance.now() - this.startTime;
                 this.showFinishScreen();
             }

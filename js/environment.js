@@ -1,9 +1,10 @@
 class Environment {
-    constructor(scene, startSegment = 0, endSegment = 299) {
+    constructor(scene, startSegment = 0, endSegment = 299, legIndex = 0) {
         this.scene = scene;
         this.roadPath = []; // Store the path for other uses (full track for physics/AI)
         this.startSegment = startSegment; // Start of visual geometry range
         this.endSegment = endSegment; // End of visual geometry range
+        this.legIndex = legIndex; // Current leg index (0-7)
         this.finishLinePosition = null; // Store finish line position for detection
         this.roadworksZones = []; // Store construction zones
         this.jumpRamps = []; // Store jump ramp objects for collision detection
@@ -11,7 +12,9 @@ class Environment {
         this.boulders = []; // Store boulder objects for collision detection
         this.checkpoints = []; // Store checkpoint positions for scoring
 
-        console.log(`Initializing environment for segments ${startSegment}-${endSegment}`);
+        // Calculate road width - first 4 legs are wider (easier)
+        this.roadWidth = legIndex < 4 ? 20 : 16;
+        console.log(`Initializing environment for segments ${startSegment}-${endSegment}, leg ${legIndex}, road width ${this.roadWidth}`);
 
         this.createRoad(); // Generates full roadPath, but only creates geometry for segment range
         this.createGrass();
@@ -87,7 +90,7 @@ class Environment {
         const roadMaterial = new THREE.MeshStandardMaterial(roadMaterialProps);
         this.roadMaterial = roadMaterial; // Store for weather effects
 
-        const roadWidth = 16;
+        const roadWidth = this.roadWidth; // Use instance road width (varies by leg difficulty)
         const segmentLength = 20; // Shorter segments for smoother curves
         
         // Track position and heading as we build the road
@@ -204,7 +207,7 @@ class Environment {
     }
     
     createContinuousRoad(roadMaterial) {
-        const roadWidth = 16;
+        const roadWidth = this.roadWidth; // Use instance road width (varies by leg difficulty)
         const geometry = new THREE.BufferGeometry();
         const vertices = [];
         const indices = [];
@@ -4637,7 +4640,7 @@ class Environment {
         // Check if terrain at (terrainX, terrainZ) with given radius intersects the road corridor
         // minClearance: additional buffer beyond road edges
 
-        const roadWidth = 16;
+        const roadWidth = this.roadWidth; // Use instance road width (varies by leg difficulty)
         const totalClearance = roadWidth / 2 + minClearance;
 
         // Check against all road segments
