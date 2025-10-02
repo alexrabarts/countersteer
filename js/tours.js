@@ -274,30 +274,9 @@ class TourSystem {
         this.keyboardHandler = (e) => {
             if (!this.legSelectorActive) return;
 
-            const numCols = 2; // Grid has 2 columns
-            const numRows = Math.ceil(this.legs.length / numCols);
-            const currentRow = Math.floor(this.selectedLegIndex / numCols);
-            const currentCol = this.selectedLegIndex % numCols;
-
             switch(e.code) {
                 case 'ArrowUp':
                 case 'KeyW':
-                    e.preventDefault();
-                    if (currentRow > 0) {
-                        this.selectedLegIndex -= numCols;
-                    }
-                    this.updateLegHighlight();
-                    break;
-
-                case 'ArrowDown':
-                case 'KeyS':
-                    e.preventDefault();
-                    if (currentRow < numRows - 1 && this.selectedLegIndex + numCols < this.legs.length) {
-                        this.selectedLegIndex += numCols;
-                    }
-                    this.updateLegHighlight();
-                    break;
-
                 case 'ArrowLeft':
                 case 'KeyA':
                     e.preventDefault();
@@ -307,6 +286,8 @@ class TourSystem {
                     this.updateLegHighlight();
                     break;
 
+                case 'ArrowDown':
+                case 'KeyS':
                 case 'ArrowRight':
                 case 'KeyD':
                     e.preventDefault();
