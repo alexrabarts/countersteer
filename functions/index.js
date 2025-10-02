@@ -8,7 +8,7 @@ const db = admin.database();
 /**
  * Rate limiting helper
  */
-async function checkRateLimit(deviceFingerprint, hourlyLimit = 5, dailyLimit = 50) {
+async function checkRateLimit(deviceFingerprint, hourlyLimit = 500, dailyLimit = 5000) {
     const now = Date.now();
     const hourAgo = now - (60 * 60 * 1000);
     const dayAgo = now - (24 * 60 * 60 * 1000);
