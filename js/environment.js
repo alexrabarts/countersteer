@@ -357,14 +357,30 @@ class Environment {
                 this.scene.add(rockGroup);
             }
             
-            // Small boulders only near the road edge
-            if (index % 8 === 0 && Math.random() > 0.7) { // Less frequent
+            // Small boulders only near the road edge - DISABLED to prevent floating
+            // These are replaced by better-grounded boulders in createRoadWalls()
+            if (false && index % 8 === 0 && Math.random() > 0.7) { // Disabled
                 const side = Math.random() > 0.5 ? 1 : -1;
-                const boulderX = point.x + side * (10 + Math.random() * 3) * Math.cos(point.heading);
-                const boulderZ = point.z - side * (10 + Math.random() * 3) * Math.sin(point.heading);
-                const boulderY = point.y - 0.8;  // More deeply embedded
+                const baseDistance = 10 + Math.random() * 3;
+                const boulderX = point.x + side * baseDistance * Math.cos(point.heading);
+                const boulderZ = point.z - side * baseDistance * Math.sin(point.heading);
 
+                // Calculate proper Y position accounting for terrain drop-off
+                const roadY = point.y || 0;
+                let boulderY;
                 const boulderRadius = 0.5 + Math.random() * 1.5;
+
+                if (side > 0) {
+                    // Right side - account for drop-off
+                    const dropDistance = Math.max(0, baseDistance - 8);
+                    const terrainDropRate = 3;
+                    const dropAmount = Math.min(dropDistance * terrainDropRate, 50);
+                    boulderY = roadY - dropAmount - boulderRadius * 0.7; // 70% embedded
+                } else {
+                    // Left side - at road level
+                    boulderY = roadY - boulderRadius * 0.7;
+                }
+
                 const boulderGeometry = this.displaceVertices(
                     new THREE.IcosahedronGeometry(boulderRadius, 3),
                     boulderRadius * 0.25

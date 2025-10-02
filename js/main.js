@@ -1114,7 +1114,7 @@ class Game {
                         font-weight: bold;
                         box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
                         transition: all 0.3s;
-                    ">RESTART TOUR</button>
+                    "><u>R</u>ESTART TOUR</button>
                 ` : `
                     <button id="nextLegBtn" style="
                         font-size: 20px;
@@ -1140,7 +1140,7 @@ class Game {
                     font-weight: bold;
                     box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
                     transition: all 0.3s;
-                ">RESTART LEG</button>
+                "><u>R</u>ESTART LEG</button>
                 <button id="returnToMenuBtn" style="
                     font-size: 20px;
                     padding: 15px 30px;
@@ -1167,6 +1167,11 @@ class Game {
         document.head.appendChild(style);
 
         document.body.appendChild(finishBanner);
+
+        // Enable R key for restart
+        if (this.input) {
+            this.input.setMenuActive(true);
+        }
 
         // Submit to leaderboard if active
         if (this.leaderboardService && this.leaderboardService.isActive()) {
@@ -1200,6 +1205,10 @@ class Game {
         // Add event listeners to buttons
         document.getElementById('restartLegBtn').addEventListener('click', () => {
             finishBanner.remove();
+            // Disable R key when menu is closed
+            if (this.input) {
+                this.input.setMenuActive(false);
+            }
             // Trigger reset via input system
             if (this.input) {
                 // Simulate reset action
@@ -1228,6 +1237,10 @@ class Game {
         });
 
         document.getElementById('returnToMenuBtn').addEventListener('click', () => {
+            // Disable R key when menu is closed
+            if (this.input) {
+                this.input.setMenuActive(false);
+            }
             this.returnToMenu();
         });
 
@@ -1236,6 +1249,10 @@ class Game {
             const nextLegBtn = document.getElementById('nextLegBtn');
             if (nextLegBtn) {
                 nextLegBtn.addEventListener('click', () => {
+                    // Disable R key when menu is closed
+                    if (this.input) {
+                        this.input.setMenuActive(false);
+                    }
                     this.startNextLeg();
                 });
             }
@@ -1246,6 +1263,10 @@ class Game {
             const restartTourBtn = document.getElementById('restartTourBtn');
             if (restartTourBtn) {
                 restartTourBtn.addEventListener('click', () => {
+                    // Disable R key when menu is closed
+                    if (this.input) {
+                        this.input.setMenuActive(false);
+                    }
                     this.startFirstLeg();
                 });
             }
@@ -1301,7 +1322,7 @@ class Game {
                     font-weight: bold;
                     box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
                     transition: all 0.3s;
-                ">RESTART</button>
+                "><u>R</u>ESTART</button>
                 <button id="menuCrashBtn" style="
                     font-size: 20px;
                     padding: 15px 30px;
@@ -1319,9 +1340,18 @@ class Game {
 
         document.body.appendChild(crashNotification);
 
+        // Enable R key for restart
+        if (this.input) {
+            this.input.setMenuActive(true);
+        }
+
         // Add event listeners to buttons
         document.getElementById('restartCrashBtn').addEventListener('click', () => {
             crashNotification.remove();
+            // Disable R key when menu is closed
+            if (this.input) {
+                this.input.setMenuActive(false);
+            }
             // Reset the vehicle
             this.vehicle.reset();
             if (this.environment.roadPath && this.environment.roadPath.length > 0) {
@@ -1347,6 +1377,10 @@ class Game {
         });
 
         document.getElementById('menuCrashBtn').addEventListener('click', () => {
+            // Disable R key when menu is closed
+            if (this.input) {
+                this.input.setMenuActive(false);
+            }
             this.returnToMenu();
         });
 

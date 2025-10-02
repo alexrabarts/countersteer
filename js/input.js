@@ -13,6 +13,7 @@ class InputHandler {
         this.pausePressed = false;
         this.virtualControls = null;
         this.steeringSmoothing = 0.4; // How quickly steering ramps up (0-1, higher = faster)
+        this.menuActive = false; // Track if crash/finish menu is showing
         this.setupEventListeners();
         this.setupMobileControls();
     }
@@ -27,8 +28,8 @@ class InputHandler {
                 this.virtualControls.highlightKey(event.code, true);
             }
 
-            // Check for reset
-            if (event.code === 'KeyR') {
+            // Check for reset (only when menu is active)
+            if (event.code === 'KeyR' && this.menuActive) {
                 this.resetPressed = true;
             }
 
@@ -209,5 +210,9 @@ class InputHandler {
         if (typeof VirtualControls !== 'undefined') {
             this.virtualControls = new VirtualControls();
         }
+    }
+
+    setMenuActive(active) {
+        this.menuActive = active;
     }
 }
