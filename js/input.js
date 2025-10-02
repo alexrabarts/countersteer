@@ -10,6 +10,7 @@ class InputHandler {
         this.soundTogglePressed = false;
         this.checkpointRestartPressed = false;
         this.cameraSwitchPressed = false;
+        this.pausePressed = false;
         this.virtualControls = null;
         this.steeringSmoothing = 0.4; // How quickly steering ramps up (0-1, higher = faster)
         this.setupEventListeners();
@@ -47,6 +48,11 @@ class InputHandler {
                 this.cameraSwitchPressed = true;
             }
 
+            // Check for pause toggle
+            if (event.code === 'KeyP') {
+                this.pausePressed = true;
+            }
+
             // Test key to force falling
             if (event.code === 'KeyF') {
                 console.log('F key pressed - forcing fall test');
@@ -77,6 +83,10 @@ class InputHandler {
 
             if (event.code === 'KeyZ') {
                 this.cameraSwitchPressed = false;
+            }
+
+            if (event.code === 'KeyP') {
+                this.pausePressed = false;
             }
         });
     }
@@ -184,14 +194,22 @@ class InputHandler {
             this.virtualControls.touches['KeyZ'] = false; // Clear after use
             return true;
         }
-        
+
         if (this.cameraSwitchPressed) {
             this.cameraSwitchPressed = false;
             return true;
         }
         return false;
     }
-    
+
+    checkPause() {
+        if (this.pausePressed) {
+            this.pausePressed = false;
+            return true;
+        }
+        return false;
+    }
+
     setupMobileControls() {
         // Always create virtual controls for WASD-style on-screen buttons
         if (typeof VirtualControls !== 'undefined') {

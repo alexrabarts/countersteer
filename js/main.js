@@ -150,6 +150,12 @@ class Game {
         this.finishTime = 0;
         this.startTime = performance.now();
 
+        // Pause state
+        this.paused = false;
+
+        // Brake duration tracking for tire smoke
+        this.brakeHeldTime = 0;
+
         // Help flags
         this.hasShownWheelieHelp = false;
 
@@ -234,7 +240,75 @@ class Game {
 
         console.log('Starting animation loop...');
         // Delay first frame to ensure renderer is fully initialized
-        requestAnimationFrame(() => this.animate());
+        this.animationFrameId = requestAnimationFrame(() => this.animate());
+    }
+
+    cleanupCurrentLeg() {
+        // Stop game loop
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+
+        // Stop sounds
+        if (this.soundManager) {
+            this.soundManager.stopEngineSound();
+        }
+
+        // Clear scene objects (keep camera and lights)
+        if (this.scene) {
+            const objectsToRemove = [];
+            this.scene.children.forEach(child => {
+                if (child !== this.camera &&
+                    child !== this.directionalLight &&
+                    child !== this.distantLight &&
+                    child !== this.ambientLight &&
+                    child !== this.leftHeadlight &&
+                    child !== this.rightHeadlight) {
+                    objectsToRemove.push(child);
+                }
+            });
+            objectsToRemove.forEach(obj => this.scene.remove(obj));
+        }
+
+        // Reset game state
+        this.finished = false;
+        this.score = 0;
+        this.checkpointsPassed = 0;
+        this.combo = 0;
+        this.comboMultiplier = 1;
+
+        console.log('Cleaned up current leg');
+    }
+
+    returnToMenu() {
+        console.log('Returning to menu...');
+
+        // Remove finish banner if exists
+        const finishBanner = document.getElementById('finishBanner');
+        if (finishBanner) {
+            finishBanner.remove();
+        }
+
+        // Remove crash notification if exists
+        const crashNotification = document.getElementById('crashNotification');
+        if (crashNotification) {
+            crashNotification.remove();
+        }
+
+        // Cleanup current leg
+        this.cleanupCurrentLeg();
+
+        // Show leg selector
+        this.tourSystem.showLegSelector();
+
+        // Hide dashboard
+        const dashboard = document.querySelector('.dashboard');
+        if (dashboard) {
+            dashboard.style.opacity = '0';
+        }
+
+        console.log('Returned to menu');
     }
 
     isWebGLAvailable() {
@@ -941,8 +1015,31 @@ class Game {
             <div style="font-size: 36px; font-weight: bold; color: #f39c12; margin-bottom: 20px;">
                 SCORE: ${totalScore.toLocaleString()}
             </div>
-            <div style="font-size: 18px; color: #bdc3c7;">
-                Press R to play again
+            <div style="margin-top: 20px; display: flex; gap: 20px; justify-content: center;">
+                <button id="restartLegBtn" style="
+                    font-size: 20px;
+                    padding: 15px 30px;
+                    background: linear-gradient(135deg, #3498db, #2980b9);
+                    color: white;
+                    border: none;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    font-weight: bold;
+                    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+                    transition: all 0.3s;
+                ">RESTART LEG</button>
+                <button id="returnToMenuBtn" style="
+                    font-size: 20px;
+                    padding: 15px 30px;
+                    background: linear-gradient(135deg, #e74c3c, #c0392b);
+                    color: white;
+                    border: none;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    font-weight: bold;
+                    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+                    transition: all 0.3s;
+                ">RETURN TO MENU</button>
             </div>
         `;
 
@@ -958,6 +1055,40 @@ class Game {
 
         document.body.appendChild(finishBanner);
 
+        // Add event listeners to buttons
+        document.getElementById('restartLegBtn').addEventListener('click', () => {
+            finishBanner.remove();
+            // Trigger reset via input system
+            if (this.input) {
+                // Simulate reset action
+                this.vehicle.reset();
+                if (this.environment.roadPath && this.environment.roadPath.length > 0) {
+                    const startPos = this.tourSystem.getStartingPosition(this.environment.roadPath);
+                    this.vehicle.position.x = startPos.x;
+                    this.vehicle.position.y = startPos.y;
+                    this.vehicle.position.z = startPos.z;
+                    this.vehicle.yawAngle = startPos.heading;
+                }
+                this.cones.reset();
+                this.finished = false;
+                this.startTime = performance.now();
+                this.score = 0;
+                this.combo = 0;
+                this.comboMultiplier = 1;
+                this.checkpointsPassed = 0;
+                this.lastCheckpointIndex = -1;
+                this.checkpointTimes = [];
+                if (this.environment && this.environment.checkpoints) {
+                    this.environment.checkpoints.forEach(cp => cp.passed = false);
+                }
+                this.updateScoreDisplay();
+            }
+        });
+
+        document.getElementById('returnToMenuBtn').addEventListener('click', () => {
+            this.returnToMenu();
+        });
+
         // Update high score if this score is better
         if (totalScore > this.highScore) {
             this.highScore = totalScore;
@@ -965,6 +1096,99 @@ class Game {
         }
 
         console.log(`COURSE FINISHED! Distance: ${distance.toFixed(0)}m, Time: ${timeSeconds.toFixed(1)}s, Score: ${totalScore}`);
+    }
+
+    showCrashNotification() {
+        // Create crash notification
+        const crashNotification = document.createElement('div');
+        crashNotification.id = 'crashNotification';
+        crashNotification.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #2c1515, #3e1515);
+            border: 3px solid #e74c3c;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            z-index: 9999;
+            color: white;
+            font-family: Arial, sans-serif;
+            animation: fadeIn 0.5s ease-out;
+            box-shadow: 0 10px 40px rgba(231, 76, 60, 0.6);
+            min-width: 400px;
+        `;
+
+        crashNotification.innerHTML = `
+            <div style="font-size: 72px; font-weight: bold; color: #e74c3c; margin-bottom: 20px; text-shadow: 0 0 20px rgba(231, 76, 60, 0.8);">
+                CRASHED!
+            </div>
+            <div style="font-size: 24px; color: #95a5a6; margin-bottom: 30px;">
+                Better luck next time!
+            </div>
+            <div style="margin-top: 30px; display: flex; gap: 20px; justify-content: center;">
+                <button id="restartCrashBtn" style="
+                    font-size: 20px;
+                    padding: 15px 30px;
+                    background: linear-gradient(135deg, #3498db, #2980b9);
+                    color: white;
+                    border: none;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    font-weight: bold;
+                    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+                    transition: all 0.3s;
+                ">RESTART</button>
+                <button id="menuCrashBtn" style="
+                    font-size: 20px;
+                    padding: 15px 30px;
+                    background: linear-gradient(135deg, #e74c3c, #c0392b);
+                    color: white;
+                    border: none;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    font-weight: bold;
+                    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+                    transition: all 0.3s;
+                ">MENU</button>
+            </div>
+        `;
+
+        document.body.appendChild(crashNotification);
+
+        // Add event listeners to buttons
+        document.getElementById('restartCrashBtn').addEventListener('click', () => {
+            crashNotification.remove();
+            // Reset the vehicle
+            this.vehicle.reset();
+            if (this.environment.roadPath && this.environment.roadPath.length > 0) {
+                const startPos = this.tourSystem.getStartingPosition(this.environment.roadPath);
+                this.vehicle.position.x = startPos.x;
+                this.vehicle.position.y = startPos.y;
+                this.vehicle.position.z = startPos.z;
+                this.vehicle.yawAngle = startPos.heading;
+            }
+            this.cones.reset();
+            this.finished = false;
+            this.startTime = performance.now();
+            this.score = 0;
+            this.combo = 0;
+            this.comboMultiplier = 1;
+            this.checkpointsPassed = 0;
+            this.lastCheckpointIndex = -1;
+            this.checkpointTimes = [];
+            if (this.environment && this.environment.checkpoints) {
+                this.environment.checkpoints.forEach(cp => cp.passed = false);
+            }
+            this.updateScoreDisplay();
+        });
+
+        document.getElementById('menuCrashBtn').addEventListener('click', () => {
+            this.returnToMenu();
+        });
+
+        console.log('Crash notification displayed');
     }
 
     updateRacePosition() {
@@ -1029,11 +1253,26 @@ class Game {
 
         // Cap deltaTime to prevent physics jumps on mobile with variable frame rates
         const deltaTime = Math.min(this.clock.getDelta(), 0.05); // Max 50ms (20 FPS minimum)
+
+        // Check for pause toggle
+        if (this.input.checkPause()) {
+            this.paused = !this.paused;
+            if (this.paused) {
+                this.soundManager.stopEngineSound();
+            }
+        }
+
+        // Skip all game logic if paused, but continue rendering
+        if (this.paused) {
+            this.renderer.render(this.scene, this.camera);
+            return;
+        }
+
         const steeringInput = this.input.getSteeringInput();
         const throttleInput = this.input.getThrottleInput();
         const brakeInput = this.input.getBrakeInput();
         const wheelieInput = this.input.getWheelieInput();
-        
+
         this.updateRacePosition();
         
         // Check for reset
@@ -1131,6 +1370,7 @@ class Game {
          // Play crash sound if we just crashed
         if (!wasCrashed && this.vehicle.crashed) {
             this.soundManager.playCrashSound();
+            this.showCrashNotification();
         }
 
         // Show wheelie help when over halfway round the course
@@ -1244,8 +1484,15 @@ class Game {
         if (this.particles && !this.vehicle.crashed) {
             this.particles.update(deltaTime);
 
-            // Tire smoke on braking/drifting
-            if (brakeInput > 0.3 && this.vehicle.speed > 30) {
+            // Track brake duration
+            if (brakeInput > 0.3) {
+                this.brakeHeldTime += deltaTime;
+            } else {
+                this.brakeHeldTime = 0;
+            }
+
+            // Tire smoke on braking/drifting - only after holding brake for 0.4 seconds
+            if (brakeInput > 0.3 && this.vehicle.speed > 30 && this.brakeHeldTime > 0.4) {
                 const smokeIntensity = brakeInput * Math.min(this.vehicle.speed / 50, 1.0);
                 // Spawn from rear wheel position
                 const rearWheelPos = this.vehicle.position.clone();

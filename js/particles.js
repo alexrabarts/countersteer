@@ -6,7 +6,7 @@ class ParticleSystem {
     }
 
     createTireSmoke(position, velocity, intensity = 1.0) {
-        const particleCount = Math.floor(5 * intensity);
+        const particleCount = Math.floor(3 * intensity); // Reduced from 5
         const geometry = new THREE.BufferGeometry();
         const positions = [];
         const velocities = [];
@@ -29,7 +29,7 @@ class ParticleSystem {
             );
 
             lifetimes.push(Math.random() * 0.5 + 0.5); // 0.5-1.0 seconds
-            sizes.push(Math.random() * 0.3 + 0.2); // 0.2-0.5 size
+            sizes.push(Math.random() * 0.15 + 0.1); // 0.1-0.25 size (reduced from 0.2-0.5)
         }
 
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -39,9 +39,9 @@ class ParticleSystem {
 
         const material = new THREE.PointsMaterial({
             color: 0xcccccc,
-            size: 0.5,
+            size: 0.3, // Reduced from 0.5
             transparent: true,
-            opacity: 0.6,
+            opacity: 0.4, // Reduced from 0.6
             blending: THREE.AdditiveBlending,
             depthWrite: false
         });
