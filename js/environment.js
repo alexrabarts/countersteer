@@ -2303,7 +2303,7 @@ class Environment {
         // Heavy skid marks and burnout streaks
         ctx.globalAlpha = 0.5;
         ctx.strokeStyle = '#0a0a0a';
-        for (let i = 0; i < 25; i++) {
+        for (let i = 0; i < 15; i++) { // Reduced from 25
             const startX = Math.random() * canvas.width;
             const startY = Math.random() * canvas.height;
             const length = 60 + Math.random() * 250;
@@ -2327,7 +2327,7 @@ class Environment {
         
         // Tire burnout patches (darker circular marks)
         ctx.globalAlpha = 0.4;
-        for (let i = 0; i < 18; i++) {
+        for (let i = 0; i < 12; i++) { // Reduced from 18
             const x = Math.random() * canvas.width;
             const y = Math.random() * canvas.height;
             const width = 18 + Math.random() * 35;
@@ -2343,7 +2343,7 @@ class Environment {
         
         // Diagonal skid marks from drifting
         ctx.globalAlpha = 0.35;
-        for (let i = 0; i < 15; i++) {
+        for (let i = 0; i < 10; i++) { // Reduced from 15
             const startX = Math.random() * canvas.width;
             const startY = Math.random() * canvas.height;
             const angle = Math.random() * Math.PI * 2;
@@ -2363,7 +2363,7 @@ class Environment {
         // Snake marks (S-shaped skids)
         ctx.globalAlpha = 0.3;
         ctx.strokeStyle = '#1a1a1a';
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 6; i++) { // Reduced from 10
             const startX = Math.random() * canvas.width;
             const startY = Math.random() * canvas.height;
             const length = 80 + Math.random() * 150;
@@ -2400,7 +2400,7 @@ class Environment {
         ctx.globalAlpha = 0.55;
         ctx.strokeStyle = '#0a0a0a';
         ctx.lineWidth = 1.5;
-        for (let i = 0; i < 35; i++) {
+        for (let i = 0; i < 20; i++) { // Reduced from 35
             ctx.beginPath();
             const startX = Math.random() * canvas.width;
             const startY = Math.random() * canvas.height;
@@ -2417,7 +2417,7 @@ class Environment {
         
         // Large patch repairs (rectangular)
         ctx.globalAlpha = 0.35;
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 12; i++) { // Reduced from 20
             const x = Math.random() * canvas.width;
             const y = Math.random() * canvas.height;
             const width = 25 + Math.random() * 50;
@@ -2436,7 +2436,7 @@ class Environment {
         
         // Irregular patch repairs
         ctx.globalAlpha = 0.3;
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 8; i++) { // Reduced from 12
             const x = Math.random() * canvas.width;
             const y = Math.random() * canvas.height;
             const size = 30 + Math.random() * 60;

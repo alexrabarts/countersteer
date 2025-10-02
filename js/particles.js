@@ -174,15 +174,22 @@ class ParticleSystem {
         const lifetimes = [];
         const sizes = [];
 
-        // Single streak particle
-        positions.push(position.x, position.y, position.z);
-        velocities.push(
-            -velocity.x * 0.5,
-            0,
-            -velocity.z * 0.5
-        );
-        lifetimes.push(0.2); // Very short
-        sizes.push(0.8);
+        // Small puff of oily smoke
+        const particleCount = 2;
+        for (let i = 0; i < particleCount; i++) {
+            positions.push(
+                position.x + (Math.random() - 0.5) * 0.2,
+                position.y + Math.random() * 0.1,
+                position.z + (Math.random() - 0.5) * 0.2
+            );
+            velocities.push(
+                -velocity.x * 0.3 + (Math.random() - 0.5) * 0.5,
+                Math.random() * 0.5 + 0.2, // Slight upward drift
+                -velocity.z * 0.3 + (Math.random() - 0.5) * 0.5
+            );
+            lifetimes.push(0.15 + Math.random() * 0.1); // Very brief
+            sizes.push(Math.random() * 0.05 + 0.03); // Much smaller
+        }
 
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
         geometry.setAttribute('velocity', new THREE.Float32BufferAttribute(velocities, 3));
@@ -190,17 +197,17 @@ class ParticleSystem {
         geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
 
         const material = new THREE.PointsMaterial({
-            color: 0x6699ff,
-            size: 1.0,
+            color: 0x333333, // Dark oily smoke color
+            size: 0.15, // Much smaller
             transparent: true,
-            opacity: 0.3,
-            blending: THREE.AdditiveBlending,
+            opacity: 0.15, // More transparent
+            blending: THREE.NormalBlending,
             depthWrite: false
         });
 
         const particles = new THREE.Points(geometry, material);
         particles.userData.age = 0;
-        particles.userData.maxLife = 0.2;
+        particles.userData.maxLife = 0.25;
         particles.userData.type = 'trail';
 
         this.scene.add(particles);

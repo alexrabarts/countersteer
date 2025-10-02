@@ -1771,13 +1771,17 @@ class Game {
                 this.particles.createTireSmoke(rearWheelPos, this.vehicle.velocity, smokeIntensity);
             }
 
-            // Speed trails at extreme speeds (90%+ max speed)
-            if (this.vehicle.speed > this.vehicle.maxSpeed * 0.9) {
-                // Spawn less frequently for performance
-                if (Math.random() < 0.3) {
+            // Brief oily smoke puffs when accelerating hard at high speed
+            // Only when: throttle is applied, speed is increasing, and at high speed
+            const isAccelerating = throttleInput > 0.8 && this.vehicle.speed > (this.lastSpeed || 0) + 1;
+            const atHighSpeed = this.vehicle.speed > this.vehicle.maxSpeed * 0.7;
+            if (isAccelerating && atHighSpeed) {
+                // Spawn very rarely for brief puffs
+                if (Math.random() < 0.08) {
                     this.particles.createSpeedTrail(this.vehicle.position.clone(), this.vehicle.velocity);
                 }
             }
+            this.lastSpeed = this.vehicle.speed;
 
             // Landing dust clouds - detect when landing from jump
             if (this.lastJumpState && !this.vehicle.isJumping) {
