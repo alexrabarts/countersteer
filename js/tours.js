@@ -195,7 +195,7 @@ class TourSystem {
         const selectorHTML = `
             <div class="tour-selector-overlay">
                 <div class="tour-selector-panel">
-                    <h1 class="tour-title">GRAND TOURING CHALLENGE</h1>
+                    <h1 class="tour-title">TWISTY CHALLENGE TOUR</h1>
                     <h2 class="tour-subtitle">Select Your Journey</h2>
                     <div class="leg-grid">
                         ${this.legs.map((leg, index) => `
