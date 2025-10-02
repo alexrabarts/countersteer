@@ -197,6 +197,24 @@ class Game {
             // Apply landscape configuration for the leg
             const landscapeConfig = this.tourSystem.getLandscapeConfig();
             this.environment.applyLandscapeConfig(landscapeConfig);
+
+            // Initialize weather system
+            console.log('Initializing weather system...');
+            if (typeof WeatherSystem !== 'undefined') {
+                this.weatherSystem = new WeatherSystem(this.scene, this.camera);
+
+                // Apply weather from leg
+                const weatherType = leg.weather || 'clear';
+                const weatherIntensity = leg.weatherIntensity !== undefined ? leg.weatherIntensity : 1.0;
+                this.weatherSystem.setWeather(weatherType, weatherIntensity);
+
+                // Apply weather visuals to environment
+                this.environment.applyWeatherVisuals(weatherType, weatherIntensity);
+
+                console.log(`Weather set to: ${weatherType} (intensity: ${weatherIntensity})`);
+            } else {
+                console.warn('WeatherSystem class not found');
+            }
         } catch (error) {
             console.error('Failed to create environment:', error);
             throw error;
@@ -218,6 +236,11 @@ class Game {
         console.log('Creating vehicle...');
         this.vehicle = new Vehicle(this.scene, (points) => this.addScore(points));
         this.vehicle.environment = this.environment; // Pass environment reference for elevation
+
+        // Connect weather system to vehicle
+        if (this.weatherSystem) {
+            this.vehicle.setWeatherSystem(this.weatherSystem);
+        }
 
         // Initialize vehicle at leg start position
         if (this.environment.roadPath && this.environment.roadPath.length > 0) {
@@ -1677,6 +1700,11 @@ class Game {
         this.updateUI();
 
         // Update particle system and spawn particles based on vehicle state
+        // Update weather system
+        if (this.weatherSystem && !this.vehicle.crashed) {
+            this.weatherSystem.update(deltaTime, this.vehicle.position);
+        }
+
         if (this.particles && !this.vehicle.crashed) {
             this.particles.update(deltaTime);
 

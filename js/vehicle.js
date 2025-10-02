@@ -48,6 +48,9 @@ class Vehicle {
         
         // Advanced wheelie balance system
         this.wheelieBalance = 0; // -1 to 1, 0 is perfectly balanced
+
+        // Weather system reference
+        this.weatherSystem = null;
         this.wheelieOptimalAngle = Math.PI / 6; // 30 degrees - sweet spot
         this.wheelieDangerAngle = Math.PI / 3; // 60 degrees - danger zone
         this.wheelieCrashAngle = Math.PI * 0.45; // 81 degrees - too far!
@@ -1018,15 +1021,22 @@ class Vehicle {
             gradientForce = -gradient * 9.81 * 0.3; // Scaled for gameplay
         }
         
+        // Get weather physics multipliers
+        const weatherMultipliers = this.weatherSystem ? this.weatherSystem.getPhysicsMultipliers() : {
+            lateralFriction: 1.0,
+            brakeForce: 1.0,
+            acceleration: 1.0
+        };
+
         // Apply throttle (reduced during wheelie for challenge)
         if (throttleInput > 0) {
             const wheeliePenalty = this.isWheelie ? 0.3 : 1.0; // Only 30% acceleration during wheelie
-            this.speed += this.acceleration * throttleInput * deltaTime * wheeliePenalty;
+            this.speed += this.acceleration * throttleInput * deltaTime * wheeliePenalty * weatherMultipliers.acceleration;
         }
-        
-        // Apply brakes
+
+        // Apply brakes (reduced in bad weather)
         if (brakeInput > 0) {
-            this.speed -= this.brakeForce * brakeInput * deltaTime;
+            this.speed -= this.brakeForce * brakeInput * deltaTime * weatherMultipliers.brakeForce;
         }
         
         // Apply gradient force
@@ -1207,9 +1217,16 @@ class Vehicle {
     }
 
     updatePhysics(deltaTime, steeringInput) {
+        // Get weather physics multipliers
+        const weatherMultipliers = this.weatherSystem ? this.weatherSystem.getPhysicsMultipliers() : {
+            lateralFriction: 1.0,
+            brakeForce: 1.0,
+            acceleration: 1.0
+        };
+
         // Steering visualization
         this.steeringAngle = steeringInput * 0.3;
-        
+
         // Speed affects steering sensitivity (less sensitive at high speed)
         const speedFactor = Math.max(0.3, Math.min(1.0, 20 / this.speed));
         
@@ -1233,23 +1250,26 @@ class Vehicle {
         
         // 3. CENTRIPETAL TORQUE: From turning (can be stabilizing or destabilizing)
         // When turning, centripetal force at ground creates moment around CG
+        // REDUCED BY WEATHER: Low grip means less centripetal force available
         let centripetalTorque = 0;
         if (Math.abs(this.leanAngle) > 0.01) {
             // Calculate turn rate from lean angle
             const leanFactor = Math.tan(Math.abs(this.leanAngle));
             const turnRadius = Math.max(8, (this.speed * this.speed) / (9.81 * leanFactor));
             const turnRate = this.speed / turnRadius;
-            
+
             // Centripetal force opposes lean only in steady-state turn
             // This creates the balance point
-            centripetalTorque = -Math.sign(this.leanAngle) * turnRate * this.speed * 0.15;
+            // Weather reduces available grip for turning
+            centripetalTorque = -Math.sign(this.leanAngle) * turnRate * this.speed * 0.15 * weatherMultipliers.lateralFriction;
         }
-        
+
         // 4. GYROSCOPIC RESISTANCE: Higher speed = more stability
         const gyroResistance = this.leanVelocity * this.speed * 0.02;
 
         // 5. SELF-RIGHTING TORQUE: Bike naturally tries to return upright
-        const selfRightingTorque = -this.leanAngle * 3.5;
+        // REDUCED BY WEATHER: Low grip means tire contact patch has less righting authority
+        const selfRightingTorque = -this.leanAngle * 3.5 * weatherMultipliers.lateralFriction;
 
         // Total torque is sum of all forces
         const totalTorque = steeringTorque + gravityTorque + centripetalTorque - gyroResistance + selfRightingTorque;
@@ -1515,7 +1535,11 @@ class Vehicle {
     getDistanceTraveledKm() {
         return this.distanceTraveled / 1000; // in kilometers
     }
-    
+
+    setWeatherSystem(weatherSystem) {
+        this.weatherSystem = weatherSystem;
+    }
+
     updateElevation() {
         // Skip elevation update when jumping
         if (this.isJumping) return;

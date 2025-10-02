@@ -1,6 +1,7 @@
 class TourSystem {
     constructor() {
         this.legs = [
+            // Leg 1: Easy warm-up
             {
                 id: 'mountain-dawn',
                 name: 'Mountain Dawn',
@@ -9,9 +10,10 @@ class TourSystem {
                 endSegment: 59,
                 timeOfDay: 'dawn',
                 landscapeVariation: 'mountain',
-                difficulty: 'Easy',
-                distance: '12 km'
+                weather: 'clear',
+                weatherIntensity: 0
             },
+            // Leg 2: Build confidence
             {
                 id: 'valley-run',
                 name: 'Valley Run',
@@ -20,41 +22,80 @@ class TourSystem {
                 endSegment: 119,
                 timeOfDay: 'golden',
                 landscapeVariation: 'valley',
-                difficulty: 'Medium',
-                distance: '12 km'
+                weather: 'clear',
+                weatherIntensity: 0
             },
-            {
-                id: 'high-pass',
-                name: 'High Pass',
-                description: 'Technical hairpins and dramatic elevation changes',
-                startSegment: 120,
-                endSegment: 179,
-                timeOfDay: 'sunset',
-                landscapeVariation: 'alpine',
-                difficulty: 'Hard',
-                distance: '12 km'
-            },
+            // Leg 3: Technical descents
             {
                 id: 'coastal-descent',
                 name: 'Coastal Descent',
                 description: 'Sweeping descents with ocean views',
-                startSegment: 180,
-                endSegment: 239,
+                startSegment: 120,
+                endSegment: 179,
                 timeOfDay: 'twilight',
                 landscapeVariation: 'coastal',
-                difficulty: 'Medium',
-                distance: '12 km'
+                weather: 'clear',
+                weatherIntensity: 0
             },
+            // Leg 4: First weather challenge - visibility
+            {
+                id: 'foggy-gorge',
+                name: 'Foggy Gorge',
+                description: 'Navigate through dense morning fog and mist',
+                startSegment: 180,
+                endSegment: 239,
+                timeOfDay: 'golden', // Morning light, but foggy
+                landscapeVariation: 'valley',
+                weather: 'fog',
+                weatherIntensity: 0.8
+            },
+            // Leg 5: Technical hairpins
+            {
+                id: 'high-pass',
+                name: 'High Pass',
+                description: 'Technical hairpins and dramatic elevation changes',
+                startSegment: 240,
+                endSegment: 299,
+                timeOfDay: 'sunset',
+                landscapeVariation: 'alpine',
+                weather: 'clear',
+                weatherIntensity: 0
+            },
+            // Leg 6: Weather + grip challenge
+            {
+                id: 'storm-valley',
+                name: 'Storm Valley',
+                description: 'Battle heavy rain and wet roads in a valley storm',
+                startSegment: 300,
+                endSegment: 359,
+                timeOfDay: 'twilight', // Dark stormy afternoon
+                landscapeVariation: 'valley',
+                weather: 'rain',
+                weatherIntensity: 0.9
+            },
+            // Leg 7: Darkness challenge
             {
                 id: 'night-ride',
                 name: 'Night Ride',
                 description: 'Mixed technical challenges under the stars',
-                startSegment: 240,
-                endSegment: 299,
+                startSegment: 360,
+                endSegment: 419,
                 timeOfDay: 'night',
                 landscapeVariation: 'mixed',
-                difficulty: 'Hard',
-                distance: '12 km'
+                weather: 'clear',
+                weatherIntensity: 0
+            },
+            // Leg 8: Ultimate finale - ice and snow
+            {
+                id: 'winter-pass',
+                name: 'Winter Pass',
+                description: 'Conquer icy roads and snowfall in the mountain pass',
+                startSegment: 420,
+                endSegment: 479,
+                timeOfDay: 'twilight', // Overcast winter day
+                landscapeVariation: 'alpine',
+                weather: 'snow',
+                weatherIntensity: 1.0
             }
         ];
 

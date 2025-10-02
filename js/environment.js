@@ -85,7 +85,8 @@ class Environment {
             roadMaterialProps.color = 0x2a2a2a; // Dark grey fallback
         }
         const roadMaterial = new THREE.MeshStandardMaterial(roadMaterialProps);
-        
+        this.roadMaterial = roadMaterial; // Store for weather effects
+
         const roadWidth = 16;
         const segmentLength = 20; // Shorter segments for smoother curves
         
@@ -4541,6 +4542,55 @@ class Environment {
         } else {
             // Create fog if it doesn't exist
             this.scene.fog = new THREE.FogExp2(0x87ceeb, density);
+        }
+    }
+
+    applyWeatherVisuals(weatherType, intensity = 1.0) {
+        console.log(`Applying weather visuals: ${weatherType} (intensity: ${intensity})`);
+
+        switch(weatherType) {
+            case 'rain':
+                // Wet road - darker, more reflective
+                if (this.roadMaterial) {
+                    this.roadMaterial.roughness = 0.3 * (1 - intensity) + 0.85 * intensity; // Smoother when wet
+                    this.roadMaterial.metalness = 0.4 * intensity; // More reflective
+                    this.roadMaterial.color.setHex(0x1a1a1a); // Darker when wet
+                    this.roadMaterial.needsUpdate = true;
+                }
+                // Darker grass and mountains
+                this.updateTerrainColors(0x3a6a3a);
+                this.updateMountainColors(0x5a4a32);
+                break;
+
+            case 'snow':
+                // Icy road - very reflective
+                if (this.roadMaterial) {
+                    this.roadMaterial.roughness = 0.2; // Very smooth/icy
+                    this.roadMaterial.metalness = 0.5; // Highly reflective
+                    this.roadMaterial.color.setHex(0xc0d0e0); // Lighter, icy blue tint
+                    this.roadMaterial.needsUpdate = true;
+                }
+                // Snow-covered terrain
+                this.updateTerrainColors(0xe0e8f0); // White/pale blue
+                this.updateMountainColors(0xd0d8e0); // Snowy mountains
+                break;
+
+            case 'fog':
+                // No visual changes to road/terrain for fog
+                // Fog is handled by WeatherSystem
+                break;
+
+            case 'clear':
+            default:
+                // Reset to normal appearance
+                if (this.roadMaterial) {
+                    this.roadMaterial.roughness = 0.85;
+                    this.roadMaterial.metalness = 0.0;
+                    this.roadMaterial.color.setHex(0x2a2a2a);
+                    this.roadMaterial.needsUpdate = true;
+                }
+                // Terrain colors will be set by applyLandscapeConfig
+                break;
         }
     }
 
