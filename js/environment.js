@@ -211,8 +211,9 @@ class Environment {
         const uvs = [];
 
         // Only create geometry for the active segment range (lazy generation)
+        // Extend by 20 segments to match decorative elements (trees, markings)
         const startIdx = Math.max(0, this.startSegment);
-        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment);
+        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment + 20);
 
         console.log(`Creating road geometry for segments ${startIdx} to ${endIdx} (${endIdx - startIdx + 1} segments)`);
 
@@ -284,8 +285,9 @@ class Environment {
         // Only adding minimal standalone rocks to avoid floating objects
 
         // Occasional large rocks near the cliff base (only in active segment range)
+        // Extend by 20 segments to match road geometry
         const startIdx = Math.max(0, this.startSegment);
-        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment);
+        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment + 20);
 
         for (let index = startIdx; index <= endIdx; index++) {
             const point = this.roadPath[index];
@@ -2675,7 +2677,7 @@ class Environment {
         }
         
         ctx.globalAlpha = 1.0;
-        
+
         const texture = new THREE.CanvasTexture(canvas);
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
@@ -2963,8 +2965,9 @@ class Environment {
         this.scene.add(lake);
 
         // Create continuous terrain strips along the road (only in active segment range)
+        // Extend by 20 segments to match road geometry and decorative elements
         const startIdx = Math.max(0, this.startSegment);
-        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment);
+        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment + 20);
 
         const createTerrainStrip = (side, offset, dropAmount, color) => {
             const points = [];
@@ -3113,7 +3116,7 @@ class Environment {
         
         // Place dashes along the road path (only in active segment range)
         const startIdx = Math.max(0, this.startSegment);
-        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment);
+        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment + 20);
 
         for (let index = startIdx; index <= endIdx; index++) {
             const point = this.roadPath[index];
@@ -3141,12 +3144,14 @@ class Environment {
             });
             const startLine = new THREE.Mesh(startGeometry, startMaterial);
             startLine.rotation.x = -Math.PI / 2;
-            const startY = this.roadPath[5].y !== undefined ? this.roadPath[5].y + 0.03 : 0.03;
-            startLine.position.set(this.roadPath[5].x, startY, this.roadPath[5].z);
+            // Place start line at beginning of leg
+            const startSegmentIdx = Math.min(this.startSegment + 5, this.endSegment);
+            const startY = this.roadPath[startSegmentIdx].y !== undefined ? this.roadPath[startSegmentIdx].y + 0.03 : 0.03;
+            startLine.position.set(this.roadPath[startSegmentIdx].x, startY, this.roadPath[startSegmentIdx].z);
             startLine.receiveShadow = true;
             this.scene.add(startLine);
-            
-            // Checkered pattern for finish (near the start)
+
+            // Checkered pattern for finish line at end of leg
             const finishMaterial = new THREE.MeshStandardMaterial({
                 color: 0xffffff,
                 transparent: true,
@@ -3154,17 +3159,19 @@ class Environment {
                 roughness: 0.7,
                 metalness: 0.0
             });
-            const lastSegments = this.roadPath.length - 5;
+            // Place finish line at endSegment + 5, giving runout space after
+            const finishSegmentIdx = Math.min(this.roadPath.length - 1, this.endSegment + 5);
             const finishLine = new THREE.Mesh(startGeometry, finishMaterial);
             finishLine.rotation.x = -Math.PI / 2;
-            finishLine.rotation.z = this.roadPath[lastSegments].heading;
-            const finishY = this.roadPath[lastSegments].y !== undefined ? this.roadPath[lastSegments].y + 0.03 : 0.03;
-            finishLine.position.set(this.roadPath[lastSegments].x, finishY, this.roadPath[lastSegments].z);
+            finishLine.rotation.z = this.roadPath[finishSegmentIdx].heading;
+            const finishY = this.roadPath[finishSegmentIdx].y !== undefined ? this.roadPath[finishSegmentIdx].y + 0.03 : 0.03;
+            finishLine.position.set(this.roadPath[finishSegmentIdx].x, finishY, this.roadPath[finishSegmentIdx].z);
             finishLine.receiveShadow = true;
             this.scene.add(finishLine);
 
             // Store finish line position for detection
-            this.finishLinePosition = new THREE.Vector3(this.roadPath[lastSegments].x, finishY, this.roadPath[lastSegments].z);
+            this.finishLinePosition = new THREE.Vector3(this.roadPath[finishSegmentIdx].x, finishY, this.roadPath[finishSegmentIdx].z);
+            console.log(`Finish line placed at segment ${finishSegmentIdx} (leg range: ${this.startSegment}-${this.endSegment})`);
         }
     }
     
@@ -3180,7 +3187,7 @@ class Environment {
         
         // Place trees along road path - only on left (mountain) side (only in active segment range)
         const startIdx = Math.max(0, this.startSegment);
-        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment);
+        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment + 20);
 
         for (let index = startIdx; index <= endIdx; index++) {
             const point = this.roadPath[index];
