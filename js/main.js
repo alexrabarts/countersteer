@@ -729,9 +729,9 @@ class Game {
             if (!this.currentWheelieTilt) this.currentWheelieTilt = 0;
             this.currentWheelieTilt = THREE.MathUtils.lerp(this.currentWheelieTilt, wheelieTilt, 0.1);
 
-            // Adjust look target height during wheelies for dramatic upward view
+            // Adjust look target height during wheelies for subtle upward view
             if (this.currentWheelieTilt > 0.05) {
-                const tiltInfluence = this.currentWheelieTilt * 5;
+                const tiltInfluence = this.currentWheelieTilt * 1.5; // Reduced from 5 to 1.5
                 this.currentLookTarget.y += tiltInfluence;
             }
 
