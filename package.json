@@ -1,7 +1,7 @@
 {
-  "name": "countersteer-game",
+  "name": "twisty-game",
   "version": "1.0.0",
-  "description": "Mountain road counter-steer motorcycle racing game",
+  "description": "Mountain road motorcycle racing game",
   "type": "module",
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/.bin/jest",

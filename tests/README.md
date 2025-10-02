@@ -1,7 +1,7 @@
 # Testing Architecture
 
 ## Overview
-This testing architecture provides comprehensive coverage for the Countersteer motorcycle racing game using Jest for unit tests and Puppeteer for integration tests.
+This testing architecture provides comprehensive coverage for the Twisty Game motorcycle racing game using Jest for unit tests and Puppeteer for integration tests.
 
 ## Structure
 
