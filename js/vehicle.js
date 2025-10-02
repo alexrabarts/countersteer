@@ -946,7 +946,21 @@ class Vehicle {
         const forward = new THREE.Vector3(0, 0, 1);
         forward.applyEuler(new THREE.Euler(0, this.yawAngle, 0));
         this.velocity.copy(forward.multiplyScalar(this.speed));
+
+        const preUpdateZ = this.position.z;
         this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
+        const postUpdateZ = this.position.z;
+
+        // Debug: Track position changes at high speeds
+        if (this.speed > 30 && !this.posDebugThrottle) {
+            console.log('HIGH SPEED DEBUG:',
+                'speed:', (this.speed * 2.237).toFixed(0) + 'mph',
+                'deltaTime:', deltaTime.toFixed(4),
+                'deltaZ:', (postUpdateZ - preUpdateZ).toFixed(3),
+                'segment:', this.currentRoadSegment);
+            this.posDebugThrottle = true;
+            setTimeout(() => this.posDebugThrottle = false, 250); // Log every 0.25s
+        }
         
         // Update elevation to follow road
         const preElevationX = this.position.x;
