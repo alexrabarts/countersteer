@@ -31,6 +31,10 @@ class WeatherSystem {
         this.weatherType = type;
         this.weatherIntensity = intensity;
 
+        // Reset lightning timer for new weather
+        this.lightningTimer = 0;
+        this.lightningInterval = 5 + Math.random() * 5; // 5-10 seconds
+
         switch(type) {
             case 'fog':
                 this.setupFog();
