@@ -1502,6 +1502,17 @@ class Game {
                 finishBanner.remove();
             }
 
+            // Remove crash notification if it exists
+            const crashNotification = document.getElementById('crashNotification');
+            if (crashNotification) {
+                crashNotification.remove();
+            }
+
+            // Disable R key when menu is closed
+            if (this.input) {
+                this.input.setMenuActive(false);
+            }
+
             // High score is updated when finishing the course, not on reset
 
             this.vehicle.reset();

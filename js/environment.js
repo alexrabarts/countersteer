@@ -4586,7 +4586,12 @@ class Environment {
                 if (this.roadMaterial) {
                     this.roadMaterial.roughness = 0.85;
                     this.roadMaterial.metalness = 0.0;
-                    this.roadMaterial.color.setHex(0x2a2a2a);
+                    // Don't override texture color - use white to show texture
+                    if (this.roadMaterial.map) {
+                        this.roadMaterial.color.setHex(0xffffff);
+                    } else {
+                        this.roadMaterial.color.setHex(0x2a2a2a); // Fallback if no texture
+                    }
                     this.roadMaterial.needsUpdate = true;
                 }
                 // Terrain colors will be set by applyLandscapeConfig
