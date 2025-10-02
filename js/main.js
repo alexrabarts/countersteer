@@ -311,6 +311,66 @@ class Game {
         console.log('Returned to menu');
     }
 
+    startNextLeg() {
+        const nextLeg = this.tourSystem.getNextLeg();
+        if (!nextLeg) {
+            console.error('No next leg available');
+            return;
+        }
+
+        console.log(`Starting next leg: ${nextLeg.name}`);
+
+        // Remove finish banner
+        const finishBanner = document.getElementById('finishBanner');
+        if (finishBanner) {
+            finishBanner.remove();
+        }
+
+        // Cleanup current leg
+        this.cleanupCurrentLeg();
+
+        // Initialize next leg
+        this.initializeGameWithLeg(nextLeg);
+
+        // Show dashboard
+        const dashboard = document.querySelector('.dashboard');
+        if (dashboard) {
+            dashboard.style.opacity = '1';
+        }
+
+        console.log('Next leg started');
+    }
+
+    startFirstLeg() {
+        const firstLeg = this.tourSystem.getFirstLeg();
+        if (!firstLeg) {
+            console.error('No first leg available');
+            return;
+        }
+
+        console.log(`Starting first leg: ${firstLeg.name}`);
+
+        // Remove finish banner
+        const finishBanner = document.getElementById('finishBanner');
+        if (finishBanner) {
+            finishBanner.remove();
+        }
+
+        // Cleanup current leg
+        this.cleanupCurrentLeg();
+
+        // Initialize first leg
+        this.initializeGameWithLeg(firstLeg);
+
+        // Show dashboard
+        const dashboard = document.querySelector('.dashboard');
+        if (dashboard) {
+            dashboard.style.opacity = '1';
+        }
+
+        console.log('First leg started (tour restart)');
+    }
+
     isWebGLAvailable() {
         try {
             const canvas = document.createElement('canvas');
@@ -988,7 +1048,11 @@ class Game {
         `;
 
         const positionColor = finalPosition === 1 ? '#FFD700' : finalPosition === 2 ? '#C0C0C0' : finalPosition === 3 ? '#CD7F32' : '#95a5a6';
-        
+
+        // Check if this is the last leg
+        const isLastLeg = this.tourSystem.isLastLeg();
+        const titleText = isLastLeg ? 'TOUR COMPLETE!' : 'LEG COMPLETE!';
+
         // Check for best time
         let bestTimeMessage = '';
         if (timeSeconds < this.bestTime) {
@@ -996,10 +1060,10 @@ class Game {
             localStorage.setItem('motorcycleBestTime', timeSeconds.toString());
             bestTimeMessage = '<div style="color: #FFD700; font-size: 22px; margin-top: 10px;">🏆 NEW BEST TIME! 🏆</div>';
         }
-        
+
         finishBanner.innerHTML = `
             <h1 style="color: #f39c12; margin: 0 0 20px 0; font-size: 48px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
-                COURSE COMPLETE!
+                ${titleText}
             </h1>
             <div style="font-size: 48px; font-weight: bold; margin-bottom: 20px; color: ${positionColor}; text-shadow: 0 0 20px ${positionColor};">
                 ${finalPosition}${positionSuffix} PLACE
@@ -1016,6 +1080,33 @@ class Game {
                 SCORE: ${totalScore.toLocaleString()}
             </div>
             <div style="margin-top: 20px; display: flex; gap: 20px; justify-content: center;">
+                ${isLastLeg ? `
+                    <button id="restartTourBtn" style="
+                        font-size: 20px;
+                        padding: 15px 30px;
+                        background: linear-gradient(135deg, #2ecc71, #27ae60);
+                        color: white;
+                        border: none;
+                        border-radius: 10px;
+                        cursor: pointer;
+                        font-weight: bold;
+                        box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+                        transition: all 0.3s;
+                    ">RESTART TOUR</button>
+                ` : `
+                    <button id="nextLegBtn" style="
+                        font-size: 20px;
+                        padding: 15px 30px;
+                        background: linear-gradient(135deg, #2ecc71, #27ae60);
+                        color: white;
+                        border: none;
+                        border-radius: 10px;
+                        cursor: pointer;
+                        font-weight: bold;
+                        box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+                        transition: all 0.3s;
+                    ">NEXT LEG →</button>
+                `}
                 <button id="restartLegBtn" style="
                     font-size: 20px;
                     padding: 15px 30px;
@@ -1088,6 +1179,26 @@ class Game {
         document.getElementById('returnToMenuBtn').addEventListener('click', () => {
             this.returnToMenu();
         });
+
+        // Add event listener for next leg button (if not last leg)
+        if (!isLastLeg) {
+            const nextLegBtn = document.getElementById('nextLegBtn');
+            if (nextLegBtn) {
+                nextLegBtn.addEventListener('click', () => {
+                    this.startNextLeg();
+                });
+            }
+        }
+
+        // Add event listener for restart tour button (if last leg)
+        if (isLastLeg) {
+            const restartTourBtn = document.getElementById('restartTourBtn');
+            if (restartTourBtn) {
+                restartTourBtn.addEventListener('click', () => {
+                    this.startFirstLeg();
+                });
+            }
+        }
 
         // Update high score if this score is better
         if (totalScore > this.highScore) {

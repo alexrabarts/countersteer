@@ -85,6 +85,28 @@ class TourSystem {
         return this.currentLeg;
     }
 
+    getCurrentLegIndex() {
+        if (!this.currentLeg) return -1;
+        return this.legs.findIndex(leg => leg.id === this.currentLeg.id);
+    }
+
+    getNextLeg() {
+        const currentIndex = this.getCurrentLegIndex();
+        if (currentIndex === -1 || currentIndex >= this.legs.length - 1) {
+            return null; // No next leg (on last leg or no leg selected)
+        }
+        return this.legs[currentIndex + 1];
+    }
+
+    getFirstLeg() {
+        return this.legs[0];
+    }
+
+    isLastLeg() {
+        const currentIndex = this.getCurrentLegIndex();
+        return currentIndex === this.legs.length - 1;
+    }
+
     getStartingPosition(roadPath) {
         if (!this.currentLeg) {
             console.warn('No leg selected, using default start position');

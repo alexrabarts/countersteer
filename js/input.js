@@ -23,7 +23,7 @@ class InputHandler {
             this.updateInputs();
 
             // Highlight virtual controls
-            if (this.virtualControls && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyR'].includes(event.code)) {
+            if (this.virtualControls && ['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(event.code)) {
                 this.virtualControls.highlightKey(event.code, true);
             }
 
@@ -65,7 +65,7 @@ class InputHandler {
             this.updateInputs();
 
             // Unhighlight virtual controls
-            if (this.virtualControls && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyR'].includes(event.code)) {
+            if (this.virtualControls && ['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(event.code)) {
                 this.virtualControls.highlightKey(event.code, false);
             }
 
@@ -158,12 +158,6 @@ class InputHandler {
     }
     
     checkReset() {
-        // Check virtual control reset button
-        if (this.virtualControls && this.virtualControls.getKey('KeyR')) {
-            this.virtualControls.touches['KeyR'] = false; // Clear after use
-            return true;
-        }
-
         if (this.resetPressed) {
             this.resetPressed = false;
             return true;

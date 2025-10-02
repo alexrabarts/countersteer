@@ -190,16 +190,15 @@ class VirtualControls {
             btn.container.appendChild(button);
         });
         
-        // Camera button (Z) - position it above the reset button
+        // Camera button (Z)
         const cameraButtonSize = isMobileLandscape ? 60 : Math.min(80, viewportHeight * 0.09);
-        const resetButtonSize = isMobileLandscape ? 60 : Math.min(80, viewportHeight * 0.09);
         const utilityButtonsOffset = buttonSize + gap + safeBottomMargin;
         const cameraButton = document.createElement('div');
         cameraButton.className = 'virtual-button-camera';
         cameraButton.innerHTML = 'Z';
         cameraButton.style.cssText = `
             position: fixed;
-            bottom: ${bottomPosition + resetButtonSize + 10}px;
+            bottom: ${bottomPosition}px;
             right: ${utilityButtonsOffset}px;
             width: ${cameraButtonSize}px;
             height: ${cameraButtonSize}px;
@@ -263,80 +262,9 @@ class VirtualControls {
             }, 100);
         });
 
-        // Reset button on the right
-        const resetButton = document.createElement('div');
-        resetButton.className = 'virtual-button-reset';
-        resetButton.innerHTML = 'R';
-        resetButton.style.cssText = `
-            position: fixed;
-            bottom: ${bottomPosition}px;
-            right: ${utilityButtonsOffset}px;
-            width: ${resetButtonSize}px;
-            height: ${resetButtonSize}px;
-            background: rgba(255, 100, 100, 0.2);
-            border: 2px solid rgba(255, 100, 100, 0.4);
-            border-radius: 50%;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: ${Math.floor(resetButtonSize * 0.35)}px;
-            font-weight: bold;
-            font-family: monospace;
-            z-index: 1000;
-            cursor: pointer;
-            touch-action: none;
-            user-select: none;
-            transition: background 0.1s;
-        `;
-
-        // Store reset button reference
-        this.buttons['KeyR'] = resetButton;
-        
-        resetButton.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.touches['KeyR'] = true;
-            resetButton.style.background = 'rgba(255, 100, 100, 0.5)';
-            resetButton.style.borderColor = 'rgba(255, 100, 100, 0.7)';
-        });
-        
-        resetButton.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            setTimeout(() => {
-                this.touches['KeyR'] = false;
-                resetButton.style.background = 'rgba(255, 100, 100, 0.2)';
-                resetButton.style.borderColor = 'rgba(255, 100, 100, 0.4)';
-            }, 100);
-        });
-        
-        resetButton.addEventListener('touchcancel', (e) => {
-            e.preventDefault();
-            this.touches['KeyR'] = false;
-            resetButton.style.background = 'rgba(255, 100, 100, 0.2)';
-            resetButton.style.borderColor = 'rgba(255, 100, 100, 0.4)';
-        });
-        
-        // Mouse events for testing
-        resetButton.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            this.touches['KeyR'] = true;
-            resetButton.style.background = 'rgba(255, 100, 100, 0.5)';
-            resetButton.style.borderColor = 'rgba(255, 100, 100, 0.7)';
-        });
-        
-        resetButton.addEventListener('mouseup', (e) => {
-            e.preventDefault();
-            setTimeout(() => {
-                this.touches['KeyR'] = false;
-                resetButton.style.background = 'rgba(255, 100, 100, 0.2)';
-                resetButton.style.borderColor = 'rgba(255, 100, 100, 0.4)';
-            }, 100);
-        });
-        
         document.body.appendChild(leftContainer);
         document.body.appendChild(rightContainer);
         document.body.appendChild(cameraButton);
-        document.body.appendChild(resetButton);
         
         // Instructions - position above controls
         const controlsHeight = tallButtonHeight;
@@ -354,7 +282,7 @@ class VirtualControls {
             font-family: monospace;
             pointer-events: none;
         `;
-        instructions.innerHTML = 'Left: Steering | Right: ↓Throttle ↑Brake<br>R: Reset | Z: Camera';
+        instructions.innerHTML = 'Left: Steering | Right: ↓Throttle ↑Brake<br>Z: Camera';
         document.body.appendChild(instructions);
         
         // Handle orientation changes
@@ -383,21 +311,19 @@ class VirtualControls {
         const button = this.buttons[keyCode];
         if (button) {
             if (active) {
-                button.style.background = keyCode === 'KeyR' ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 255, 255, 0.3)';
-                button.style.borderColor = keyCode === 'KeyR' ? 'rgba(255, 100, 100, 0.7)' : 'rgba(255, 255, 255, 0.6)';
+                button.style.background = 'rgba(255, 255, 255, 0.3)';
+                button.style.borderColor = 'rgba(255, 255, 255, 0.6)';
             } else {
-                button.style.background = keyCode === 'KeyR' ? 'rgba(255, 100, 100, 0.2)' : 'rgba(255, 255, 255, 0.1)';
-                button.style.borderColor = keyCode === 'KeyR' ? 'rgba(255, 100, 100, 0.4)' : 'rgba(255, 255, 255, 0.3)';
+                button.style.background = 'rgba(255, 255, 255, 0.1)';
+                button.style.borderColor = 'rgba(255, 255, 255, 0.3)';
             }
         }
     }
     
     destroy() {
         const controls = document.querySelector('.virtual-controls');
-        const reset = document.querySelector('.virtual-button-reset');
         const instructions = document.querySelector('[style*="Throttle"]');
         if (controls) controls.remove();
-        if (reset) reset.remove();
         if (instructions) instructions.remove();
         
         // Clean up event listeners
