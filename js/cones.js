@@ -8,24 +8,9 @@ class Cones {
     }
 
     createCheckeredTexture() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 64;
-        canvas.height = 64;
-        const ctx = canvas.getContext('2d');
-
-        const squareSize = 8;
-        for (let x = 0; x < canvas.width; x += squareSize) {
-            for (let y = 0; y < canvas.height; y += squareSize) {
-                const isBlack = (Math.floor(x / squareSize) + Math.floor(y / squareSize)) % 2 === 0;
-                ctx.fillStyle = isBlack ? '#000000' : '#ffffff';
-                ctx.fillRect(x, y, squareSize, squareSize);
-            }
-        }
-
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-        return texture;
+        // Temporarily disabled to debug rendering issue
+        // Will use solid colors instead
+        return null;
     }
     
     createCones() {
@@ -135,13 +120,18 @@ class Cones {
 
         // Start line
         const startGeometry = new THREE.PlaneGeometry(16, 2);
-        const startMaterial = new THREE.MeshStandardMaterial({
-            map: checkeredTexture,
+        const startMaterialProps = {
+            color: 0x000000,
             transparent: true,
             opacity: 0.9,
             roughness: 0.7,
             metalness: 0.0
-        });
+        };
+        if (checkeredTexture) {
+            startMaterialProps.map = checkeredTexture;
+            startMaterialProps.color = 0xffffff;
+        }
+        const startMaterial = new THREE.MeshStandardMaterial(startMaterialProps);
         const startLine = new THREE.Mesh(startGeometry, startMaterial);
         startLine.rotation.x = -Math.PI / 2;
         startLine.position.set(0, 0.03, 20);
@@ -156,13 +146,18 @@ class Cones {
         // Finish line
         if (this.environment && this.environment.roadPath.length > 0) {
             const lastPoint = this.environment.roadPath[this.environment.roadPath.length - 1];
-            const finishMaterial = new THREE.MeshStandardMaterial({
-                map: checkeredTexture,
+            const finishMaterialProps = {
+                color: 0x000000,
                 transparent: true,
                 opacity: 0.9,
                 roughness: 0.7,
                 metalness: 0.0
-            });
+            };
+            if (checkeredTexture) {
+                finishMaterialProps.map = checkeredTexture;
+                finishMaterialProps.color = 0xffffff;
+            }
+            const finishMaterial = new THREE.MeshStandardMaterial(finishMaterialProps);
             const finishLine = new THREE.Mesh(startGeometry, finishMaterial);
             finishLine.rotation.x = -Math.PI / 2;
             finishLine.rotation.z = -lastPoint.heading;
