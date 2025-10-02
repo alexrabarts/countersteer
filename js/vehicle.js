@@ -661,30 +661,12 @@ class Vehicle {
         if (!this.crashed && this.lastPosition) {
             const distanceDelta = this.position.distanceTo(this.lastPosition);
             this.distanceTraveled += distanceDelta;
-
-            // Update road segment tracking based on Z-distance traveled
-            if (this.environment && this.environment.roadPath && this.environment.roadPath.length > 1) {
-                const zDelta = this.position.z - this.lastPosition.z;
-                if (Math.abs(zDelta) > 0.01) { // Only update if actually moving
-                    this.segmentProgress += zDelta / 20; // Segment length is 20 units
-
-                    // Handle segment transitions
-                    while (this.segmentProgress >= 1 && this.currentRoadSegment < this.environment.roadPath.length - 1) {
-                        this.segmentProgress -= 1;
-                        this.currentRoadSegment++;
-                    }
-                    while (this.segmentProgress < 0 && this.currentRoadSegment > 0) {
-                        this.segmentProgress += 1;
-                        this.currentRoadSegment--;
-                    }
-
-                    // Clamp to valid range
-                    this.currentRoadSegment = Math.max(0, Math.min(this.environment.roadPath.length - 1, this.currentRoadSegment));
-                    this.segmentProgress = Math.max(0, Math.min(1, this.segmentProgress));
-                }
-            }
         }
         this.lastPosition = this.position.clone();
+
+        // Note: currentRoadSegment is now updated ONLY by the search-based methods
+        // (checkWallCollision and updateElevation) which find the true closest segment.
+        // The old Z-delta tracking was unreliable on curves and caused oscillation.
         
         // Check for wall/edge collision FIRST (even when crashed, in case we need to fall)
         if (!this.fallingOffCliff) {
@@ -974,11 +956,11 @@ class Vehicle {
         const postElevationZ = this.position.z;
 
         // Log if elevation update changed lateral position (shouldn't happen)
-        // if (Math.abs(preElevationX - postElevationX) > 0.01 || Math.abs(preElevationZ - postElevationZ) > 0.01) {
-        //     console.log('WARNING: updateElevation changed lateral position!',
-        //         'X:', preElevationX.toFixed(2), '->', postElevationX.toFixed(2),
-        //         'Z:', preElevationZ.toFixed(2), '->', postElevationZ.toFixed(2));
-        // }
+        if (Math.abs(preElevationX - postElevationX) > 0.01 || Math.abs(preElevationZ - postElevationZ) > 0.01) {
+            console.log('WARNING: updateElevation changed lateral position!',
+                'X:', preElevationX.toFixed(2), '->', postElevationX.toFixed(2),
+                'Z:', preElevationZ.toFixed(2), '->', postElevationZ.toFixed(2));
+        }
         
         // Wall collision already checked at the beginning of update()
         

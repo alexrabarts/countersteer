@@ -252,6 +252,10 @@ class Game {
             this.vehicle.position.z = startPos.z;
             this.vehicle.yawAngle = startPos.heading;
 
+            // Initialize segment tracking to match starting position
+            this.vehicle.currentRoadSegment = leg.startSegment;
+            this.vehicle.segmentProgress = 0;
+
             console.log(`Starting at segment ${leg.startSegment}: position (${startPos.x.toFixed(1)}, ${startPos.y.toFixed(1)}, ${startPos.z.toFixed(1)})`);
 
             // Initialize camera in follow position behind bike
