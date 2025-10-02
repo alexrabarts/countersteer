@@ -1632,8 +1632,8 @@ class Game {
 
          this.vehicle.update(deltaTime, steeringInput, throttleInput, brakeInput, wheelieInput);
 
-         // Play crash sound if we just crashed
-        if (!wasCrashed && this.vehicle.crashed) {
+         // Play crash sound if we just crashed (but not if finished)
+        if (!wasCrashed && this.vehicle.crashed && !this.finished) {
             this.soundManager.playCrashSound();
             this.showCrashNotification();
         }

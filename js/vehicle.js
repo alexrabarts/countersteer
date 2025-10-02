@@ -810,8 +810,8 @@ class Vehicle {
             this.updateJump(deltaTime, throttleInput, brakeInput);
         }
         
-        // Check for low-speed fall (but not while jumping or finished)
-        if (!this.isJumping && !this.finished && this.speed < this.minSpeed) {
+        // Check for low-speed fall (but not while jumping)
+        if (!this.isJumping && this.speed < this.minSpeed) {
             this.crashed = true;
             this.crashAngle = this.leanAngle || 0.5; // Fall to the side
             this.frame.material.color.setHex(0xff6600); // Orange for low-speed fall
@@ -832,7 +832,7 @@ class Vehicle {
                 const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
                 
                 // Check if we hit the boulder (account for bike size)
-                if (!this.finished && distance < boulder.radius + 1.0) {
+                if (distance < boulder.radius + 1.0) {
                     this.crashed = true;
                     this.crashAngle = this.leanAngle || 0.5;
                     this.frame.material.color.setHex(0xff0000); // Red for collision
@@ -871,7 +871,7 @@ class Vehicle {
 
                 const distance = Math.sqrt(dx * dx + dz * dz);
 
-                if (!this.finished && distance < collisionDistance) {
+                if (distance < collisionDistance) {
                     this.crashed = true;
                     this.crashAngle = this.leanAngle || 0.5;
                     this.frame.material.color.setHex(0xFF8C00); // Dark orange for construction crash
@@ -909,8 +909,8 @@ class Vehicle {
                 this.position.y = closestSegment.y;
                 this.velocity.y = Math.max(0, this.velocity.y); // Prevent downward velocity
 
-                // If not already crashed and not finished, crash it now
-                if (!this.crashed && !this.finished) {
+                // If not already crashed, crash it now
+                if (!this.crashed) {
                     this.crashed = true;
                     this.crashAngle = this.leanAngle || 0.5;
                     this.frame.material.color.setHex(0x8b4513); // Brown for ground collision
@@ -923,8 +923,8 @@ class Vehicle {
         // Update physics
         this.updatePhysics(deltaTime, steeringInput);
         
-        // Check for crash from excessive lean (unless finished)
-        if (!this.finished && Math.abs(this.leanAngle) > this.maxLeanAngle) {
+        // Check for crash from excessive lean
+        if (Math.abs(this.leanAngle) > this.maxLeanAngle) {
             this.crashed = true;
             this.crashAngle = this.leanAngle;
             this.frame.material.color.setHex(0xff0000); // Red for high-speed crash
@@ -1092,7 +1092,7 @@ class Vehicle {
             const dangerAngleDegrees = 70; // Warning zone
             const crashAngleDegrees = 77; // Crash threshold
             
-            if (!this.finished && angleDegrees >= crashAngleDegrees) {
+            if (angleDegrees >= crashAngleDegrees) {
                 // CRASHED! Went too far back
                 this.crashed = true;
                 this.isWheelie = false;
@@ -1659,7 +1659,7 @@ class Vehicle {
                 }
                 
                 // Check if we've hit the left cliff wall (negative perpDistance)
-                if (!this.finished && perpDistance < -wallBuffer && !this.crashed) {
+                if (perpDistance < -wallBuffer && !this.crashed) {
                     // Hit the cliff wall on the left - crash with bounce
                     this.crashed = true;
                     this.fallingOffCliff = false; // Not falling, we hit a wall
@@ -1683,7 +1683,7 @@ class Vehicle {
 
 
                 // Check if we've gone off the right cliff edge (positive perpDistance)
-                if (!this.finished && perpDistance > effectiveCliffEdge && !this.crashed) {
+                if (perpDistance > effectiveCliffEdge && !this.crashed) {
                     console.log('=== FALLING OFF RIGHT CLIFF! ===');
                     console.log('perpDistance:', perpDistance, 'effectiveCliffEdge:', effectiveCliffEdge, 'cliffEdge:', cliffEdge);
                     console.log('Vehicle position:', this.position.x.toFixed(1), this.position.z.toFixed(1), 'Y:', this.position.y.toFixed(1));
@@ -1756,7 +1756,7 @@ class Vehicle {
         }
         
         // Safety check - if we've been jumping too long, force landing
-        if (!this.finished && this.position.y < this.jumpStartHeight - 10) {
+        if (this.position.y < this.jumpStartHeight - 10) {
             this.crashed = true;
             this.isJumping = false;
             this.jumpRotation = 0;
@@ -1787,8 +1787,8 @@ class Vehicle {
             this.jumpRotation = 0;
             // Slow down a bit from the hard landing
             this.speed *= 0.7;
-        } else if (!this.finished) {
-            // Bad angle - crash (unless finished)
+        } else {
+            // Bad angle - crash
             this.crashed = true;
             this.crashAngle = this.jumpRotation > 0 ? Math.PI/2 : -Math.PI/2;
             console.log('CRASHED! Bad landing angle:', (landingAngle * 180 / Math.PI).toFixed(0) + '°');
