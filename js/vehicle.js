@@ -676,7 +676,6 @@ class Vehicle {
         if (this.crashed) {
             // If falling off cliff, apply gravity and check ground collision
             if (this.fallingOffCliff) {
-                // console.log('FALLING: Y=' + this.position.y.toFixed(1) + ' VelY=' + this.velocity.y.toFixed(1));
                 // Apply stronger gravity for dramatic falling
                 this.velocity.y -= 15 * deltaTime;
 
@@ -871,15 +870,6 @@ class Vehicle {
 
                 const distance = Math.sqrt(dx * dx + dz * dz);
 
-                // Debug logging for roadwork collisions
-                if (distance < 15) { // Log when reasonably close
-                    console.log('Roadwork obstacle check:', obstacle.type,
-                        'distance:', distance.toFixed(2),
-                        'collisionDistance:', collisionDistance,
-                        'bike pos:', this.position.x.toFixed(1), this.position.z.toFixed(1),
-                        'obstacle pos:', obstacle.position.x.toFixed(1), obstacle.position.z.toFixed(1));
-                }
-
                 if (distance < collisionDistance) {
                     this.crashed = true;
                     this.crashAngle = this.leanAngle || 0.5;
@@ -915,7 +905,6 @@ class Vehicle {
 
             if (closestSegment && this.position.y < closestSegment.y - 2.0) {
                 // Bike is significantly below road surface - correct position
-                console.log('CORRECTING! Bike below road surface at', this.position.x.toFixed(1), this.position.z.toFixed(1), 'Y:', this.position.y.toFixed(1), 'road Y:', closestSegment.y.toFixed(1));
                 this.position.y = closestSegment.y;
                 this.velocity.y = Math.max(0, this.velocity.y); // Prevent downward velocity
 
@@ -924,7 +913,6 @@ class Vehicle {
                     this.crashed = true;
                     this.crashAngle = this.leanAngle || 0.5;
                     this.frame.material.color.setHex(0x8b4513); // Brown for ground collision
-                    console.log('CRASHED! Hit the ground (fell through road)');
                 }
             }
         }
@@ -956,13 +944,6 @@ class Vehicle {
         const postElevationX = this.position.x;
         const postElevationZ = this.position.z;
 
-        // Log if elevation update changed lateral position (shouldn't happen)
-        // if (Math.abs(preElevationX - postElevationX) > 0.01 || Math.abs(preElevationZ - postElevationZ) > 0.01) {
-        //     console.log('WARNING: updateElevation changed lateral position!',
-        //         'X:', preElevationX.toFixed(2), '->', postElevationX.toFixed(2),
-        //         'Z:', preElevationZ.toFixed(2), '->', postElevationZ.toFixed(2));
-        // }
-        
         // Wall collision already checked at the beginning of update()
         
         // Update 3D model
@@ -1038,11 +1019,6 @@ class Vehicle {
         if (!this.wheelieDebugInit) {
             console.log('=== WHEELIE SYSTEM INITIALIZED ===');
             this.wheelieDebugInit = true;
-        }
-        
-        // Log every time throttle is pressed
-        if (throttleInput > 0) {
-            // console.log('[WHEELIE] Method called with throttle:', throttleInput, 'speed:', this.speed.toFixed(1) + 'm/s');
         }
 
         // Only allow wheelies when on ground and not crashed
@@ -1164,11 +1140,6 @@ class Vehicle {
                 this.wheelieScoreAccumulated += pointsThisFrame;
             }
 
-            // Simple angle feedback (optional logging)
-            // if (Math.abs(this.wheelieAngle - oldAngle) > 0.1) {
-            //     console.log(`Wheelie: ${angleDegrees.toFixed(1)}° | Score: ${Math.round(this.wheelieScoreAccumulated)}`);
-            // }
-
             // End wheelie if angle gets to zero or speed too low
             if (this.wheelieAngle <= 0 || this.speed < 5) {
                 this.isWheelie = false;
@@ -1286,17 +1257,6 @@ class Vehicle {
             this.yawAngle -= angularVel * Math.sign(this.leanAngle) * deltaTime;
         }
         
-        // Debug output
-        if (!this.debugCounter) this.debugCounter = 0;
-        this.debugCounter++;
-        if (this.debugCounter % 30 === 0 && (Math.abs(steeringInput) > 0 || Math.abs(this.leanAngle) > 0.01)) {
-            console.log(
-                'Input:', steeringInput.toFixed(1),
-                '| Steer:', (this.steeringAngle * 180/Math.PI).toFixed(0) + '°',
-                '| Lean:', (this.leanAngle * 180/Math.PI).toFixed(1) + '°',
-                '| LeanVel:', (this.leanVelocity * 180/Math.PI).toFixed(0) + '°/s'
-            );
-        }
     }
 
     updateMesh() {
@@ -1370,11 +1330,6 @@ class Vehicle {
                 0.4 * brightness,
                 0.7 * brightness
             );
-            
-            // Debug: log when wheelie is active (commented out)
-            // if (this.wheelieAngle > 0.1 && this.wheelieDebugCounter % 60 === 0) {
-            //     console.log('Applying wheelie rotation:', (this.wheelieAngle * 180 / Math.PI).toFixed(1) + '°');
-            // }
         } else {
             // Normal lean
             this.group.rotation.x = 0; // Reset pitch
@@ -1694,18 +1649,10 @@ class Vehicle {
                 // Update hysteresis state
                 this.wasNearEdge = Math.abs(perpDistance) > effectiveRoadEdge;
 
-                // Debug logging (uncomment for troubleshooting)
-                // console.log('PerpDistance:', perpDistance.toFixed(2),
-                //     'RoadEdge:', effectiveRoadEdge.toFixed(1),
-                //     'SafetyZone:', effectiveSafetyZone.toFixed(1),
-                //     'CliffEdge:', effectiveCliffEdge.toFixed(1),
-                //     'WallBuffer:', wallBuffer.toFixed(1));
-                
                 // Check if we're on the ledge areas (slow down but don't crash)
                 if (Math.abs(perpDistance) > effectiveRoadEdge && Math.abs(perpDistance) < effectiveSafetyZone) {
                     // On the edge/ledge - slow down but don't crash
                     this.speed *= 0.95; // Gradual speed reduction
-                    // console.log('NEAR EDGE: Slowing down at distance', perpDistance.toFixed(1));
                 }
                 
                 // Check if we've hit the left cliff wall (negative perpDistance)

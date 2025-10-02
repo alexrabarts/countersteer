@@ -191,11 +191,6 @@ class Cones {
 
             const heightDiff = Math.abs(vehiclePosition.y - cone.position.y);
 
-            // Debug: log when close to cones
-            if (distance < 4 && heightDiff < 4 && !cone.hit) {
-                console.log(`Close to cone: ${distance.toFixed(2)}m away, ${heightDiff.toFixed(2)}m height diff, vehicle Y: ${vehiclePosition.y.toFixed(2)}, cone Y: ${cone.position.y.toFixed(2)}`);
-            }
-
             if (distance < hitDistance && heightDiff < heightTolerance && !cone.hit) {
                 cone.hit = true;
                 cone.rotation.z = Math.PI / 3;

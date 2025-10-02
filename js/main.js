@@ -157,7 +157,6 @@ class Game {
         // High score tracking
         this.highScore = parseInt(localStorage.getItem('motorcycleHighScore') || '0');
         this.bestTime = parseFloat(localStorage.getItem('motorcycleBestTime') || '999999');
-        this.updateHighScoreDisplay();
 
         // Finish state
         this.finished = false;
@@ -1002,9 +1001,6 @@ class Game {
         this.updateScoreDisplay();
     }
     
-    updateHighScoreDisplay() {
-        document.getElementById('highScore').textContent = `Best: ${this.highScore.toLocaleString()}`;
-    }
     
     updateWheelieIndicator() {
         const indicator = document.getElementById('wheelieIndicator');
@@ -1184,7 +1180,7 @@ class Game {
                     font-weight: bold;
                     box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
                     transition: all 0.3s;
-                ">RETURN TO MENU</button>
+                ">RETURN TO <u>M</u>ENU</button>
             </div>
         `;
 
@@ -1366,7 +1362,7 @@ class Game {
                     font-weight: bold;
                     box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
                     transition: all 0.3s;
-                ">MENU</button>
+                "><u>M</u>ENU</button>
             </div>
         `;
 
@@ -1510,6 +1506,28 @@ class Game {
 
             this.updateRacePosition();
         
+        // Check for menu return
+        if (this.input.checkMenuReturn()) {
+            // Remove finish banner if it exists
+            const finishBanner = document.getElementById('finishBanner');
+            if (finishBanner) {
+                finishBanner.remove();
+            }
+
+            // Remove crash notification if it exists
+            const crashNotification = document.getElementById('crashNotification');
+            if (crashNotification) {
+                crashNotification.remove();
+            }
+
+            // Disable menu keys when menu is closed
+            if (this.input) {
+                this.input.setMenuActive(false);
+            }
+
+            this.returnToMenu();
+        }
+
         // Check for reset
         if (this.input.checkReset()) {
             // Remove finish banner if it exists
@@ -1559,7 +1577,6 @@ class Game {
 
             // Reset UI
             this.updateScoreDisplay();
-            document.getElementById('checkpointCount').textContent = 'Checkpoints: 0/5';
 
             // Show dashboard again
             const dashboard = document.querySelector('.dashboard');
@@ -2060,7 +2077,6 @@ class Game {
         if (this.score > this.highScore) {
             this.highScore = this.score;
             localStorage.setItem('motorcycleHighScore', this.highScore.toString());
-            this.updateHighScoreDisplay();
         }
     }
     
@@ -2080,9 +2096,6 @@ class Game {
         notification.className = 'checkpoint-notification';
         notification.textContent = `CHECKPOINT ${checkpointNum}/5! +${points}`;
         document.body.appendChild(notification);
-        
-        // Update checkpoint counter
-        document.getElementById('checkpointCount').textContent = `Checkpoints: ${this.checkpointsPassed}/5`;
         
         setTimeout(() => {
             notification.remove();

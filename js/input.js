@@ -7,6 +7,7 @@ class InputHandler {
         this.brakeInput = 0;
         this.wheelieInput = 0;
         this.resetPressed = false;
+        this.menuReturnPressed = false;
         this.soundTogglePressed = false;
         this.checkpointRestartPressed = false;
         this.cameraSwitchPressed = false;
@@ -33,8 +34,13 @@ class InputHandler {
                 this.resetPressed = true;
             }
 
-            // Check for sound toggle
-            if (event.code === 'KeyM') {
+            // Check for menu return (only when menu is active)
+            if (event.code === 'KeyM' && this.menuActive) {
+                this.menuReturnPressed = true;
+            }
+
+            // Check for sound toggle (only when menu is not active)
+            if (event.code === 'KeyM' && !this.menuActive) {
                 this.soundTogglePressed = true;
             }
 
@@ -75,6 +81,7 @@ class InputHandler {
             }
 
             if (event.code === 'KeyM') {
+                this.menuReturnPressed = false;
                 this.soundTogglePressed = false;
             }
 
@@ -161,6 +168,14 @@ class InputHandler {
     checkReset() {
         if (this.resetPressed) {
             this.resetPressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    checkMenuReturn() {
+        if (this.menuReturnPressed) {
+            this.menuReturnPressed = false;
             return true;
         }
         return false;

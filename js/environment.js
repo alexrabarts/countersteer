@@ -1511,16 +1511,16 @@ class Environment {
         
         // Layer 1: Distant mountain range (far background)
         this.createDistantMountainRange();
-        
-        // Layer 2: Mid-range mountains 
+
+        // Layer 2: Mid-range mountains
         this.createMidRangeMountains();
-        
+
         // Layer 3: Near hills with more detail
         this.createNearHills();
-        
+
         // Layer 4: Majestic peak - the dominant mountain
         this.createMajesticPeak();
-        
+
         // Layer 5: End course dramatic mountains
         this.createEndCourseMountains();
     }
@@ -1534,7 +1534,7 @@ class Environment {
         
         // Parameters for distant mountains
         const numPeaks = 8;
-        const baseDistance = 1500; // Much further away
+        const baseDistance = 5000; // MOVED: Much further away from road
         const maxHeight = 400;
         const width = 3000; // Wider to cover horizon
         
@@ -1611,7 +1611,7 @@ class Environment {
         const secondRangeGeometry = geometry.clone();
         const secondRangeMaterial = material.clone();
         const secondRange = new THREE.Mesh(secondRangeGeometry, secondRangeMaterial);
-        secondRange.position.set(500, 50, 400); // Further right and back
+        secondRange.position.set(-2000, 50, 6000); // MOVED: Far left and much further back
         secondRange.scale.set(0.8, 0.9, 1);
         this.scene.add(secondRange);
     }
@@ -3496,8 +3496,6 @@ class Environment {
                 height: 1,
                 depth: 0.8
             });
-
-            // console.log('Created barrier at:', barrierX.toFixed(1), barrierZ.toFixed(1), 'segment:', i);
 
             // Add orange and white stripes
             const stripeTexture = this.createConstructionStripeTexture();
