@@ -1637,9 +1637,12 @@ class Vehicle {
                     }
                 }
 
-                 // Smooth elevation following to prevent bobbing with gradual changes
-                 // Increased smoothing for less jumpy behavior
-                 this.position.y = this.position.y * 0.85 + targetY * 0.15;
+                // Speed-adaptive elevation smoothing
+                // At low speeds: smooth (0.15) to prevent bobbing
+                // At high speeds: responsive (0.40) to prevent jitter from lag
+                const speedRatio = Math.min(this.speed / 30, 1.0); // Normalize to 0-1 at 30 m/s
+                const lerpFactor = 0.15 + (speedRatio * 0.25); // 0.15 at low speed, 0.40 at high speed
+                this.position.y = this.position.y * (1 - lerpFactor) + targetY * lerpFactor;
             }
         }
     }
