@@ -129,6 +129,11 @@ class Game {
         this.frameCount = 0;
         this.lastTime = performance.now();
 
+        // Fixed timestep for physics (prevents oscillation from variable frame timing)
+        this.fixedTimeStep = 1/60; // 60 Hz physics
+        this.accumulatedTime = 0;
+        this.maxAccumulatedTime = 0.1; // Cap at 100ms to prevent spiral of death
+
         // Scoring system
         this.score = 0;
         this.combo = 0;
@@ -1474,8 +1479,10 @@ class Game {
             document.getElementById('fps').textContent = `FPS: ${this.fps}`;
         }
 
-        // Cap deltaTime to prevent physics jumps on mobile with variable frame rates
-        const deltaTime = Math.min(this.clock.getDelta(), 0.05); // Max 50ms (20 FPS minimum)
+        // Get actual frame time and accumulate for fixed timestep
+        const rawDeltaTime = Math.min(this.clock.getDelta(), 0.05); // Cap at 50ms
+        this.accumulatedTime += rawDeltaTime;
+        this.accumulatedTime = Math.min(this.accumulatedTime, this.maxAccumulatedTime); // Prevent spiral of death
 
         // Check for pause toggle
         if (this.input.checkPause()) {
@@ -1496,7 +1503,12 @@ class Game {
         const brakeInput = this.input.getBrakeInput();
         const wheelieInput = this.input.getWheelieInput();
 
-        this.updateRacePosition();
+        // Run physics in fixed timesteps - ensures consistent movement
+        // regardless of variable frame timing
+        while (this.accumulatedTime >= this.fixedTimeStep) {
+            const deltaTime = this.fixedTimeStep; // Always 16.67ms
+
+            this.updateRacePosition();
         
         // Check for reset
         if (this.input.checkReset()) {
@@ -1754,6 +1766,12 @@ class Game {
             }
             this.lastJumpState = this.vehicle.isJumping;
         }
+
+            // Consume fixed timestep from accumulated time
+            this.accumulatedTime -= this.fixedTimeStep;
+        } // End of fixed timestep physics loop
+
+        // RENDERING: Everything below runs once per frame, not per physics step
 
         // Update directional light to follow vehicle
         this.directionalLight.position.x = this.vehicle.position.x + 50;
