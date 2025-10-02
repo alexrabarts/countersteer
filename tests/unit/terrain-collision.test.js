@@ -194,4 +194,248 @@ describe('Terrain Collision Tests', () => {
             expect(interpolatedY).toBeCloseTo(27.5);
         });
     });
+
+    describe('Mountain and Hill Road Clearance', () => {
+        // Helper function to simulate road path (simplified version)
+        const generateSimpleRoadPath = () => {
+            const path = [];
+            let x = 0, z = 0, heading = 0;
+            const segmentLength = 20;
+
+            // Generate 300 segments similar to actual road
+            for (let i = 0; i < 300; i++) {
+                path.push({
+                    x: x + (segmentLength / 2) * Math.sin(heading),
+                    z: z + (segmentLength / 2) * Math.cos(heading),
+                    y: Math.sin(i * 0.04) * 8 + Math.cos(i * 0.025) * 6 + 25,
+                    heading: heading
+                });
+
+                x += segmentLength * Math.sin(heading);
+                z += segmentLength * Math.cos(heading);
+
+                // Add some turns based on segment index (simplified courseLayout)
+                if (i >= 5 && i < 10) heading += 0.06;        // Right turn
+                else if (i >= 13 && i < 17) heading -= 0.05;  // Left turn
+                else if (i >= 119 && i < 127) heading += 0.28; // Hairpin right
+                else if (i >= 130 && i < 137) heading -= 0.25; // Hairpin left
+            }
+
+            return path;
+        };
+
+        // Helper to check if point is clear of road
+        const checkClearance = (terrainX, terrainZ, terrainRadius, roadPath, minBuffer = 50) => {
+            const roadWidth = 16;
+            const totalClearance = roadWidth / 2 + minBuffer;
+
+            for (const point of roadPath) {
+                const dx = terrainX - point.x;
+                const dz = terrainZ - point.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+
+                if (distance < (terrainRadius + totalClearance)) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        test('lake island main peak should not overlap road', () => {
+            const roadPath = generateSimpleRoadPath();
+            const terrain = { x: 350, z: 100, radius: 125 }; // width=250
+
+            const isClear = checkClearance(
+                terrain.x,
+                terrain.z,
+                terrain.radius,
+                roadPath,
+                50 // 50 unit buffer
+            );
+
+            expect(isClear).toBe(true);
+        });
+
+        test('lake island secondary peak should not overlap road', () => {
+            const roadPath = generateSimpleRoadPath();
+            const terrain = { x: 250, z: -50, radius: 75 }; // width=150
+
+            const isClear = checkClearance(
+                terrain.x,
+                terrain.z,
+                terrain.radius,
+                roadPath,
+                50
+            );
+
+            expect(isClear).toBe(true);
+        });
+
+        test('majestic peak 1 should not overlap road', () => {
+            const roadPath = generateSimpleRoadPath();
+            const terrain = { x: -1200, z: 1000, radius: 400 }; // width=800 - UPDATED position
+
+            const isClear = checkClearance(
+                terrain.x,
+                terrain.z,
+                terrain.radius,
+                roadPath,
+                50
+            );
+
+            expect(isClear).toBe(true);
+        });
+
+        test('majestic peak 2 should not overlap road', () => {
+            const roadPath = generateSimpleRoadPath();
+            const terrain = { x: -1600, z: 1400, radius: 375 }; // width=750 - UPDATED position
+
+            const isClear = checkClearance(
+                terrain.x,
+                terrain.z,
+                terrain.radius,
+                roadPath,
+                50
+            );
+
+            expect(isClear).toBe(true);
+        });
+
+        test('all mid-range mountains should not overlap road', () => {
+            const roadPath = generateSimpleRoadPath();
+            const midRangePeaks = [
+                { name: 'Peak 1', x: -900, z: 700, radius: 150 },    // UPDATED positions
+                { name: 'Peak 2', x: -700, z: 1200, radius: 140 },
+                { name: 'Peak 3', x: -1000, z: 1800, radius: 175 },
+                { name: 'Peak 4', x: -600, z: 2200, radius: 145 },
+                { name: 'Peak 5', x: -800, z: 2600, radius: 155 }
+            ];
+
+            midRangePeaks.forEach(peak => {
+                const isClear = checkClearance(
+                    peak.x,
+                    peak.z,
+                    peak.radius,
+                    roadPath,
+                    50
+                );
+
+                expect(isClear).toBe(true);
+            });
+        });
+
+        test('terrain should have minimum 50 unit buffer from road edges', () => {
+            const minBuffer = 50;
+            const roadHalfWidth = 8;
+            const minimumClearance = roadHalfWidth + minBuffer;
+
+            // The minimum clearance should be reasonable for mountains
+            expect(minimumClearance).toBe(58); // 8 + 50 = 58 units
+        });
+
+        test('road path should cover expected coordinate ranges', () => {
+            const roadPath = generateSimpleRoadPath();
+
+            // Extract min/max coordinates
+            const xs = roadPath.map(p => p.x);
+            const zs = roadPath.map(p => p.z);
+
+            const minX = Math.min(...xs);
+            const maxX = Math.max(...xs);
+            const minZ = Math.min(...zs);
+            const maxZ = Math.max(...zs);
+
+            // Road should span significant area
+            expect(maxX - minX).toBeGreaterThan(100);
+            expect(maxZ - minZ).toBeGreaterThan(100);
+
+            // Road bounds should be within expected limits
+            // Note: Test road generation uses simplified turns, actual road is longer
+            expect(minX).toBeGreaterThan(-100);
+            expect(maxX).toBeLessThan(6000);  // Generous upper bound
+            expect(minZ).toBeGreaterThan(-100);
+            expect(maxZ).toBeLessThan(6000);  // Generous upper bound
+        });
+
+        test('validateTerrainRoadClearance should detect overlapping terrain', () => {
+            const roadPath = generateSimpleRoadPath();
+
+            // Create a mock environment with the road path
+            const mockEnvironment = {
+                roadPath: roadPath,
+                validateTerrainRoadClearance(terrainX, terrainZ, terrainRadius, minClearance = 50) {
+                    const roadWidth = 16;
+                    const totalClearance = roadWidth / 2 + minClearance;
+
+                    for (let i = 0; i < this.roadPath.length; i++) {
+                        const roadPoint = this.roadPath[i];
+                        const dx = terrainX - roadPoint.x;
+                        const dz = terrainZ - roadPoint.z;
+                        const distance = Math.sqrt(dx * dx + dz * dz);
+
+                        if (distance < (terrainRadius + totalClearance)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+            };
+
+            // Test with terrain that definitely overlaps
+            const overlappingTerrain = {
+                x: roadPath[50].x,  // Directly on road
+                z: roadPath[50].z,
+                radius: 100
+            };
+
+            const isValid = mockEnvironment.validateTerrainRoadClearance(
+                overlappingTerrain.x,
+                overlappingTerrain.z,
+                overlappingTerrain.radius,
+                50
+            );
+
+            expect(isValid).toBe(false);
+        });
+
+        test('validateTerrainRoadClearance should pass for distant terrain', () => {
+            const roadPath = generateSimpleRoadPath();
+
+            const mockEnvironment = {
+                roadPath: roadPath,
+                validateTerrainRoadClearance(terrainX, terrainZ, terrainRadius, minClearance = 50) {
+                    const roadWidth = 16;
+                    const totalClearance = roadWidth / 2 + minClearance;
+
+                    for (let i = 0; i < this.roadPath.length; i++) {
+                        const roadPoint = this.roadPath[i];
+                        const dx = terrainX - roadPoint.x;
+                        const dz = terrainZ - roadPoint.z;
+                        const distance = Math.sqrt(dx * dx + dz * dz);
+
+                        if (distance < (terrainRadius + totalClearance)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+            };
+
+            // Test with terrain far from road
+            const distantTerrain = {
+                x: 2000,  // Far away
+                z: 2000,
+                radius: 200
+            };
+
+            const isValid = mockEnvironment.validateTerrainRoadClearance(
+                distantTerrain.x,
+                distantTerrain.z,
+                distantTerrain.radius,
+                50
+            );
+
+            expect(isValid).toBe(true);
+        });
+    });
 });

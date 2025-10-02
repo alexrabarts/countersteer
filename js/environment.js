@@ -21,6 +21,18 @@ class Environment {
         this.createRoadworks(); // Add construction zones
         this.addHairpinWarnings(); // Add hairpin bend warnings
         this.createCheckpoints(); // Add scoring checkpoints
+
+        // Validate terrain-road clearance (development-time check)
+        const terrainErrors = this.validateAllTerrainClearance();
+        if (terrainErrors.length > 0) {
+            console.error('❌ TERRAIN-ROAD OVERLAP DETECTED:');
+            terrainErrors.forEach(error => {
+                console.error(`  - ${error.name} at (${error.position.x}, ${error.position.z}) radius ${error.radius}`);
+            });
+            console.error('These terrain objects are too close to or overlapping the road!');
+        } else {
+            console.log('✅ Terrain validation passed - no road overlaps detected');
+        }
     }
     
     displaceVertices(geometry, amount) {
@@ -1591,14 +1603,15 @@ class Environment {
         // Create mid-distance mountains with more detail
         const group = new THREE.Group();
         
-        // Create several individual peaks - closer but still clear of road
-        // Road max Z is about 488, so keep peaks beyond 600
+        // Create several individual peaks - MOVED to avoid road overlap
+        // Actual road bounds: X: 0-3622, Z: 0-2488
+        // Placing peaks far left (X < -500) to guarantee clearance
         const peaks = [
-            { x: -600, z: 700, height: 250, width: 300 },   // Left back
-            { x: -200, z: 750, height: 200, width: 280 },   // Left-center back
-            { x: 300, z: 800, height: 280, width: 350 },    // Center back (safely beyond road)
-            { x: 800, z: 750, height: 230, width: 290 },    // Right back (just beyond road X:700)
-            { x: 1200, z: 700, height: 260, width: 310 }    // Far right back
+            { x: -900, z: 700, height: 250, width: 300 },   // Left back - MOVED from -600
+            { x: -700, z: 1200, height: 200, width: 280 },  // Left-center back - MOVED from -200
+            { x: -1000, z: 1800, height: 280, width: 350 }, // Left far - MOVED from 300
+            { x: -600, z: 2200, height: 230, width: 290 },  // Left-back - MOVED from 800
+            { x: -800, z: 2600, height: 260, width: 310 }   // Left end - MOVED from 1200
         ];
         
         peaks.forEach(peak => {
@@ -1697,14 +1710,16 @@ class Environment {
         const group = new THREE.Group();
         
         // First peak - Mont Blanc style with shallower slope
-        const peak1X = 500;
+        // MOVED: Far left of road to avoid overlap (road X: 0-3622, Z: 0-2488)
+        const peak1X = -1200;
         const peak1Z = 1000;
         const peak1Height = 500; // Very tall
         const peak1Width = 800;  // Much wider base for shallower Mont Blanc-like slope
-        
+
         // Second peak - slightly shorter and offset
-        const peak2X = 900;  // Move further apart due to wider bases
-        const peak2Z = 950;
+        // MOVED: Far left to avoid road overlap
+        const peak2X = -1600;  // Move further apart due to wider bases
+        const peak2Z = 1400;
         const peak2Height = 450;
         const peak2Width = 750;  // Also wider for shallower slope
         
@@ -4539,5 +4554,79 @@ class Environment {
         }
 
         return variation;
+    }
+
+    // Terrain validation methods to prevent road-terrain overlap
+    validateTerrainRoadClearance(terrainX, terrainZ, terrainRadius, minClearance = 50) {
+        // Check if terrain at (terrainX, terrainZ) with given radius intersects the road corridor
+        // minClearance: additional buffer beyond road edges
+
+        const roadWidth = 16;
+        const totalClearance = roadWidth / 2 + minClearance;
+
+        // Check against all road segments
+        for (let i = 0; i < this.roadPath.length; i++) {
+            const roadPoint = this.roadPath[i];
+
+            // Calculate distance from terrain center to road segment center
+            const dx = terrainX - roadPoint.x;
+            const dz = terrainZ - roadPoint.z;
+            const distance = Math.sqrt(dx * dx + dz * dz);
+
+            // If terrain bounding circle intersects road corridor, fail validation
+            if (distance < (terrainRadius + totalClearance)) {
+                console.warn(`Terrain overlap detected at (${terrainX}, ${terrainZ}) radius ${terrainRadius} - distance to road segment ${i}: ${distance.toFixed(1)} (min: ${(terrainRadius + totalClearance).toFixed(1)})`);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    validateAllTerrainClearance() {
+        // Development-time check to ensure all terrain is clear of the road
+        // This should be called after all terrain generation is complete
+        // Returns array of validation errors
+
+        const errors = [];
+
+        // Define all terrain objects that need validation
+        // This is a comprehensive list based on the terrain creation methods
+        const terrainObjects = [
+            // Lake island mountain (createNearHills -> createLakeIslandMountain)
+            { name: 'Lake island main peak', x: 350, z: 100, radius: 125 },  // width=250, radius=width/2
+            { name: 'Lake island secondary peak', x: 250, z: -50, radius: 75 }, // width=150, radius=75
+
+            // Majestic peaks (createMajesticPeak) - UPDATED positions
+            { name: 'Majestic peak 1', x: -1200, z: 1000, radius: 400 }, // width=800, radius=400
+            { name: 'Majestic peak 2', x: -1600, z: 1400, radius: 375 },  // width=750, radius=375
+
+            // Mid-range mountains (createMidRangeMountains) - UPDATED positions
+            { name: 'Mid-range peak 1', x: -900, z: 700, radius: 150 },   // width=300
+            { name: 'Mid-range peak 2', x: -700, z: 1200, radius: 140 },   // width=280
+            { name: 'Mid-range peak 3', x: -1000, z: 1800, radius: 175 },    // width=350
+            { name: 'Mid-range peak 4', x: -600, z: 2200, radius: 145 },    // width=290
+            { name: 'Mid-range peak 5', x: -800, z: 2600, radius: 155 },   // width=310
+        ];
+
+        // Validate each terrain object
+        for (const terrain of terrainObjects) {
+            const isValid = this.validateTerrainRoadClearance(
+                terrain.x,
+                terrain.z,
+                terrain.radius,
+                50 // 50 unit buffer
+            );
+
+            if (!isValid) {
+                errors.push({
+                    name: terrain.name,
+                    position: { x: terrain.x, z: terrain.z },
+                    radius: terrain.radius
+                });
+            }
+        }
+
+        return errors;
     }
 }
