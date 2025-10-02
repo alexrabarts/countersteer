@@ -105,65 +105,21 @@ class Game {
             }
         };
 
+        // Create tour system
+        console.log('Creating tour system...');
+        this.tourSystem = new TourSystem();
+
         this.init();
         this.setupScene();
         this.setupLighting();
         this.setupCamera();
-        
-        console.log('Creating environment...');
-        try {
-            this.environment = new Environment(this.scene);
-            console.log('Environment created successfully');
-        } catch (error) {
-            console.error('Failed to create environment:', error);
-            throw error;
-        }
-        
-        console.log('Creating cones course...');
-        this.cones = new Cones(this.scene, this.environment, (points) => {
-            this.addScore(points);
-            this.showConeHitNotification(points);
-            this.soundManager.playConeHitSound();
-        });
-        
-        console.log('Creating traffic...');
-        this.traffic = new Traffic(this.scene, this.environment);
 
-        console.log('Creating particle system...');
-        this.particles = new ParticleSystem(this.scene);
-
-        console.log('Creating vehicle...');
-        this.vehicle = new Vehicle(this.scene, (points) => this.addScore(points));
-        this.vehicle.environment = this.environment; // Pass environment reference for elevation
-        
-        // Initialize vehicle at proper road height
-        if (this.environment.roadPath && this.environment.roadPath.length > 0) {
-            const startY = this.environment.roadPath[0].y || 0;
-            this.vehicle.position.y = startY;
-            
-            // Initialize camera in follow position behind bike
-            const normalCameraOffset = this.baseCameraOffset.clone();
-            normalCameraOffset.applyEuler(new THREE.Euler(0, this.vehicle.yawAngle, 0));
-            const normalCameraPos = this.vehicle.position.clone().add(normalCameraOffset);
-            
-            // Position camera in follow position
-            this.camera.position.set(normalCameraPos.x, normalCameraPos.y, normalCameraPos.z);
-            this.cameraIntroStartPos.copy(normalCameraPos);
-            this.cameraIntroEndPos.copy(normalCameraPos);
-            this.currentCameraPos.copy(normalCameraPos);
-        }
-        
-        this.input = new InputHandler();
-
-        // Initialize sound system with volume control
-        this.soundManager = new SoundManager();
-        this.soundManager.masterVolume = 0.3;
-
+        // Initialize game state variables
         this.clock = new THREE.Clock();
         this.fps = 0;
         this.frameCount = 0;
         this.lastTime = performance.now();
-        
+
         // Scoring system
         this.score = 0;
         this.combo = 0;
@@ -174,16 +130,16 @@ class Game {
         this.lastCheckpointPosition = null;
         this.lastCheckpointHeading = 0;
         this.checkpointRestartPressed = false;
-        
+
         // Speed streak bonus
         this.speedStreakTime = 0;
         this.lastSpeedCheck = 0;
         this.highSpeedThreshold = 50;
-        
+
         // Near miss tracking
         this.lastNearMissTime = 0;
         this.nearMissCheckedBikes = new Set();
-        
+
         // High score tracking
         this.highScore = parseInt(localStorage.getItem('motorcycleHighScore') || '0');
         this.bestTime = parseFloat(localStorage.getItem('motorcycleBestTime') || '999999');
@@ -197,46 +153,88 @@ class Game {
         // Help flags
         this.hasShownWheelieHelp = false;
 
-        // Setup time-of-day button listeners
-        this.setupTimeOfDayButtons();
+        // Initialize input handler and sound manager (independent of environment)
+        this.input = new InputHandler();
+        this.soundManager = new SoundManager();
+        this.soundManager.masterVolume = 0.3;
+
+        // Show tour selector and wait for leg selection
+        console.log('Showing tour selector...');
+        this.tourSystem.createLegSelector(document.body, (leg) => {
+            console.log('Leg selected:', leg.name);
+            this.initializeGameWithLeg(leg);
+        });
+    }
+
+    initializeGameWithLeg(leg) {
+        // Hide tour selector
+        this.tourSystem.hideLegSelector();
+
+        // Set time of day for the leg
+        this.setTimeOfDay(leg.timeOfDay);
+
+        console.log('Creating environment...');
+        try {
+            // Create environment with lazy generation for the selected leg
+            this.environment = new Environment(this.scene, leg.startSegment, leg.endSegment);
+            console.log('Environment created successfully');
+
+            // Apply landscape configuration for the leg
+            const landscapeConfig = this.tourSystem.getLandscapeConfig();
+            this.environment.applyLandscapeConfig(landscapeConfig);
+        } catch (error) {
+            console.error('Failed to create environment:', error);
+            throw error;
+        }
+
+        console.log('Creating cones course...');
+        this.cones = new Cones(this.scene, this.environment, (points) => {
+            this.addScore(points);
+            this.showConeHitNotification(points);
+            this.soundManager.playConeHitSound();
+        });
+
+        console.log('Creating traffic...');
+        this.traffic = new Traffic(this.scene, this.environment);
+
+        console.log('Creating particle system...');
+        this.particles = new ParticleSystem(this.scene);
+
+        console.log('Creating vehicle...');
+        this.vehicle = new Vehicle(this.scene, (points) => this.addScore(points));
+        this.vehicle.environment = this.environment; // Pass environment reference for elevation
+
+        // Initialize vehicle at leg start position
+        if (this.environment.roadPath && this.environment.roadPath.length > 0) {
+            const startPos = this.tourSystem.getStartingPosition(this.environment.roadPath);
+            this.vehicle.position.x = startPos.x;
+            this.vehicle.position.y = startPos.y;
+            this.vehicle.position.z = startPos.z;
+            this.vehicle.yawAngle = startPos.heading;
+
+            console.log(`Starting at segment ${leg.startSegment}: position (${startPos.x.toFixed(1)}, ${startPos.y.toFixed(1)}, ${startPos.z.toFixed(1)})`);
+
+            // Initialize camera in follow position behind bike
+            const normalCameraOffset = this.baseCameraOffset.clone();
+            normalCameraOffset.applyEuler(new THREE.Euler(0, this.vehicle.yawAngle, 0));
+            const normalCameraPos = this.vehicle.position.clone().add(normalCameraOffset);
+
+            // Position camera in follow position
+            this.camera.position.set(normalCameraPos.x, normalCameraPos.y, normalCameraPos.z);
+            this.cameraIntroStartPos.copy(normalCameraPos);
+            this.cameraIntroEndPos.copy(normalCameraPos);
+            this.currentCameraPos.copy(normalCameraPos);
+        }
+
+        // Reset game state for new leg
+        this.score = 0;
+        this.checkpointsPassed = 0;
+        this.finished = false;
+        this.startTime = performance.now();
 
         console.log('Starting animation loop...');
         // Delay first frame to ensure renderer is fully initialized
         requestAnimationFrame(() => this.animate());
-    }
-
-    setupTimeOfDayButtons() {
-        const buttons = document.querySelectorAll('.time-button');
-        buttons.forEach(button => {
-            button.addEventListener('click', () => {
-                const timeKey = button.getAttribute('data-time');
-                this.setTimeOfDay(timeKey);
-
-                // Update button states
-                buttons.forEach(btn => btn.classList.remove('active'));
-                button.classList.add('active');
-            });
-        });
-
-        // Add keyboard shortcut (T key to cycle through times)
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 't' || e.key === 'T') {
-                const times = ['golden', 'sunset', 'twilight', 'night', 'dawn'];
-                const currentIndex = times.indexOf(this.timeOfDay);
-                const nextIndex = (currentIndex + 1) % times.length;
-                const nextTime = times[nextIndex];
-
-                this.setTimeOfDay(nextTime);
-
-                // Update button states
-                buttons.forEach(btn => {
-                    btn.classList.remove('active');
-                    if (btn.getAttribute('data-time') === nextTime) {
-                        btn.classList.add('active');
-                    }
-                });
-            }
-        });
     }
 
     isWebGLAvailable() {
@@ -1044,9 +1042,12 @@ class Game {
 
             this.vehicle.reset();
             if (this.environment.roadPath && this.environment.roadPath.length > 0) {
-                this.vehicle.position.x = this.environment.roadPath[0].x || 0;
-                this.vehicle.position.y = this.environment.roadPath[0].y || 0;
-                this.vehicle.position.z = this.environment.roadPath[0].z || 0;
+                // Reset to the leg's starting position (not always segment 0)
+                const startPos = this.tourSystem.getStartingPosition(this.environment.roadPath);
+                this.vehicle.position.x = startPos.x;
+                this.vehicle.position.y = startPos.y;
+                this.vehicle.position.z = startPos.z;
+                this.vehicle.yawAngle = startPos.heading;
             }
             this.cones.reset();
             this.finished = false;

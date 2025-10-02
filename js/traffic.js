@@ -5,10 +5,10 @@ class Traffic {
         this.cars = [];
         this.motorcycles = [];
         this.maxCars = 1;
-        this.maxMotorcycles = 4;
+        this.maxMotorcycles = 5;  // The Touring Crew: Steve, Alex, Shane, Tim, Guy
         this.carSpacing = 250;
         this.motorcycleSpacing = 150;
-        
+
         this.initializeCars();
         this.initializeMotorcycles();
     }
@@ -32,32 +32,66 @@ class Traffic {
     initializeMotorcycles() {
         const totalSegments = this.environment.roadPath.length;
         const spacing = Math.floor(totalSegments / this.maxMotorcycles);
-        
-        const skillLevels = ['slow', 'average', 'fast', 'expert'];
-        
+
+        // The Touring Crew - Fixed riders with personalities
+        const touringCrew = [
+            {
+                name: 'Steve',
+                skill: 'expert',
+                helmet: 0x000000,  // Black
+                suit: 0x1a1a1a,    // Dark gray
+                bikeColor: 0xff0000, // Red
+                baseSpeed: 48 + Math.random() * 8
+            },
+            {
+                name: 'Alex',
+                skill: 'fast',
+                helmet: 0xff0000,  // Red
+                suit: 0x8b0000,    // Dark red
+                bikeColor: 0x0000ff, // Blue
+                baseSpeed: 42 + Math.random() * 6
+            },
+            {
+                name: 'Shane',
+                skill: 'average',
+                helmet: 0xffdd00,  // Yellow/gold
+                suit: 0x3a3a1a,    // Olive/yellow tint
+                bikeColor: 0xffff00, // Yellow
+                baseSpeed: 36 + Math.random() * 5
+            },
+            {
+                name: 'Tim',
+                skill: 'average',
+                helmet: 0xeecc00,  // Gold
+                suit: 0x3a3a1a,    // Olive/yellow tint
+                bikeColor: 0x00ff00, // Green
+                baseSpeed: 36 + Math.random() * 5
+            },
+            {
+                name: 'Guy',
+                skill: 'slow',
+                helmet: 0xffffff,  // White
+                suit: 0x4a4a4a,    // Medium gray
+                bikeColor: 0xff8800, // Orange
+                baseSpeed: 30 + Math.random() * 5
+            }
+        ];
+
         for (let i = 0; i < this.maxMotorcycles; i++) {
             const startSegment = (i * spacing + Math.floor(Math.random() * spacing * 0.3)) % totalSegments;
-            const skill = skillLevels[i % skillLevels.length];
-            let baseSpeed;
-            
-            switch(skill) {
-                case 'slow': baseSpeed = 30 + Math.random() * 5; break;
-                case 'average': baseSpeed = 36 + Math.random() * 5; break;
-                case 'fast': baseSpeed = 42 + Math.random() * 6; break;
-                case 'expert': baseSpeed = 48 + Math.random() * 8; break;
-            }
-            
+            const riderConfig = touringCrew[i];
+
             const motorcycle = new AIMotorcycle(this.scene, this.environment, {
                 direction: 1,
-                speed: baseSpeed,
+                speed: riderConfig.baseSpeed,
                 startSegment: startSegment,
                 lane: 'left',
-                color: this.getRandomBikeColor(),
-                style: this.getRandomBikeStyle(),
-                skill: skill,
-                riderName: this.getRiderName(skill),
-                helmetColor: this.getHelmetColorForSkill(skill),
-                suitColor: this.getRiderSuitColor(skill)
+                color: riderConfig.bikeColor,
+                style: 'sport',  // All sport bikes for touring crew
+                skill: riderConfig.skill,
+                riderName: riderConfig.name,
+                helmetColor: riderConfig.helmet,
+                suitColor: riderConfig.suit
             });
             this.motorcycles.push(motorcycle);
         }

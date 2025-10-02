@@ -80,49 +80,6 @@
             z-index: 50;
         }
 
-        /* Time of Day Menu */
-        .time-menu {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            border: 2px solid #4a9eff;
-            border-radius: 8px;
-            padding: 10px;
-            z-index: 100;
-        }
-
-        .time-menu h4 {
-            margin: 0 0 8px 0;
-            color: #4a9eff;
-            font-size: 14px;
-            text-align: center;
-        }
-
-        .time-button {
-            display: block;
-            width: 100%;
-            padding: 8px 12px;
-            margin: 4px 0;
-            background: rgba(74, 158, 255, 0.2);
-            border: 1px solid #4a9eff;
-            border-radius: 4px;
-            color: white;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.2s;
-        }
-
-        .time-button:hover {
-            background: rgba(74, 158, 255, 0.4);
-            transform: scale(1.05);
-        }
-
-        .time-button.active {
-            background: rgba(74, 158, 255, 0.6);
-            border-color: #00ff00;
-            font-weight: bold;
-        }
 
         body {
             margin: 0;
@@ -280,7 +237,128 @@
             color: #aaa;
             font-size: 12px;
         }
-        
+
+        /* Tour Selector Overlay */
+        .tour-selector-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .tour-selector-panel {
+            max-width: 1200px;
+            width: 90%;
+            padding: 40px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 3px solid #4a9eff;
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(74, 158, 255, 0.5);
+        }
+
+        .tour-title {
+            text-align: center;
+            font-size: 48px;
+            color: #4a9eff;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px rgba(74, 158, 255, 0.8);
+        }
+
+        .tour-subtitle {
+            text-align: center;
+            font-size: 20px;
+            color: #88ccff;
+            margin: 0 0 40px 0;
+            font-weight: normal;
+        }
+
+        .leg-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .leg-card {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #4a9eff;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .leg-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(74, 158, 255, 0.4);
+            border-color: #00ff00;
+        }
+
+        .leg-number {
+            font-size: 12px;
+            color: #88ccff;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        .leg-name {
+            font-size: 24px;
+            color: #4a9eff;
+            margin: 0 0 10px 0;
+        }
+
+        .leg-description {
+            color: #aaa;
+            font-size: 14px;
+            line-height: 1.6;
+            margin: 0 0 15px 0;
+            min-height: 60px;
+        }
+
+        .leg-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .leg-stats .stat {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .leg-stats strong {
+            color: #4a9eff;
+            margin-bottom: 2px;
+        }
+
+        .select-leg-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #4a9eff 0%, #2266cc 100%);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .select-leg-btn:hover {
+            background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+            transform: scale(1.05);
+        }
 
     </style>
 </head>
@@ -320,16 +398,6 @@
     <!-- Speed Vignette - darkens edges at high speed -->
     <div id="speedVignette"></div>
 
-    <!-- Time of Day Menu -->
-    <div class="time-menu">
-        <h4>TIME OF DAY (T)</h4>
-        <button class="time-button active" data-time="golden">Golden Hour</button>
-        <button class="time-button" data-time="sunset">Sunset</button>
-        <button class="time-button" data-time="twilight">Twilight</button>
-        <button class="time-button" data-time="night">Night</button>
-        <button class="time-button" data-time="dawn">Dawn</button>
-    </div>
-
     <!-- Motorcycle Speedometer -->
     <div class="speedometer">
         <div class="speedo-ring">
@@ -354,6 +422,7 @@
     <script src="js/virtualcontrols.js"></script>
     <script src="js/input.js"></script>
     <script src="js/particles.js"></script>
+    <script src="js/tours.js"></script>
     <script src="js/vehicle.js"></script>
     <script src="js/environment.js"></script>
     <script src="js/cones.js"></script>

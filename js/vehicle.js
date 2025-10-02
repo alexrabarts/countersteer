@@ -1592,9 +1592,10 @@ class Vehicle {
                         targetY = closest.segment.y * weight + nextSegment.y * (1 - weight);
                     }
                 }
-                
+
                  // Smooth elevation following to prevent bobbing with gradual changes
-                 this.position.y = this.position.y * 0.7 + targetY * 0.3;
+                 // Increased smoothing for less jumpy behavior
+                 this.position.y = this.position.y * 0.85 + targetY * 0.15;
             }
         }
     }

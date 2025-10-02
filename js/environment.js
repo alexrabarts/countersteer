@@ -1,14 +1,19 @@
 class Environment {
-    constructor(scene) {
+    constructor(scene, startSegment = 0, endSegment = 299) {
         this.scene = scene;
-        this.roadPath = []; // Store the path for other uses
+        this.roadPath = []; // Store the path for other uses (full track for physics/AI)
+        this.startSegment = startSegment; // Start of visual geometry range
+        this.endSegment = endSegment; // End of visual geometry range
         this.finishLinePosition = null; // Store finish line position for detection
         this.roadworksZones = []; // Store construction zones
         this.jumpRamps = []; // Store jump ramp objects for collision detection
         this.roadworkObstacles = []; // Store barriers and equipment for collision detection
         this.boulders = []; // Store boulder objects for collision detection
         this.checkpoints = []; // Store checkpoint positions for scoring
-        this.createRoad();
+
+        console.log(`Initializing environment for segments ${startSegment}-${endSegment}`);
+
+        this.createRoad(); // Generates full roadPath, but only creates geometry for segment range
         this.createGrass();
         this.createLayeredMountains(); // Add layered mountain scenery
         this.createRoadMarkings();
@@ -56,13 +61,18 @@ class Environment {
     createRoad() {
         // Create road texture
         const roadTexture = this.createRoadTexture();
-        const roadMaterial = new THREE.MeshStandardMaterial({
-            map: roadTexture,
+        const roadMaterialProps = {
             side: THREE.DoubleSide,
             roughness: 0.85,
             metalness: 0.0,
             envMapIntensity: 0.3
-        });
+        };
+        if (roadTexture) {
+            roadMaterialProps.map = roadTexture;
+        } else {
+            roadMaterialProps.color = 0x2a2a2a; // Dark grey fallback
+        }
+        const roadMaterial = new THREE.MeshStandardMaterial(roadMaterialProps);
         
         const roadWidth = 16;
         const segmentLength = 20; // Shorter segments for smoother curves
@@ -74,23 +84,73 @@ class Environment {
         
         // Define the course as a series of straights and turns
         // Each element defines how many segments and the turn rate per segment
+        // Extended touring layout: 300 segments across 5 legs (~60km total)
         const courseLayout = [
-            { segments: 10, turnRate: 0 },        // Start straight - 200m
-            { segments: 5, turnRate: 0.10 },      // Right turn 1 - moderate
+            // === LEG 1: MOUNTAIN DAWN (0-59) - Gentle winding mountain start ===
+            { segments: 12, turnRate: 0 },        // Long start straight
+            { segments: 5, turnRate: 0.06 },      // Gentle right sweep
+            { segments: 6, turnRate: 0 },         // Flowing straight
+            { segments: 4, turnRate: -0.05 },     // Gentle left
+            { segments: 7, turnRate: 0 },         // Long straight section
+            { segments: 5, turnRate: 0.08 },      // Moderate right
             { segments: 4, turnRate: 0 },         // Short straight
-            { segments: 6, turnRate: 0.12 },      // Right turn 2 - sharper
-            { segments: 3, turnRate: 0 },         // Very short straight
-            { segments: 8, turnRate: 0.08 },      // Right turn 3 - gradual
+            { segments: 6, turnRate: -0.07 },     // Moderate left
             { segments: 5, turnRate: 0 },         // Straight
-            { segments: 2, turnRate: 0 },         // Short approach to hairpin
-            { segments: 7, turnRate: 0.25 },      // EXTREME HAIRPIN - almost 180 degrees
-            { segments: 2, turnRate: 0 },         // Short exit from hairpin
-            { segments: 4, turnRate: -0.10 },     // Left turn - moderate to change direction
+            { segments: 5, turnRate: 0.05 },      // Gentle right curve
+
+            // === LEG 2: VALLEY RUN (60-119) - Fast flowing sections ===
+            { segments: 8, turnRate: 0 },         // Fast straight
+            { segments: 6, turnRate: 0.09 },      // Sweeping right
+            { segments: 7, turnRate: 0 },         // Long fast section
+            { segments: 5, turnRate: -0.10 },     // Sweeping left
+            { segments: 8, turnRate: 0 },         // High-speed straight
+            { segments: 4, turnRate: 0.08 },      // Fast right
             { segments: 6, turnRate: 0 },         // Straight
-            { segments: 5, turnRate: -0.12 },     // Left turn 2 - sharper
+            { segments: 5, turnRate: -0.09 },     // Fast left sweep
+            { segments: 7, turnRate: 0 },         // Straight valley floor
+            { segments: 4, turnRate: 0.07 },      // Flowing right
+
+            // === LEG 3: HIGH PASS (120-179) - Tight hairpins and elevation ===
+            { segments: 5, turnRate: 0 },         // Approach
+            { segments: 3, turnRate: 0.15 },      // Sharp right
+            { segments: 2, turnRate: 0 },         // Chicane straight
+            { segments: 3, turnRate: -0.15 },     // Sharp left
+            { segments: 4, turnRate: 0 },         // Short straight
+            { segments: 8, turnRate: 0.28 },      // HAIRPIN RIGHT - tight mountain turn
+            { segments: 3, turnRate: 0 },         // Recovery
+            { segments: 5, turnRate: 0.12 },      // Tight right
+            { segments: 2, turnRate: 0 },         // Short link
+            { segments: 7, turnRate: -0.25 },     // HAIRPIN LEFT - dramatic switchback
+            { segments: 3, turnRate: 0 },         // Exit
+            { segments: 5, turnRate: 0.14 },      // Technical right
+            { segments: 4, turnRate: 0 },         // Brief straight
+            { segments: 4, turnRate: -0.13 },     // Technical left
+
+            // === LEG 4: COASTAL DESCENT (180-239) - Sweeping descents ===
+            { segments: 9, turnRate: 0 },         // Long descent straight
+            { segments: 7, turnRate: 0.10 },      // Sweeping right descent
+            { segments: 8, turnRate: 0 },         // Fast downhill
+            { segments: 6, turnRate: -0.11 },     // Sweeping left descent
+            { segments: 10, turnRate: 0 },        // Extended high-speed section
+            { segments: 5, turnRate: 0.09 },      // Flowing right
+            { segments: 7, turnRate: 0 },         // Fast straight
+            { segments: 6, turnRate: -0.10 },     // Coastal sweep left
+            { segments: 2, turnRate: 0 },         // Short link
+
+            // === LEG 5: NIGHT RIDE (240-299) - Mixed technical finale ===
+            { segments: 6, turnRate: 0 },         // Finale approach
+            { segments: 4, turnRate: 0.12 },      // Technical right
             { segments: 3, turnRate: 0 },         // Short straight
-            { segments: 5, turnRate: -0.08 },     // Left turn 3 - gradual back toward start
-            { segments: 6, turnRate: 0 },         // Final straight back to start area
+            { segments: 4, turnRate: -0.13 },     // Technical left
+            { segments: 5, turnRate: 0 },         // Straight section
+            { segments: 5, turnRate: 0.10 },      // Right curve
+            { segments: 4, turnRate: 0 },         // Link
+            { segments: 5, turnRate: -0.11 },     // Left curve
+            { segments: 7, turnRate: 0 },         // Long straight buildup
+            { segments: 3, turnRate: 0.08 },      // Final right
+            { segments: 4, turnRate: 0 },         // Short straight
+            { segments: 3, turnRate: -0.09 },     // Final left
+            { segments: 7, turnRate: 0 },         // Grand finale straight to finish
         ];
         
         // First, build the road path
@@ -100,9 +160,10 @@ class Environment {
                 // Calculate center position for this segment
                 const centerX = currentX + (segmentLength/2) * Math.sin(currentHeading);
                 const centerZ = currentZ + (segmentLength/2) * Math.cos(currentHeading);
-                
-                // Calculate elevation with smooth continuous function - dramatic mountain road
-                const elevation = Math.sin(segmentIndex * 0.05) * 15 + Math.cos(segmentIndex * 0.03) * 12 + 25;
+
+                // Calculate elevation with smooth continuous function - gentle rolling terrain
+                // Reduced amplitude for smoother ride
+                const elevation = Math.sin(segmentIndex * 0.04) * 8 + Math.cos(segmentIndex * 0.025) * 6 + 25;
                 
                 // Store path point with elevation
                 this.roadPath.push({
@@ -135,68 +196,86 @@ class Environment {
         const vertices = [];
         const indices = [];
         const uvs = [];
-        
-        // Create vertices for continuous road surface
-        for (let i = 0; i < this.roadPath.length; i++) {
+
+        // Only create geometry for the active segment range (lazy generation)
+        const startIdx = Math.max(0, this.startSegment);
+        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment);
+
+        console.log(`Creating road geometry for segments ${startIdx} to ${endIdx} (${endIdx - startIdx + 1} segments)`);
+
+        // Create vertices for continuous road surface (only for active range)
+        for (let i = startIdx; i <= endIdx; i++) {
             const point = this.roadPath[i];
             const nextPoint = i < this.roadPath.length - 1 ? this.roadPath[i + 1] : point;
-            
+
             // Smoothly interpolate elevation between points
             const y = point.y;
             const nextY = nextPoint.y;
-            
+
             // Calculate perpendicular to road direction
             const perpX = Math.cos(point.heading) * roadWidth / 2;
             const perpZ = -Math.sin(point.heading) * roadWidth / 2;
-            
+
             // Add vertices for left and right edge of road
             vertices.push(
                 point.x - perpX, y, point.z - perpZ,  // Left edge
                 point.x + perpX, y, point.z + perpZ   // Right edge
             );
-            
+
             // Add UV coordinates
             uvs.push(0, i * 0.1, 1, i * 0.1);
         }
-        
-        // Create triangles connecting the vertices
-        for (let i = 0; i < this.roadPath.length - 1; i++) {
+
+        // Create triangles connecting the vertices (optimized indexing)
+        const segmentCount = endIdx - startIdx;
+        for (let i = 0; i < segmentCount; i++) {
             const baseIndex = i * 2;
-            // Two triangles per road segment
+            // Two triangles per road segment - counter-clockwise winding
             indices.push(
                 baseIndex, baseIndex + 2, baseIndex + 1,
                 baseIndex + 1, baseIndex + 2, baseIndex + 3
             );
         }
-        
+
         // Set geometry attributes
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
         geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
         geometry.setIndex(indices);
         geometry.computeVertexNormals();
-        
+
         // Create the road mesh
         const roadMesh = new THREE.Mesh(geometry, roadMaterial);
         roadMesh.receiveShadow = true;
         roadMesh.castShadow = true;
         this.scene.add(roadMesh);
-        
+
         console.log('Created continuous road with', vertices.length / 3, 'vertices');
     }
 
     addRockFormations() {
         // Create rock materials with smooth weathered appearance matching cliffs
         const rockMaterials = [
-            new THREE.MeshStandardMaterial({ color: 0xa0a0a0, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false }),
-            new THREE.MeshStandardMaterial({ color: 0x959595, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false }),
-            new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false })
+            new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false }),
+            new THREE.MeshStandardMaterial({ color: 0x1e1e1e, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false }),
+            new THREE.MeshStandardMaterial({ color: 0x242424, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false }),
+            new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false }),
+            new THREE.MeshStandardMaterial({ color: 0x303030, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false }),
+            new THREE.MeshStandardMaterial({ color: 0x221a12, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false }),
+            new THREE.MeshStandardMaterial({ color: 0x282118, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false }),
+            new THREE.MeshStandardMaterial({ color: 0x2e261c, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false }),
+            new THREE.MeshStandardMaterial({ color: 0x342c20, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false }),
+            new THREE.MeshStandardMaterial({ color: 0x3a3224, roughness: 0.92, metalness: 0.0, envMapIntensity: 0.2, flatShading: false })
         ];
         
         // NOTE: Most rock formations are now handled by the faceted cliff walls
         // Only adding minimal standalone rocks to avoid floating objects
-        
-        // Occasional large rocks near the cliff base
-        this.roadPath.forEach((point, index) => {
+
+        // Occasional large rocks near the cliff base (only in active segment range)
+        const startIdx = Math.max(0, this.startSegment);
+        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment);
+
+        for (let index = startIdx; index <= endIdx; index++) {
+            const point = this.roadPath[index];
             if (index % 15 === 0) { // Much less frequent
                 // Left side cliff rocks (elevated side) - properly grounded
                 const cliffX = point.x - (18 + Math.random() * 8) * Math.cos(point.heading);
@@ -304,8 +383,8 @@ class Environment {
                     mesh: boulder
                 });
             }
-        });
-        
+        }
+
         // Rock face walls removed - now handled by faceted cliff walls in createRoadWalls()
     }
     
@@ -430,13 +509,20 @@ class Environment {
     }
     
     createRoadWalls() {
-        // Rock materials for boulders - lighter grey-brown variations matching cliff
+        // Rock materials for boulders - very dark, no green
         const rockMaterials = [
-            new THREE.MeshStandardMaterial({ color: 0xa0a0a0, roughness: 0.98, metalness: 0.0 }), // Very light grey
-            new THREE.MeshStandardMaterial({ color: 0x959595, roughness: 0.97, metalness: 0.0 }), // Light grey
-            new THREE.MeshStandardMaterial({ color: 0xaaaaaa, roughness: 0.96, metalness: 0.0 }), // Pale grey
-            new THREE.MeshStandardMaterial({ color: 0x9a9a9a, roughness: 0.98, metalness: 0.0 }), // Light-medium grey
-            new THREE.MeshStandardMaterial({ color: 0xa09282, roughness: 0.97, metalness: 0.0 })  // Light grey-brown
+            new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.98, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x1e1e1e, roughness: 0.97, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x242424, roughness: 0.96, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.98, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x303030, roughness: 0.97, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x221a12, roughness: 0.98, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x282118, roughness: 0.97, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x2e261c, roughness: 0.96, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x342c20, roughness: 0.98, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x3a3224, roughness: 0.97, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x363636, roughness: 0.96, metalness: 0.0 }),
+            new THREE.MeshStandardMaterial({ color: 0x3c3c3c, roughness: 0.97, metalness: 0.0 })
         ];
         
         // Create continuous faceted rock walls with integrated slope
@@ -583,7 +669,6 @@ class Environment {
                         );
                         
                         // More realistic mountain rock colors with grey variations
-                        // Base grey colors ranging from light to dark
                         const greyBase = 0.35 + Math.random() * 0.25; // 0.35 to 0.6
                         
                         // Add geological stratification layers
@@ -607,63 +692,24 @@ class Environment {
                         const waterStainX = idx * 0.2;
                         const waterStain = (Math.sin(waterStainX) > 0.7 && verticalProgress < 0.8) ? -0.15 : 0;
                         
-                        // Vegetation patches - sparse moss and lichen on less steep areas
-                        let isVegetated = false;
-                        let isBrown = false;
-                        const vegetationNoise = Math.sin(idx * 0.25 + j * 0.35) * Math.cos(idx * 0.4 - j * 0.3);
-                        const brownNoise = Math.cos(idx * 0.18 + j * 0.22) * Math.sin(idx * 0.35 - j * 0.28);
-                        
-                        // Much less vegetation - only in very specific spots
-                        const vegetationChance = (1 - verticalProgress) * 0.2 + 
-                                                (1 - Math.abs(facetedDisplacement) / 10) * 0.1;
-                        
-                        if (vegetationNoise > 0.6 && Math.random() < vegetationChance) {
-                            isVegetated = true;
-                        } else if (brownNoise > 0.5 && Math.random() < 0.15) {
-                            // Occasional brown weathered rock
-                            isBrown = true;
-                        }
-                        
-                        if (isVegetated) {
-                            // Darker, more muted green - almost grey-green
-                            const greyGreenBase = 0.32 + Math.random() * 0.08;
-                            const greenTint = 0.08 + Math.random() * 0.05; // Very subtle green
-                            
-                            colors.push(
-                                greyGreenBase * 0.9,  // Slightly less red
-                                greyGreenBase + greenTint,  // Very subtle green
-                                greyGreenBase * 0.85   // Slightly less blue
-                            );
-                        } else if (isBrown) {
-                            // Brown weathered rock patches
-                            const brownBase = 0.35 + Math.random() * 0.1;
-                            const brownTint = 0.05 + Math.random() * 0.03;
-                            
-                            colors.push(
-                                brownBase + brownTint * 1.2,  // More red
-                                brownBase,  // Base
-                                brownBase - brownTint * 0.5   // Less blue
-                            );
-                        } else {
-                        // Regular rock colors with green tinting for horizontal facets
+                        // Regular rock colors
                         const finalGrey = Math.max(0.2, Math.min(0.8,
                             greyBase + heightVariation - depthVariation + weathering + stratumVariation + waterStain));
 
-                        // Add green tinting for horizontal areas (higher displacement creates flatter surfaces)
-                        const horizontalFactor = Math.min(1, Math.abs(facetedDisplacement) / 6); // 0-1, higher for more displaced (horizontal) areas
-                        const greenTintStrength = horizontalFactor * 0.12; // Up to 12% green tint for horizontal facets
+                        // Add green tinting for horizontal facets (where displacement is higher)
+                        const horizontalFactor = Math.min(1, Math.abs(facetedDisplacement) / 8);
+                        const greenTintStrength = horizontalFactor * 0.08;
 
-                        // Add slight color tints for realism
-                        const redTint = finalGrey + mineralStreak - greenTintStrength * 0.3; // Reduce red for green tint
-                        const greenTint = finalGrey - 0.02 + greenTintStrength; // Add green for horizontal areas
-                        const blueTint = finalGrey + 0.03 - greenTintStrength * 0.2; // Slight blue reduction
+                        // Slight color tints for realism
+                        const redTint = finalGrey + mineralStreak - greenTintStrength * 0.2;
+                        const greenTint = finalGrey - 0.02 + greenTintStrength;
+                        const blueTint = finalGrey + 0.03 - greenTintStrength * 0.15;
 
                         colors.push(
                             redTint,
                             greenTint,
                             blueTint
                         );
-                        }
                         
                         // UV coordinates
                         uvs.push(idx * 0.1, verticalProgress);
@@ -735,23 +781,22 @@ class Environment {
                     expectedGroundY = roadY;
                 }
                 
-                // Test 3: Boulder bottom should be at or below expected ground
-                const boulderBottom = y - boulderRadius;
-                // Stricter tolerance for small boulders
-                const tolerance = boulderRadius < 1.5 ? 0.1 : 0.5;
+                // Test 3: Boulder bottom should be at or below expected ground - STRICT
+                const boulderBottom = y - boulderRadius * 1.1; // Account for scaled geometry
+                const tolerance = 0.1; // Very strict tolerance
                 
                 if (boulderBottom > expectedGroundY + tolerance) {
-                    console.warn(`Boulder FLOATING (size ${boulderRadius.toFixed(1)}): Bottom at ${boulderBottom.toFixed(1)}, expected ground at ${expectedGroundY.toFixed(1)}`);
-                    // Consistent embedding - at least 50% for all boulders
-                    const embedDepth = 0.5 + (boulderRadius < 1.5 ? 0.2 : 0);
+                    console.warn(`Boulder FLOATING (size ${boulderRadius.toFixed(1)}): Bottom at ${boulderBottom.toFixed(1)}, expected ground at ${expectedGroundY.toFixed(1)}, FORCING DOWN`);
+                    // Force deep embedding for all boulders
+                    const embedDepth = 0.6 + (boulderRadius < 1.5 ? 0.2 : 0);
                     return { valid: false, correctY: expectedGroundY - boulderRadius * embedDepth };
                 }
                 
-                // Test 4: Boulder shouldn't be too deep (more than 60% embedded)
+                // Test 4: Boulder shouldn't be too deep (more than 80% embedded)
                 const boulderTop = y + boulderRadius;
-                if (boulderTop < expectedGroundY - boulderRadius * 0.2) {
+                if (boulderTop < expectedGroundY - boulderRadius * 0.5) {
                     console.warn(`Boulder too deep: Top at ${boulderTop.toFixed(1)}, ground at ${expectedGroundY.toFixed(1)}`);
-                    return { valid: false, correctY: expectedGroundY - boulderRadius * 0.3 };
+                    return { valid: false, correctY: expectedGroundY - boulderRadius * 0.4 };
                 }
                 
                 // Test 5: Check against cliff wall position (left side)
@@ -762,6 +807,12 @@ class Environment {
                         console.warn(`Boulder conflicting with cliff base at ${distFromCenter.toFixed(1)} units`);
                         return false;
                     }
+                }
+                
+                // Test 6: Additional floating check - ensure center is below expected ground
+                if (y > expectedGroundY + boulderRadius * 0.3) {
+                    console.warn(`Boulder center too high (size ${boulderRadius.toFixed(1)}): Center at ${y.toFixed(1)}, ground at ${expectedGroundY.toFixed(1)}, FORCING DOWN`);
+                    return { valid: false, correctY: expectedGroundY - boulderRadius * 0.6 };
                 }
                 
                 return { valid: true };
@@ -807,22 +858,34 @@ class Environment {
                         const perpZ = -Math.sin(point.heading) * distance * side;
                         
                         // Position the rock embedded into cliff face
-                        const embedDepth = rockSize * 0.4; // Embed 40% into cliff
+                        const embedDepth = rockSize * 0.5; // Embed 50% into cliff (increased from 40%)
                         
+                        let rockY;
                         if (height > 0) {
                             // Left side - mountain wall going up
+                            rockY = (point.y || 0) + cliffHeight - embedDepth;
                             rock.position.set(
                                 point.x + perpX,
-                                (point.y || 0) + cliffHeight - embedDepth, // Lower to embed
+                                rockY,
                                 point.z + perpZ
                             );
                         } else {
                             // Right side - cliff going down
+                            rockY = (point.y || 0) - cliffHeight + embedDepth;
                             rock.position.set(
                                 point.x + perpX,
-                                (point.y || 0) - cliffHeight + embedDepth, // Raise to embed on drop-off
+                                rockY,
                                 point.z + perpZ
                             );
+                        }
+                        
+                        // Validate embedded rock isn't floating
+                        const roadY = point.y || 0;
+                        const expectedMinY = roadY - Math.abs(height);
+                        if (rockY > roadY + rockSize && heightRatio < 0.1) {
+                            // Rock too high and near base - skip it
+                            console.warn(`Skipping floating embedded rock at height ${rockY.toFixed(1)} above road ${roadY.toFixed(1)}`);
+                            continue;
                         }
                         
                         // Random rotation for natural look
@@ -1485,11 +1548,11 @@ class Environment {
             indices.push(baseIndex, baseIndex + 1, baseIndex + 2);
             indices.push(baseIndex, baseIndex + 2, baseIndex + 3);
             
-            // Atmospheric perspective - lighter blue-grey color
+            // Atmospheric perspective - darker blue-grey color
             const atmosphericColor = {
-                r: 0.55 + Math.random() * 0.05,
-                g: 0.60 + Math.random() * 0.05,
-                b: 0.70 + Math.random() * 0.05
+                r: 0.35 + Math.random() * 0.05,
+                g: 0.40 + Math.random() * 0.05,
+                b: 0.50 + Math.random() * 0.05
             };
             
             // Add colors for all 4 vertices
@@ -1544,7 +1607,7 @@ class Environment {
                 peak.z, 
                 peak.height, 
                 peak.width,
-                0x606570 // Medium grey color
+                0x505560 // Darker grey color
             );
             group.add(mountain);
         });
@@ -1895,7 +1958,7 @@ class Environment {
         if (height > 200) {
             const snowGeometry = new THREE.SphereGeometry(width/5, 8, 6);
             const snowMaterial = new THREE.MeshStandardMaterial({
-                color: 0xf0f0f0,
+                color: 0xd8d8d8,
                 roughness: 0.7,
                 metalness: 0.0
             });
@@ -1947,18 +2010,18 @@ class Environment {
         
         hillGeometry.computeVertexNormals();
         
-        // Create gradient colors for the hill
+        // Create gradient colors for the hill - darker green
         const colors = [];
         for (let i = 0; i < positions.count; i++) {
             const y = positions.getY(i);
             const heightRatio = Math.max(0, y) / height;
             
-            // Base color - green to brown gradient
-            const baseGreen = 0.25 + heightRatio * 0.1;
+            // Base color - darker richer green
+            const baseGreen = 0.35 + heightRatio * 0.12;
             const baseColor = {
-                r: 0.35 + heightRatio * 0.15,
-                g: baseGreen + Math.random() * 0.05,
-                b: 0.25 + heightRatio * 0.1
+                r: 0.18 + heightRatio * 0.08,
+                g: baseGreen + Math.random() * 0.06,
+                b: 0.15 + heightRatio * 0.06
             };
             
             colors.push(baseColor.r, baseColor.g, baseColor.b);
@@ -1979,9 +2042,9 @@ class Environment {
         hill.receiveShadow = true;
         group.add(hill);
         
-        // Add vegetation patches
+        // Add vegetation patches - greener
         const vegetationMaterial = new THREE.MeshStandardMaterial({
-            color: 0x2d4a2d,
+            color: 0x3d6a3d,
             roughness: 0.9,
             metalness: 0.0
         });
@@ -2113,45 +2176,66 @@ class Environment {
         const texture = new THREE.CanvasTexture(canvas);
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(0.5, 0.5);
         return texture;
     }
     
     createRoadTexture() {
         const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 1024;
+        canvas.width = 1024;
+        canvas.height = 2048;
         const ctx = canvas.getContext('2d');
         
-        // Asphalt base
+        // Asphalt base with variation
         ctx.fillStyle = '#3a3a3a';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
+        // Add base texture variation
+        for (let i = 0; i < 300; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const size = Math.random() * 8 + 3;
+            const darkness = Math.random() * 20;
+            ctx.fillStyle = `rgba(${40 - darkness}, ${40 - darkness}, ${40 - darkness}, 0.3)`;
+            ctx.fillRect(x, y, size, size);
+        }
+        
         // Fine aggregate texture (small stones)
-        for (let i = 0; i < 1200; i++) {
+        for (let i = 0; i < 2000; i++) {
             const gray = Math.random() * 30 + 35;
-            ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, ${0.3 + Math.random() * 0.4})`;
-            const size = Math.random() * 2 + 0.5;
+            ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, ${0.4 + Math.random() * 0.5})`;
+            const size = Math.random() * 2.5 + 0.5;
             ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, size, size);
         }
         
         // Coarse aggregate (larger stones)
-        for (let i = 0; i < 150; i++) {
+        for (let i = 0; i < 250; i++) {
             const gray = Math.random() * 25 + 45;
-            ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, 0.6)`;
-            const size = Math.random() * 4 + 2;
+            ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, 0.7)`;
+            const size = Math.random() * 5 + 2;
             ctx.beginPath();
             ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, size/2, 0, Math.PI * 2);
             ctx.fill();
         }
         
+        // Embedded larger rocks
+        for (let i = 0; i < 80; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const size = Math.random() * 4 + 3;
+            const gray = Math.random() * 20 + 50;
+            ctx.fillStyle = `rgba(${gray}, ${gray}, ${gray}, 0.8)`;
+            ctx.beginPath();
+            ctx.arc(x, y, size/2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
         // Tire tracks and wear marks
-        ctx.globalAlpha = 0.3;
+        ctx.globalAlpha = 0.4;
         
         // Left tire track
         const leftTrackX = canvas.width * 0.35;
-        ctx.strokeStyle = '#2a2a2a';
-        ctx.lineWidth = 15;
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 18;
         ctx.beginPath();
         ctx.moveTo(leftTrackX, 0);
         for (let y = 0; y < canvas.height; y += 20) {
@@ -2169,15 +2253,94 @@ class Environment {
         ctx.stroke();
         
         // Center wear (from motorcycles)
-        ctx.strokeStyle = '#323232';
-        ctx.lineWidth = 8;
-        ctx.globalAlpha = 0.2;
+        ctx.strokeStyle = '#282828';
+        ctx.lineWidth = 12;
+        ctx.globalAlpha = 0.3;
         ctx.beginPath();
         ctx.moveTo(canvas.width / 2, 0);
         for (let y = 0; y < canvas.height; y += 30) {
             ctx.lineTo(canvas.width / 2 + Math.sin(y * 0.03) * 2, y);
         }
         ctx.stroke();
+        
+        // Heavy skid marks and burnout streaks
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = '#0a0a0a';
+        for (let i = 0; i < 25; i++) {
+            const startX = Math.random() * canvas.width;
+            const startY = Math.random() * canvas.height;
+            const length = 60 + Math.random() * 250;
+            const angle = (Math.random() - 0.5) * 0.6;
+            
+            ctx.lineWidth = 6 + Math.random() * 20;
+            ctx.globalAlpha = 0.25 + Math.random() * 0.4;
+            
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            
+            for (let j = 0; j < length; j += 8) {
+                const wobble = Math.sin(j * 0.08) * 3;
+                ctx.lineTo(
+                    startX + Math.sin(angle) * j + wobble,
+                    startY + Math.cos(angle) * j
+                );
+            }
+            ctx.stroke();
+        }
+        
+        // Tire burnout patches (darker circular marks)
+        ctx.globalAlpha = 0.4;
+        for (let i = 0; i < 18; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const width = 18 + Math.random() * 35;
+            const height = 35 + Math.random() * 70;
+            
+            ctx.fillStyle = '#0f0f0f';
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate((Math.random() - 0.5) * 0.6);
+            ctx.fillRect(-width/2, -height/2, width, height);
+            ctx.restore();
+        }
+        
+        // Diagonal skid marks from drifting
+        ctx.globalAlpha = 0.35;
+        for (let i = 0; i < 15; i++) {
+            const startX = Math.random() * canvas.width;
+            const startY = Math.random() * canvas.height;
+            const angle = Math.random() * Math.PI * 2;
+            const length = 40 + Math.random() * 100;
+            
+            ctx.strokeStyle = '#151515';
+            ctx.lineWidth = 10 + Math.random() * 12;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(
+                startX + Math.cos(angle) * length,
+                startY + Math.sin(angle) * length
+            );
+            ctx.stroke();
+        }
+        
+        // Snake marks (S-shaped skids)
+        ctx.globalAlpha = 0.3;
+        ctx.strokeStyle = '#1a1a1a';
+        for (let i = 0; i < 10; i++) {
+            const startX = Math.random() * canvas.width;
+            const startY = Math.random() * canvas.height;
+            const length = 80 + Math.random() * 150;
+            
+            ctx.lineWidth = 8 + Math.random() * 10;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            
+            for (let j = 0; j < length; j += 5) {
+                const sway = Math.sin(j * 0.1) * 15;
+                ctx.lineTo(startX + sway, startY + j);
+            }
+            ctx.stroke();
+        }
         
         // Oil stains and patches
         ctx.globalAlpha = 0.15;
@@ -2196,23 +2359,93 @@ class Environment {
             ctx.fill();
         }
         
-        // Cracks and repairs
-        ctx.globalAlpha = 0.4;
-        ctx.strokeStyle = '#1a1a1a';
-        ctx.lineWidth = 2;
-        for (let i = 0; i < 8; i++) {
+        // Cracks
+        ctx.globalAlpha = 0.55;
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 35; i++) {
             ctx.beginPath();
             const startX = Math.random() * canvas.width;
             const startY = Math.random() * canvas.height;
             ctx.moveTo(startX, startY);
             
-            for (let j = 0; j < 3; j++) {
+            for (let j = 0; j < 5; j++) {
                 ctx.lineTo(
-                    startX + (Math.random() - 0.5) * 30,
-                    startY + Math.random() * 40
+                    startX + (Math.random() - 0.5) * 50,
+                    startY + Math.random() * 60
                 );
             }
             ctx.stroke();
+        }
+        
+        // Large patch repairs (rectangular)
+        ctx.globalAlpha = 0.35;
+        for (let i = 0; i < 20; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const width = 25 + Math.random() * 50;
+            const height = 25 + Math.random() * 50;
+            
+            ctx.fillStyle = '#424242';
+            ctx.fillRect(x, y, width, height);
+            
+            for (let j = 0; j < 30; j++) {
+                const px = x + Math.random() * width;
+                const py = y + Math.random() * height;
+                ctx.fillStyle = `rgba(${48 + Math.random() * 22}, ${48 + Math.random() * 22}, ${48 + Math.random() * 22}, 0.6)`;
+                ctx.fillRect(px, py, 1.5, 1.5);
+            }
+        }
+        
+        // Irregular patch repairs
+        ctx.globalAlpha = 0.3;
+        for (let i = 0; i < 12; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const size = 30 + Math.random() * 60;
+            
+            ctx.fillStyle = '#3f3f3f';
+            ctx.beginPath();
+            for (let angle = 0; angle < Math.PI * 2; angle += 0.5) {
+                const radius = size * (0.7 + Math.random() * 0.3);
+                ctx.lineTo(
+                    x + Math.cos(angle) * radius,
+                    y + Math.sin(angle) * radius
+                );
+            }
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // Tar seams (road joint repairs)
+        ctx.globalAlpha = 0.4;
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 6;
+        for (let i = 0; i < 8; i++) {
+            const y = Math.random() * canvas.height;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            for (let x = 0; x < canvas.width; x += 10) {
+                ctx.lineTo(x, y + Math.sin(x * 0.1) * 2);
+            }
+            ctx.stroke();
+        }
+        
+        // Weathering stains
+        ctx.globalAlpha = 0.2;
+        for (let i = 0; i < 25; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const radius = 8 + Math.random() * 15;
+            
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+            gradient.addColorStop(0, 'rgba(30, 30, 30, 0.4)');
+            gradient.addColorStop(1, 'rgba(30, 30, 30, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
         }
         
         ctx.globalAlpha = 1.0;
@@ -2244,6 +2477,172 @@ class Environment {
             ctx.lineTo(canvas.width - 8, y + 10);
             ctx.stroke();
         }
+        
+        // ABS braking patterns - reduced
+        ctx.globalAlpha = 0.25;
+        ctx.strokeStyle = '#0d0d0d';
+        for (let i = 0; i < 4; i++) {
+            const startX = Math.random() * canvas.width;
+            const startY = Math.random() * canvas.height;
+            const segments = 4 + Math.floor(Math.random() * 3);
+            ctx.lineWidth = 10 + Math.random() * 6;
+            
+            for (let j = 0; j < segments; j++) {
+                ctx.beginPath();
+                const segY = startY + j * 25;
+                ctx.moveTo(startX, segY);
+                ctx.lineTo(startX + (Math.random() - 0.5) * 4, segY + 10);
+                ctx.stroke();
+            }
+        }
+        
+        // Corner entry marks - reduced
+        ctx.globalAlpha = 0.3;
+        for (let i = 0; i < 5; i++) {
+            const startX = Math.random() * canvas.width;
+            const startY = Math.random() * canvas.height;
+            const length = 50 + Math.random() * 80;
+            const curve = (Math.random() - 0.5) * 0.3;
+            
+            ctx.strokeStyle = '#0a0a0a';
+            ctx.lineWidth = 12 + Math.random() * 8;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            
+            for (let j = 0; j < length; j += 5) {
+                const curveAmount = Math.pow(j / length, 2) * curve * 50;
+                ctx.lineTo(startX + curveAmount, startY + j);
+            }
+            ctx.stroke();
+        }
+        
+        // Motorcycle lean marks - reduced
+        ctx.globalAlpha = 0.25;
+        for (let i = 0; i < 5; i++) {
+            const cx = Math.random() * canvas.width;
+            const cy = Math.random() * canvas.height;
+            const radius = 40 + Math.random() * 80;
+            const arcStart = Math.random() * Math.PI;
+            const arcLength = Math.PI * 0.3 + Math.random() * Math.PI * 0.3;
+            
+            ctx.strokeStyle = '#121212';
+            ctx.lineWidth = 7 + Math.random() * 5;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, arcStart, arcStart + arcLength);
+            ctx.stroke();
+        }
+        
+        // Rubber buildup marks - reduced
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = '#080808';
+        for (let i = 0; i < 50; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const size = 2 + Math.random() * 4;
+            ctx.beginPath();
+            ctx.arc(x, y, size/2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Circular pothole repairs - reduced
+        ctx.globalAlpha = 0.3;
+        for (let i = 0; i < 4; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const radius = 15 + Math.random() * 20;
+            
+            ctx.fillStyle = '#2a2a2a';
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#3f3f3f';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, radius + 4, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        // Utility cut repairs - reduced
+        ctx.globalAlpha = 0.25;
+        for (let i = 0; i < 3; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const width = 20 + Math.random() * 15;
+            const length = 80 + Math.random() * 120;
+            const angle = (Math.random() - 0.5) * 0.6;
+            
+            ctx.fillStyle = '#404040';
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            ctx.fillRect(-width/2, 0, width, length);
+            
+            ctx.strokeStyle = '#1a1a1a';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(-width/2, 0);
+            ctx.lineTo(-width/2, length);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(width/2, 0);
+            ctx.lineTo(width/2, length);
+            ctx.stroke();
+            ctx.restore();
+        }
+        
+        // Rain staining - reduced
+        ctx.globalAlpha = 0.15;
+        for (let i = 0; i < 8; i++) {
+            const startX = Math.random() * canvas.width;
+            const startY = Math.random() * canvas.height;
+            const length = 40 + Math.random() * 80;
+            
+            const gradient = ctx.createLinearGradient(startX, startY, startX + 5, startY + length);
+            gradient.addColorStop(0, 'rgba(25, 25, 25, 0.25)');
+            gradient.addColorStop(1, 'rgba(25, 25, 25, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(startX, startY, 6 + Math.random() * 4, length);
+        }
+        
+        // Surface oxidation - reduced
+        ctx.globalAlpha = 0.08;
+        for (let i = 0; i < 12; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const radius = 80 + Math.random() * 100;
+            
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+            gradient.addColorStop(0, 'rgba(60, 60, 60, 0.15)');
+            gradient.addColorStop(1, 'rgba(60, 60, 60, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Tar crack sealing - reduced
+        ctx.globalAlpha = 0.4;
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 10; i++) {
+            ctx.beginPath();
+            const startX = Math.random() * canvas.width;
+            const startY = Math.random() * canvas.height;
+            ctx.moveTo(startX, startY);
+            
+            for (let j = 0; j < 3; j++) {
+                ctx.lineTo(
+                    startX + (Math.random() - 0.5) * 30,
+                    startY + Math.random() * 40
+                );
+            }
+            ctx.stroke();
+        }
+        
+        ctx.globalAlpha = 1.0;
         
         const texture = new THREE.CanvasTexture(canvas);
         texture.wrapS = THREE.RepeatWrapping;
@@ -2531,41 +2930,45 @@ class Environment {
         lake.receiveShadow = true;
         this.scene.add(lake);
 
-        // Create continuous terrain strips along the road
+        // Create continuous terrain strips along the road (only in active segment range)
+        const startIdx = Math.max(0, this.startSegment);
+        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment);
+
         const createTerrainStrip = (side, offset, dropAmount, color) => {
             const points = [];
             const geometry = new THREE.BufferGeometry();
             const vertices = [];
             const indices = [];
-            
-            // Create vertices for terrain strip
-            for (let i = 0; i < this.roadPath.length - 1; i++) {
+
+            // Create vertices for terrain strip (only for active range)
+            for (let i = startIdx; i < endIdx; i++) {
                 const point = this.roadPath[i];
                 const nextPoint = this.roadPath[i + 1];
                 const roadY = point.y !== undefined ? point.y : 0;
                 const nextRoadY = nextPoint.y !== undefined ? nextPoint.y : 0;
-                
+
                 // Calculate perpendicular offset
                 const perpX = Math.cos(point.heading) * offset * side;
                 const perpZ = -Math.sin(point.heading) * offset * side;
                 const nextPerpX = Math.cos(nextPoint.heading) * offset * side;
                 const nextPerpZ = -Math.sin(nextPoint.heading) * offset * side;
-                
+
                 // Inner edge (closer to road)
                 vertices.push(
                     point.x + perpX, roadY + dropAmount, point.z + perpZ,
                     nextPoint.x + nextPerpX, nextRoadY + dropAmount, nextPoint.z + nextPerpZ
                 );
-                
+
                 // Outer edge (further from road) - extend much further for mountainside
                 vertices.push(
                     point.x + perpX * 8, roadY + dropAmount * 2, point.z + perpZ * 8,
                     nextPoint.x + nextPerpX * 8, nextRoadY + dropAmount * 2, nextPoint.z + nextPerpZ * 8
                 );
             }
-            
+
             // Create triangles
-            for (let i = 0; i < this.roadPath.length - 1; i++) {
+            const segmentCount = endIdx - startIdx;
+            for (let i = 0; i < segmentCount; i++) {
                 const baseIndex = i * 4;
                 // Two triangles per segment
                 indices.push(
@@ -2578,8 +2981,47 @@ class Environment {
             geometry.setIndex(indices);
             geometry.computeVertexNormals();
             
+            // Create simple grass texture
+            const grassCanvas = document.createElement('canvas');
+            grassCanvas.width = 256;
+            grassCanvas.height = 256;
+            const grassCtx = grassCanvas.getContext('2d');
+            
+            // Base color from parameter
+            const r = (color >> 16) & 0xFF;
+            const g = (color >> 8) & 0xFF;
+            const b = color & 0xFF;
+            grassCtx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+            grassCtx.fillRect(0, 0, grassCanvas.width, grassCanvas.height);
+            
+            // Add darker grass patches for texture
+            grassCtx.globalAlpha = 0.3;
+            for (let i = 0; i < 100; i++) {
+                const x = Math.random() * grassCanvas.width;
+                const y = Math.random() * grassCanvas.height;
+                const size = Math.random() * 8 + 2;
+                const darkness = Math.random() * 30;
+                grassCtx.fillStyle = `rgb(${Math.max(0, r - darkness)}, ${Math.max(0, g - darkness)}, ${Math.max(0, b - darkness)})`;
+                grassCtx.fillRect(x, y, size, size);
+            }
+            
+            // Add lighter highlights
+            grassCtx.globalAlpha = 0.2;
+            for (let i = 0; i < 50; i++) {
+                const x = Math.random() * grassCanvas.width;
+                const y = Math.random() * grassCanvas.height;
+                const size = Math.random() * 4 + 1;
+                grassCtx.fillStyle = `rgb(${Math.min(255, r + 20)}, ${Math.min(255, g + 20)}, ${Math.min(255, b + 15)})`;
+                grassCtx.fillRect(x, y, size, size);
+            }
+            
+            const grassTexture = new THREE.CanvasTexture(grassCanvas);
+            grassTexture.wrapS = THREE.RepeatWrapping;
+            grassTexture.wrapT = THREE.RepeatWrapping;
+            grassTexture.repeat.set(4, 4);
+            
             const material = new THREE.MeshStandardMaterial({
-                color: color,
+                map: grassTexture,
                 roughness: 0.95,
                 metalness: 0.0,
                 side: THREE.DoubleSide
@@ -2591,12 +3033,12 @@ class Environment {
             return mesh;
         };
         
-        // Create right side drop-off terrain - massive mountainside drop
-        const rightTerrain = createTerrainStrip(1, 12, -50, 0x2a4f2a);
+        // Create right side drop-off terrain - massive mountainside drop - darker
+        const rightTerrain = createTerrainStrip(1, 12, -50, 0x1a2f1a);
         this.scene.add(rightTerrain);
         
-        // Create far right deep drop-off - extreme cliff face
-        const deepDropTerrain = createTerrainStrip(1, 36, -150, 0x1a3f1a);
+        // Create far right deep drop-off - extreme cliff face - darker
+        const deepDropTerrain = createTerrainStrip(1, 36, -150, 0x0a1f0a);
         this.scene.add(deepDropTerrain);
         
         // Add vertical walls connecting road to terrain
@@ -2637,8 +3079,12 @@ class Environment {
             metalness: 0.0
         });
         
-        // Place dashes along the road path
-        this.roadPath.forEach((point, index) => {
+        // Place dashes along the road path (only in active segment range)
+        const startIdx = Math.max(0, this.startSegment);
+        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment);
+
+        for (let index = startIdx; index <= endIdx; index++) {
+            const point = this.roadPath[index];
             if (index % 2 === 0) { // Every other segment
                 const dashGeometry = new THREE.PlaneGeometry(0.2, 4);
                 const dash = new THREE.Mesh(dashGeometry, dashMaterial);
@@ -2649,7 +3095,7 @@ class Environment {
                 dash.receiveShadow = true;
                 this.scene.add(dash);
             }
-        });
+        }
         
         // Add start/finish line
         if (this.roadPath.length > 0) {
@@ -2700,19 +3146,23 @@ class Environment {
         const foliageGeometry = new THREE.SphereGeometry(3, 6, 5);
         const foliageMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22, roughness: 0.95, metalness: 0.0 });
         
-        // Place trees along road path - only on left (mountain) side
-        this.roadPath.forEach((point, index) => {
+        // Place trees along road path - only on left (mountain) side (only in active segment range)
+        const startIdx = Math.max(0, this.startSegment);
+        const endIdx = Math.min(this.roadPath.length - 1, this.endSegment);
+
+        for (let index = startIdx; index <= endIdx; index++) {
+            const point = this.roadPath[index];
             if (index % 7 === 0) { // Every 7th segment for sparser placement
                 // Only place trees on the left (mountain) side
                 const treeDistance = 20 + Math.random() * 10;
-                
+
                 // Left side tree (mountain side)
                 const leftX = point.x - treeDistance * Math.cos(point.heading);
                 const leftZ = point.z + treeDistance * Math.sin(point.heading);
-                
+
                 // Ground level for tree base
                 const groundLevel = point.y - 0.5;
-                
+
                 const leftTrunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
                 leftTrunk.position.set(leftX, groundLevel + 2, leftZ);
                 leftTrunk.castShadow = true;
@@ -2724,42 +3174,45 @@ class Environment {
                 leftFoliage.castShadow = true;
                 leftFoliage.receiveShadow = true;
                 this.scene.add(leftFoliage);
-                
+
                 // No trees on right side (cliff drop-off) to avoid floating trees
             }
-        });
+        }
 
-        // Bushes along the mountain side only
+        // Bushes along the mountain side only (only in active segment range)
         const bushGeometry = new THREE.SphereGeometry(1, 6, 4);
         const bushMaterial = new THREE.MeshStandardMaterial({ color: 0x2d5016, roughness: 0.9, metalness: 0.0 });
-        this.roadPath.forEach((point, index) => {
+
+        for (let index = startIdx; index <= endIdx; index++) {
+            const point = this.roadPath[index];
             if (index % 6 === 0) { // Less frequent
                 // Only left side bushes (mountain side)
                 const bushDistance = 12 + Math.random() * 5;
                 const bushX = point.x - bushDistance * Math.cos(point.heading);
                 const bushZ = point.z + bushDistance * Math.sin(point.heading);
-                
+
                 const leftBush = new THREE.Mesh(bushGeometry, bushMaterial);
                 leftBush.position.set(bushX, point.y - 0.3, bushZ); // Partially embedded
                 leftBush.castShadow = true;
                 leftBush.receiveShadow = true;
                 this.scene.add(leftBush);
-                
+
                 // No bushes on cliff side
             }
-        });
+        }
 
-        // Small cones for track detail (not guard rails)
+        // Small cones for track detail (not guard rails) (only in active segment range)
         const coneGeometry = new THREE.ConeGeometry(0.15, 0.5, 8);
         const coneMaterial = new THREE.MeshStandardMaterial({ color: 0xff4500, roughness: 0.8, metalness: 0.0 });
-        
-        this.roadPath.forEach((point, index) => {
+
+        for (let index = startIdx; index <= endIdx; index++) {
+            const point = this.roadPath[index];
             if (index % 8 === 0 && index > 30 && index < this.roadPath.length - 5) {
                 const coneY = point.y !== undefined ? point.y + 0.25 : 0.25;
-                
+
                 const nextIndex = Math.min(index + 1, this.roadPath.length - 1);
                 const headingChange = Math.abs(this.roadPath[nextIndex].heading - point.heading);
-                
+
                 if (headingChange < 0.01) {
                     const leftX = point.x - 8.5 * Math.cos(point.heading);
                     const leftZ = point.z + 8.5 * Math.sin(point.heading);
@@ -2778,7 +3231,7 @@ class Environment {
                     this.scene.add(rightCone);
                 }
             }
-        });
+        }
 
         // Start sign
         const signPostGeometry = new THREE.CylinderGeometry(0.05, 0.05, 2, 8);
@@ -2808,13 +3261,15 @@ class Environment {
             roughness: 0.5,
             metalness: 0.0
         });
-        
-        this.roadPath.forEach((point, index) => {
+
+        // Place road posts (only in active segment range)
+        for (let index = startIdx; index <= endIdx; index++) {
+            const point = this.roadPath[index];
             if (index % 3 === 0) { // Every 3rd segment (60m spacing)
                 // Posts on outside of curves, both sides on straights
                 const nextIndex = Math.min(index + 1, this.roadPath.length - 1);
                 const headingChange = this.roadPath[nextIndex].heading - point.heading;
-                
+
                 if (Math.abs(headingChange) < 0.01) {
                     // Straight section - posts on both sides
                     // Left post
@@ -2825,7 +3280,7 @@ class Environment {
                     leftPost.castShadow = true;
                     leftPost.receiveShadow = true;
                     this.scene.add(leftPost);
-                    
+
                     // Right post
                     const rightX = point.x + 9 * Math.sin(point.heading + Math.PI/2);
                     const rightZ = point.z + 9 * Math.cos(point.heading + Math.PI/2);
@@ -2854,7 +3309,7 @@ class Environment {
                     this.scene.add(reflector);
                 }
             }
-        });
+        }
     }
     
     createRoadworks() {
@@ -3232,12 +3687,17 @@ class Environment {
         
         // Create dirt material with texture
         const dirtTexture = this.createDirtTexture();
-        const dirtMaterial = new THREE.MeshStandardMaterial({
-            map: dirtTexture,
-            color: 0xFFFFFF, // White base to let texture colors show through
+        const dirtMaterialProps = {
             roughness: 0.98,
             metalness: 0.0
-        });
+        };
+        if (dirtTexture) {
+            dirtMaterialProps.map = dirtTexture;
+            dirtMaterialProps.color = 0xFFFFFF; // White base to let texture colors show through
+        } else {
+            dirtMaterialProps.color = 0x3A2210; // Very dark brown dirt fallback
+        }
+        const dirtMaterial = new THREE.MeshStandardMaterial(dirtMaterialProps);
         
         const ramp = new THREE.Mesh(geometry, dirtMaterial);
         ramp.position.set(point.x, point.y, point.z);
@@ -3263,8 +3723,8 @@ class Environment {
         canvas.height = 256;
         const ctx = canvas.getContext('2d');
 
-        // Base dirt color - more varied brown tones
-        ctx.fillStyle = '#6B4423';
+        // Base dirt color - very dark brown tones
+        ctx.fillStyle = '#3A2210';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // Add large dirt clumps and variations
@@ -3274,10 +3734,10 @@ class Environment {
             const radius = Math.random() * 4 + 1;
             const brightness = Math.random() * 60 - 30;
 
-            // Vary between different dirt tones
-            const r = Math.max(0, Math.min(255, 107 + brightness + Math.random() * 20));
-            const g = Math.max(0, Math.min(255, 68 + brightness + Math.random() * 15));
-            const b = Math.max(0, Math.min(255, 35 + brightness + Math.random() * 10));
+            // Vary between very dark dirt tones
+            const r = Math.max(0, Math.min(255, 58 + brightness + Math.random() * 15));
+            const g = Math.max(0, Math.min(255, 34 + brightness + Math.random() * 12));
+            const b = Math.max(0, Math.min(255, 16 + brightness + Math.random() * 8));
 
             ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.6)`;
             ctx.beginPath();
@@ -3293,7 +3753,7 @@ class Environment {
             const width = Math.random() * 25 + 8;
             const height = Math.random() * 25 + 8;
 
-            ctx.fillStyle = '#4A2C1A';
+            ctx.fillStyle = '#281810';
             ctx.fillRect(x, y, width, height);
         }
 
@@ -3369,9 +3829,11 @@ class Environment {
             ctx.restore();
         }
         
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.wrapS = THREE.RepeatWrapping;
-        return texture;
+        // TEMP DISABLED to debug render issue
+        return null;
+        // const texture = new THREE.CanvasTexture(canvas);
+        // texture.wrapS = THREE.RepeatWrapping;
+        // return texture;
     }
     
     createBulldozer(x, y, z, rotation) {
@@ -3577,7 +4039,7 @@ class Environment {
         // Create shipping container geometry
         const containerGeometry = new THREE.BoxGeometry(2.5, 2.5, 6);
         const containerMaterial = new THREE.MeshStandardMaterial({
-            color: 0xFF6B35, // Bright orange for visibility
+            color: 0xAA3318, // Even darker orange for visibility
             roughness: 0.9,
             metalness: 0.1
         });
@@ -3906,10 +4368,12 @@ class Environment {
             ctx.fill();
         }
 
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-        return texture;
+        // TEMP DISABLED to debug render issue
+        return null;
+        // const texture = new THREE.CanvasTexture(canvas);
+        // texture.wrapS = THREE.RepeatWrapping;
+        // texture.wrapT = THREE.RepeatWrapping;
+        // return texture;
     }
 
     createCheckpoints() {
@@ -3931,14 +4395,29 @@ class Environment {
             // Create checkpoint gate
             const gateGroup = new THREE.Group();
             
-            // Left pole with red/white stripes (like Swiss roadworks)
+            // Left pole with red/white stripes
             const poleGeometry = new THREE.CylinderGeometry(0.15, 0.15, 5);
+            
+            // Create red/white stripe material
+            const stripeCanvas = document.createElement('canvas');
+            stripeCanvas.width = 32;
+            stripeCanvas.height = 128;
+            const stripeCtx = stripeCanvas.getContext('2d');
+            
+            // Alternating red and white stripes
+            for (let i = 0; i < 8; i++) {
+                stripeCtx.fillStyle = i % 2 === 0 ? '#ff0000' : '#ffffff';
+                stripeCtx.fillRect(0, i * 16, 32, 16);
+            }
+            
+            const stripeTexture2 = new THREE.CanvasTexture(stripeCanvas);
+            stripeTexture2.wrapS = THREE.RepeatWrapping;
+            stripeTexture2.wrapT = THREE.RepeatWrapping;
+            
             const poleMaterial = new THREE.MeshStandardMaterial({
-                map: stripeTexture,
-                emissive: 0x330000,
-                emissiveIntensity: 0.1,
-                roughness: 0.5,
-                metalness: 0.5
+                map: stripeTexture2,
+                roughness: 0.6,
+                metalness: 0.2
             });
 
             const leftPole = new THREE.Mesh(poleGeometry, poleMaterial);
@@ -3948,21 +4427,6 @@ class Environment {
             const rightPole = new THREE.Mesh(poleGeometry, poleMaterial);
             rightPole.position.set(6, 2.5, 0);
             gateGroup.add(rightPole);
-            
-            // Add glowing banner across checkpoint
-            const bannerGeometry = new THREE.PlaneGeometry(12, 0.5);
-            const bannerMaterial = new THREE.MeshStandardMaterial({
-                color: 0x00ff00,
-                emissive: 0x00ff00,
-                emissiveIntensity: 0.5,
-                transparent: true,
-                opacity: 0.6,
-                side: THREE.DoubleSide
-            });
-            const banner = new THREE.Mesh(bannerGeometry, bannerMaterial);
-            banner.position.set(0, 4, 0);
-            banner.rotation.y = Math.PI / 2;
-            gateGroup.add(banner);
             
             // Position and orient the checkpoint
             gateGroup.position.set(point.x, point.y, point.z);
@@ -3987,5 +4451,93 @@ class Environment {
                 segmentIndex: segmentIndex
             });
         }
+    }
+
+    // Landscape variation methods for tour legs
+    applyLandscapeConfig(config) {
+        console.log('Applying landscape config:', config);
+
+        // Store config for reference
+        this.landscapeConfig = config;
+
+        // Update terrain colors if available
+        if (config.grassColor) {
+            this.updateTerrainColors(config.grassColor);
+        }
+
+        // Update mountain colors if available
+        if (config.mountainColor) {
+            this.updateMountainColors(config.mountainColor);
+        }
+
+        // Update fog if available
+        if (config.fogDensity !== undefined) {
+            this.updateFog(config.fogDensity);
+        }
+    }
+
+    updateTerrainColors(grassColor) {
+        // Update terrain strips (grass/ground next to road)
+        this.scene.traverse((object) => {
+            if (object.isMesh && object.userData.type === 'terrain') {
+                object.material.color.setHex(grassColor);
+                object.material.needsUpdate = true;
+            }
+        });
+    }
+
+    updateMountainColors(mountainColor) {
+        // Update mountain meshes
+        this.scene.traverse((object) => {
+            if (object.isMesh && object.userData.type === 'mountain') {
+                object.material.color.setHex(mountainColor);
+                object.material.needsUpdate = true;
+            }
+        });
+    }
+
+    updateFog(density) {
+        // Update scene fog if present
+        if (this.scene.fog) {
+            if (this.scene.fog.density !== undefined) {
+                this.scene.fog.density = density;
+            } else if (this.scene.fog.near !== undefined && this.scene.fog.far !== undefined) {
+                // Convert density to linear fog parameters
+                const baseFar = 1000;
+                this.scene.fog.far = baseFar / (density * 100);
+                this.scene.fog.near = this.scene.fog.far * 0.1;
+            }
+        } else {
+            // Create fog if it doesn't exist
+            this.scene.fog = new THREE.FogExp2(0x87ceeb, density);
+        }
+    }
+
+    getLandscapeVariation(segmentIndex) {
+        // Return subtle landscape characteristics based on segment position
+        // This can be used for procedural variation within legs
+        const variation = {
+            elevation: 1.0,
+            roughness: 1.0,
+            density: 1.0
+        };
+
+        // Example: Increase elevation in high pass sections (segments 120-179)
+        if (segmentIndex >= 120 && segmentIndex < 180) {
+            variation.elevation = 1.5;
+            variation.roughness = 1.3;
+        }
+        // Valley sections (segments 60-119) are flatter
+        else if (segmentIndex >= 60 && segmentIndex < 120) {
+            variation.elevation = 0.7;
+            variation.density = 1.2;
+        }
+        // Coastal descent (segments 180-239)
+        else if (segmentIndex >= 180 && segmentIndex < 240) {
+            variation.elevation = 0.8;
+            variation.roughness = 0.9;
+        }
+
+        return variation;
     }
 }
