@@ -793,14 +793,14 @@ class Game {
         }
         
         this.camera.position.copy(this.currentCameraPos);
-        
-        // Additional camera shake at high speeds (outside onboard mode)
-        if (this.cameraMode !== 2) {
-            const speedFactor = this.vehicle.speed / this.vehicle.maxSpeed;
-            const shakeIntensity = speedFactor * 0.05;
-            this.camera.position.x += (Math.random() - 0.5) * shakeIntensity;
-            this.camera.position.y += (Math.random() - 0.5) * shakeIntensity * 0.3;
-        }
+
+        // Additional camera shake at high speeds (outside onboard mode) - TEMPORARILY DISABLED FOR TESTING
+        // if (this.cameraMode !== 2) {
+        //     const speedFactor = this.vehicle.speed / this.vehicle.maxSpeed;
+        //     const shakeIntensity = speedFactor * 0.05;
+        //     this.camera.position.x += (Math.random() - 0.5) * shakeIntensity;
+        //     this.camera.position.y += (Math.random() - 0.5) * shakeIntensity * 0.3;
+        // }
 
         // Mode-specific FOV and look target
         const speedRatio = this.vehicle.speed / this.vehicle.maxSpeed;
@@ -847,45 +847,48 @@ class Game {
             this.camera.fov = this.currentFOV;
             this.camera.updateProjectionMatrix();
 
-            // Enhanced camera shake with multiple sources
+            // Enhanced camera shake with multiple sources - TEMPORARILY DISABLED FOR TESTING
             if (!this.cameraShakeOffset) this.cameraShakeOffset = new THREE.Vector3();
 
-            // Base speed shake - increases dramatically at high speeds
-            const speedShake = Math.pow(speedFactor, 2) * 0.12;
+            // // Base speed shake - increases dramatically at high speeds
+            // const speedShake = Math.pow(speedFactor, 2) * 0.12;
 
-            // Terrain/roughness shake - simulates bumpy road
-            const terrainShake = Math.sin(performance.now() * 0.02) * 0.015 * speedFactor;
+            // // Terrain/roughness shake - simulates bumpy road
+            // const terrainShake = Math.sin(performance.now() * 0.02) * 0.015 * speedFactor;
 
-            // Landing impact shake - big jolt when landing from jumps
-            let landingShake = 0;
-            if (this.vehicle.isJumping) {
-                this.lastJumpState = true;
-            } else if (this.lastJumpState) {
-                // Just landed - create impact shake
-                this.landingShakeIntensity = 0.3;
-                this.landingShakeTime = performance.now();
-                this.lastJumpState = false;
-            }
+            // // Landing impact shake - big jolt when landing from jumps
+            // let landingShake = 0;
+            // if (this.vehicle.isJumping) {
+            //     this.lastJumpState = true;
+            // } else if (this.lastJumpState) {
+            //     // Just landed - create impact shake
+            //     this.landingShakeIntensity = 0.3;
+            //     this.landingShakeTime = performance.now();
+            //     this.lastJumpState = false;
+            // }
 
-            // Decay landing shake over time
-            if (this.landingShakeIntensity > 0) {
-                const timeSinceLanding = (performance.now() - this.landingShakeTime) / 1000;
-                landingShake = this.landingShakeIntensity * Math.exp(-timeSinceLanding * 8);
-                if (landingShake < 0.01) this.landingShakeIntensity = 0;
-            }
+            // // Decay landing shake over time
+            // if (this.landingShakeIntensity > 0) {
+            //     const timeSinceLanding = (performance.now() - this.landingShakeTime) / 1000;
+            //     landingShake = this.landingShakeIntensity * Math.exp(-timeSinceLanding * 8);
+            //     if (landingShake < 0.01) this.landingShakeIntensity = 0;
+            // }
 
-            // Wheelie wobble - adds instability feel during wheelies
-            let wheelieShake = 0;
-            if (this.vehicle.isWheelie) {
-                const wheelieAngle = this.vehicle.wheelieAngle * 180 / Math.PI;
-                wheelieShake = (wheelieAngle / 60) * 0.04 * Math.sin(performance.now() * 0.01);
-            }
+            // // Wheelie wobble - adds instability feel during wheelies
+            // let wheelieShake = 0;
+            // if (this.vehicle.isWheelie) {
+            //     const wheelieAngle = this.vehicle.wheelieAngle * 180 / Math.PI;
+            //     wheelieShake = (wheelieAngle / 60) * 0.04 * Math.sin(performance.now() * 0.01);
+            // }
 
-            // Combine all shake sources
-            const totalShake = speedShake + terrainShake + landingShake + wheelieShake;
-            this.cameraShakeOffset.x = (Math.random() - 0.5) * totalShake;
-            this.cameraShakeOffset.y = (Math.random() - 0.5) * totalShake * 0.6;
-            this.cameraShakeOffset.z = (Math.random() - 0.5) * totalShake * 0.4;
+            // // Combine all shake sources
+            // const totalShake = speedShake + terrainShake + landingShake + wheelieShake;
+            // this.cameraShakeOffset.x = (Math.random() - 0.5) * totalShake;
+            // this.cameraShakeOffset.y = (Math.random() - 0.5) * totalShake * 0.6;
+            // this.cameraShakeOffset.z = (Math.random() - 0.5) * totalShake * 0.4;
+
+            // Set shake to zero for testing
+            this.cameraShakeOffset.set(0, 0, 0);
             
             // Look ahead of vehicle for better anticipation on mountain roads
             const lookAheadDistance = (this.cameraMode === 1 ? 5 : 3) + speedRatio * 7; // Look further in high view
