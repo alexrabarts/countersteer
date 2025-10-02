@@ -1540,6 +1540,22 @@ class Vehicle {
         this.weatherSystem = weatherSystem;
     }
 
+    getSegmentSearchRange() {
+        // Return a range of segments to search (nearby segments only)
+        // This dramatically improves performance vs searching all segments
+        const searchRadius = 10; // Search ±10 segments around current position
+
+        if (!this.environment || !this.environment.roadPath || this.environment.roadPath.length === 0) {
+            return { start: 0, end: 0 };
+        }
+
+        const pathLength = this.environment.roadPath.length;
+        const start = Math.max(0, this.currentRoadSegment - searchRadius);
+        const end = Math.min(pathLength - 1, this.currentRoadSegment + searchRadius);
+
+        return { start, end };
+    }
+
     updateElevation() {
         // Skip elevation update when jumping
         if (this.isJumping) return;
@@ -1570,21 +1586,25 @@ class Vehicle {
         
         // Find nearest road segments and interpolate between them
         if (this.environment && this.environment.roadPath) {
-            // Find closest segment
+            // Get search range (only search nearby segments for performance)
+            const range = this.getSegmentSearchRange();
+
+            // Find closest segment within search range
             let closest = { segment: null, distance: Infinity };
             let closestIndex = -1;
-            
-            this.environment.roadPath.forEach((segment, index) => {
+
+            for (let index = range.start; index <= range.end; index++) {
+                const segment = this.environment.roadPath[index];
                 const distance = Math.sqrt(
-                    Math.pow(this.position.x - segment.x, 2) + 
+                    Math.pow(this.position.x - segment.x, 2) +
                     Math.pow(this.position.z - segment.z, 2)
                 );
-                
+
                 if (distance < closest.distance) {
                     closest = { segment, distance };
                     closestIndex = index;
                 }
-            });
+            }
             
             if (closest.segment && closest.segment.y !== undefined) {
                 let targetY = closest.segment.y;
@@ -1640,10 +1660,15 @@ class Vehicle {
         }
 
         if (this.environment && this.environment.roadPath) {
+            // Get search range (only search nearby segments for performance)
+            const range = this.getSegmentSearchRange();
+
             // Use the closest segment for accurate perpDistance calculation
             let currentSegment = null;
             let minDistance = Infinity;
-            this.environment.roadPath.forEach((segment, index) => {
+
+            for (let index = range.start; index <= range.end; index++) {
+                const segment = this.environment.roadPath[index];
                 const distance = Math.sqrt(
                     Math.pow(this.position.x - segment.x, 2) +
                     Math.pow(this.position.z - segment.z, 2)
@@ -1654,7 +1679,7 @@ class Vehicle {
                     currentSegment = segment;
                     this.currentRoadSegment = index; // Update current segment
                 }
-            });
+            }
 
             if (currentSegment) {
                 // Calculate perpendicular distance from road centerline
