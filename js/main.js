@@ -591,8 +591,8 @@ class Game {
             this.rightHeadlight.intensity = 0.5;
         }
 
-        // Show notification
-        this.showTimeOfDayNotification(config.name);
+        // Show notification (disabled - don't show popup at level start)
+        // this.showTimeOfDayNotification(config.name);
     }
 
     showTimeOfDayNotification(timeName) {

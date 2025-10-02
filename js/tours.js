@@ -239,7 +239,7 @@ class TourSystem {
                     <h1 class="tour-title">TWISTY CHALLENGE TOUR</h1>
                     <div class="leg-grid">
                         ${this.legs.map((leg, index) => `
-                            <div class="leg-card" data-leg-id="${leg.id}">
+                            <div class="leg-card" data-leg-id="${leg.id}" data-leg-index="${index}">
                                 <div class="leg-number">LEG ${index + 1}</div>
                                 <h3 class="leg-name">${leg.name}</h3>
                                 <p class="leg-description">${leg.description}</p>
@@ -253,16 +253,97 @@ class TourSystem {
 
         container.insertAdjacentHTML('beforeend', selectorHTML);
 
-        // Add event listeners
+        // Initialize keyboard navigation
+        this.selectedLegIndex = 0;
+        this.legSelectorActive = true;
+        this.updateLegHighlight();
+
+        // Add event listeners for mouse clicks
         document.querySelectorAll('.select-leg-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const legId = e.target.dataset.legId;
                 const leg = this.selectLeg(legId);
                 if (leg && onLegSelected) {
+                    this.legSelectorActive = false;
                     onLegSelected(leg);
                 }
             });
         });
+
+        // Add keyboard navigation
+        this.keyboardHandler = (e) => {
+            if (!this.legSelectorActive) return;
+
+            const numCols = 2; // Grid has 2 columns
+            const numRows = Math.ceil(this.legs.length / numCols);
+            const currentRow = Math.floor(this.selectedLegIndex / numCols);
+            const currentCol = this.selectedLegIndex % numCols;
+
+            switch(e.code) {
+                case 'ArrowUp':
+                case 'KeyW':
+                    e.preventDefault();
+                    if (currentRow > 0) {
+                        this.selectedLegIndex -= numCols;
+                    }
+                    this.updateLegHighlight();
+                    break;
+
+                case 'ArrowDown':
+                case 'KeyS':
+                    e.preventDefault();
+                    if (currentRow < numRows - 1 && this.selectedLegIndex + numCols < this.legs.length) {
+                        this.selectedLegIndex += numCols;
+                    }
+                    this.updateLegHighlight();
+                    break;
+
+                case 'ArrowLeft':
+                case 'KeyA':
+                    e.preventDefault();
+                    if (this.selectedLegIndex > 0) {
+                        this.selectedLegIndex--;
+                    }
+                    this.updateLegHighlight();
+                    break;
+
+                case 'ArrowRight':
+                case 'KeyD':
+                    e.preventDefault();
+                    if (this.selectedLegIndex < this.legs.length - 1) {
+                        this.selectedLegIndex++;
+                    }
+                    this.updateLegHighlight();
+                    break;
+
+                case 'Enter':
+                case 'Space':
+                    e.preventDefault();
+                    const selectedLeg = this.legs[this.selectedLegIndex];
+                    const leg = this.selectLeg(selectedLeg.id);
+                    if (leg && onLegSelected) {
+                        this.legSelectorActive = false;
+                        onLegSelected(leg);
+                    }
+                    break;
+            }
+        };
+
+        document.addEventListener('keydown', this.keyboardHandler);
+    }
+
+    updateLegHighlight() {
+        // Remove highlight from all cards
+        document.querySelectorAll('.leg-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+
+        // Add highlight to selected card
+        const selectedCard = document.querySelector(`.leg-card[data-leg-index="${this.selectedLegIndex}"]`);
+        if (selectedCard) {
+            selectedCard.classList.add('selected');
+            selectedCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     }
 
     hideLegSelector() {
@@ -270,12 +351,24 @@ class TourSystem {
         if (overlay) {
             overlay.style.display = 'none';
         }
+        this.legSelectorActive = false;
+
+        // Remove keyboard event listener
+        if (this.keyboardHandler) {
+            document.removeEventListener('keydown', this.keyboardHandler);
+        }
     }
 
     showLegSelector() {
         const overlay = document.querySelector('.tour-selector-overlay');
         if (overlay) {
             overlay.style.display = 'flex';
+        }
+        this.legSelectorActive = true;
+
+        // Re-highlight the selected card
+        if (typeof this.selectedLegIndex !== 'undefined') {
+            this.updateLegHighlight();
         }
     }
 }
