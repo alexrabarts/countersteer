@@ -1022,7 +1022,8 @@ class Game {
             document.getElementById('fps').textContent = `FPS: ${this.fps}`;
         }
 
-        const deltaTime = this.clock.getDelta();
+        // Cap deltaTime to prevent physics jumps on mobile with variable frame rates
+        const deltaTime = Math.min(this.clock.getDelta(), 0.05); // Max 50ms (20 FPS minimum)
         const steeringInput = this.input.getSteeringInput();
         const throttleInput = this.input.getThrottleInput();
         const brakeInput = this.input.getBrakeInput();
