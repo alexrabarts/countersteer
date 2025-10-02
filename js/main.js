@@ -109,6 +109,15 @@ class Game {
         console.log('Creating tour system...');
         this.tourSystem = new TourSystem();
 
+        // Initialize leaderboard service
+        if (typeof LeaderboardService !== 'undefined' && window.firebaseFunctions) {
+            this.leaderboardService = new LeaderboardService(window.firebaseFunctions);
+            console.log('Leaderboard service initialized');
+        } else {
+            this.leaderboardService = null;
+            console.warn('Leaderboard service not available - Firebase not initialized');
+        }
+
         this.init();
         this.setupScene();
         this.setupLighting();
@@ -237,6 +246,19 @@ class Game {
         this.checkpointsPassed = 0;
         this.finished = false;
         this.startTime = performance.now();
+
+        // Start leaderboard session
+        if (this.leaderboardService) {
+            this.leaderboardService.startRun(leg.id).then(result => {
+                if (result === true) {
+                    console.log('Leaderboard session started for leg:', leg.id);
+                } else if (result.error) {
+                    console.warn('Leaderboard session start failed:', result.message);
+                }
+            }).catch(error => {
+                console.error('Failed to start leaderboard session:', error);
+            });
+        }
 
         console.log('Starting animation loop...');
         // Delay first frame to ensure renderer is fully initialized
@@ -1146,6 +1168,35 @@ class Game {
 
         document.body.appendChild(finishBanner);
 
+        // Submit to leaderboard if active
+        if (this.leaderboardService && this.leaderboardService.isActive()) {
+            // Prompt for player name
+            setTimeout(() => {
+                const playerName = prompt('Enter your name for the leaderboard (4 letters):', '');
+                if (playerName && playerName.length === 4) {
+                    this.leaderboardService.submitRun(playerName).then(result => {
+                        if (result.success) {
+                            console.log(`Leaderboard submitted! Rank: ${result.rank}`);
+                            alert(`Leaderboard rank: ${result.rank}${result.flagged ? ' (flagged for review)' : ''}`);
+                            // TODO: Show leaderboard UI with player's position
+                        } else {
+                            console.error('Failed to submit leaderboard:', result.error);
+                            alert('Failed to submit to leaderboard: ' + result.error);
+                        }
+                    }).catch(error => {
+                        console.error('Leaderboard submission error:', error);
+                        alert('Error submitting to leaderboard: ' + error.message);
+                    });
+                } else {
+                    // Cancel session if name not provided
+                    this.leaderboardService.cancelSession();
+                    if (playerName !== null && playerName.length !== 4) {
+                        alert('Name must be exactly 4 characters');
+                    }
+                }
+            }, 500); // Delay to let finish screen show first
+        }
+
         // Add event listeners to buttons
         document.getElementById('restartLegBtn').addEventListener('click', () => {
             finishBanner.remove();
@@ -1686,6 +1737,12 @@ class Game {
                         // Record checkpoint pass time
                         const currentTime = performance.now();
                         this.checkpointTimes[checkpoint.index] = currentTime;
+
+                        // Record in leaderboard service
+                        if (this.leaderboardService && this.leaderboardService.isActive()) {
+                            this.leaderboardService.recordCheckpoint(checkpoint.index, currentTime)
+                                .catch(error => console.error('Failed to record checkpoint:', error));
+                        }
 
                         // Calculate speed-based points
                         let sectionTime = 0;

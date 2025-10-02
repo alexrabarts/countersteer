@@ -1,0 +1,17 @@
+{
+  "rules": {
+    "leaderboards": {
+      "$legId": {
+        ".read": true,
+        ".write": false,
+        "$entryId": {
+          ".validate": false
+        }
+      }
+    },
+    "sessions": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}
