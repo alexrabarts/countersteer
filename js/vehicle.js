@@ -1642,6 +1642,20 @@ class Vehicle {
                 // At high speeds: responsive (0.40) to prevent jitter from lag
                 const speedRatio = Math.min(this.speed / 30, 1.0); // Normalize to 0-1 at 30 m/s
                 const lerpFactor = 0.15 + (speedRatio * 0.25); // 0.15 at low speed, 0.40 at high speed
+
+                // Debug logging at high speeds
+                if (this.speed > 30 && !this.debugLogThrottle) {
+                    console.log('HIGH SPEED ELEVATION:',
+                        'speed:', (this.speed * 2.237).toFixed(0) + 'mph',
+                        'currentY:', this.position.y.toFixed(2),
+                        'targetY:', targetY.toFixed(2),
+                        'diff:', (targetY - this.position.y).toFixed(2),
+                        'segment:', closestIndex,
+                        'range:', range.start + '-' + range.end);
+                    this.debugLogThrottle = true;
+                    setTimeout(() => this.debugLogThrottle = false, 100);
+                }
+
                 this.position.y = this.position.y * (1 - lerpFactor) + targetY * lerpFactor;
             }
         }
