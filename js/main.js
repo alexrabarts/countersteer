@@ -465,6 +465,11 @@ class Game {
         this.cameraTarget = new THREE.Vector3();
         this.currentCameraPos = this.camera.position.clone();
         this.currentLookTarget = new THREE.Vector3(0, 1, 0);
+
+        // Reusable objects for camera updates to avoid GC pressure
+        this.tempMatrix = new THREE.Matrix4();
+        this.tempVector = new THREE.Vector3();
+        this.tempUpVector = new THREE.Vector3();
         this.cameraLerpFactor = this.cameraModes[0].lerpFactor;
         this.cameraLateralOffset = 0; // Track lateral offset for smooth side movement
         this.previousYawAngle = 0; // Track yaw changes for lateral movement
@@ -622,10 +627,10 @@ class Game {
             
             // Look straight ahead from bike position
             const lookAheadDistance = 10 + speedRatio * 5;
-            const lookAhead = new THREE.Vector3(0, 0.5, lookAheadDistance);
-            lookAhead.applyEuler(vehicleRotation);
-            
-            const lookTarget = this.vehicle.position.clone().add(lookAhead);
+            this.tempVector.set(0, 0.5, lookAheadDistance);
+            this.tempVector.applyEuler(vehicleRotation);
+
+            const lookTarget = this.vehicle.position.clone().add(this.tempVector);
             
             this.currentLookTarget.lerp(lookTarget, 0.3); // Fast response for onboard
             
@@ -636,11 +641,11 @@ class Game {
             this.currentCameraBanking = THREE.MathUtils.lerp(this.currentCameraBanking, targetOnboardBank, 0.2);
             
             // Create custom up vector rotated by banking amount
-            const bankMatrix = new THREE.Matrix4().makeRotationZ(this.currentCameraBanking);
-            const upVector = new THREE.Vector3(0, 1, 0).applyMatrix4(bankMatrix);
-            
+            this.tempMatrix.makeRotationZ(this.currentCameraBanking);
+            this.tempUpVector.set(0, 1, 0).applyMatrix4(this.tempMatrix);
+
             // Apply banking through custom up vector, then lookAt
-            this.camera.up.copy(upVector);
+            this.camera.up.copy(this.tempUpVector);
             this.camera.lookAt(this.currentLookTarget);
         } else {
             // Standard and High View cameras
@@ -699,17 +704,17 @@ class Game {
             
             // Look ahead of vehicle for better anticipation on mountain roads
             const lookAheadDistance = (this.cameraMode === 1 ? 5 : 3) + speedRatio * 7; // Look further in high view
-            const lookAhead = new THREE.Vector3(0, 0, lookAheadDistance);
-            lookAhead.applyEuler(vehicleRotation);
-            
-            const lookTarget = this.vehicle.position.clone().add(lookAhead);
+            this.tempVector.set(0, 0, lookAheadDistance);
+            this.tempVector.applyEuler(vehicleRotation);
+
+            const lookTarget = this.vehicle.position.clone().add(this.tempVector);
             lookTarget.y += this.cameraMode === 1 ? 2 : 1; // Look higher in high view
             
             // Add lean-based lateral offset for corner viewing (less in high view)
             const leanLateralOffset = -this.vehicle.leanAngle * (this.cameraMode === 1 ? 2 : 4);
-            const lateralVector = new THREE.Vector3(leanLateralOffset, 0, 0);
-            lateralVector.applyEuler(vehicleRotation);
-            lookTarget.add(lateralVector);
+            this.tempUpVector.set(leanLateralOffset, 0, 0);
+            this.tempUpVector.applyEuler(vehicleRotation);
+            lookTarget.add(this.tempUpVector);
             this.currentLookTarget.lerp(lookTarget, this.cameraLerpFactor * 1.5);
             
             // Camera banking BEFORE lookAt - subtle lean feedback
@@ -736,11 +741,11 @@ class Game {
             }
 
             // Create custom up vector rotated by banking amount (negative for camera banking opposite to lean)
-            const bankMatrix = new THREE.Matrix4().makeRotationZ(this.currentCameraBanking);
-            const upVector = new THREE.Vector3(0, 1, 0).applyMatrix4(bankMatrix);
+            this.tempMatrix.makeRotationZ(this.currentCameraBanking);
+            this.tempUpVector.set(0, 1, 0).applyMatrix4(this.tempMatrix);
 
             // Apply banking through custom up vector, then lookAt
-            this.camera.up.copy(upVector);
+            this.camera.up.copy(this.tempUpVector);
             this.camera.lookAt(this.currentLookTarget);
         }
         
