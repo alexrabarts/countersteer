@@ -234,8 +234,8 @@ class Environment {
                 point.x + perpX, y, point.z + perpZ   // Right edge
             );
 
-            // Add UV coordinates
-            uvs.push(0, i * 0.1, 1, i * 0.1);
+            // Add UV coordinates (use relative indexing so each leg starts at UV.v = 0)
+            uvs.push(0, (i - startIdx) * 0.1, 1, (i - startIdx) * 0.1);
         }
 
         // Create triangles connecting the vertices (optimized indexing)
