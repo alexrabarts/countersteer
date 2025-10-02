@@ -3072,11 +3072,14 @@ class Environment {
         };
         
         // Create right side drop-off terrain - massive mountainside drop - darker
-        const rightTerrain = createTerrainStrip(1, 12, -50, 0x1a2f1a);
+        // Position relative to road width (halfWidth + 2 for edge strip)
+        const edgeStripOffset = this.roadWidth / 2 + 2;
+        const rightTerrain = createTerrainStrip(1, edgeStripOffset, -50, 0x1a2f1a);
         this.scene.add(rightTerrain);
-        
+
         // Create far right deep drop-off - extreme cliff face - darker
-        const deepDropTerrain = createTerrainStrip(1, 36, -150, 0x0a1f0a);
+        const deepDropOffset = this.roadWidth / 2 + 26; // Scale with road width
+        const deepDropTerrain = createTerrainStrip(1, deepDropOffset, -150, 0x0a1f0a);
         this.scene.add(deepDropTerrain);
         
         // Add vertical walls connecting road to terrain

@@ -1157,7 +1157,7 @@ class Game {
                         font-weight: bold;
                         box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
                         transition: all 0.3s;
-                    ">NEXT LEG →</button>
+                    "><u>N</u>EXT LEG →</button>
                 `}
                 <button id="restartLegBtn" style="
                     font-size: 20px;
@@ -1585,6 +1585,22 @@ class Game {
             if (dashboard) {
                 dashboard.style.opacity = '1';
             }
+        }
+
+        // Check for next leg (N key)
+        if (this.input.checkNextLeg()) {
+            // Remove finish banner if it exists
+            const finishBanner = document.getElementById('finishBanner');
+            if (finishBanner) {
+                finishBanner.remove();
+            }
+
+            // Disable N key when menu is closed
+            if (this.input) {
+                this.input.setMenuActive(false);
+            }
+
+            this.startNextLeg();
         }
 
         // Check for sound toggle

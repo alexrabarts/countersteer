@@ -243,7 +243,7 @@ class TourSystem {
                                 <div class="leg-number">LEG ${index + 1}</div>
                                 <h3 class="leg-name">${leg.name}</h3>
                                 <p class="leg-description">${leg.description}</p>
-                                <button class="select-leg-btn" data-leg-id="${leg.id}">Start This Leg</button>
+                                <button class="select-leg-btn" data-leg-id="${leg.id}">START</button>
                             </div>
                         `).join('')}
                     </div>

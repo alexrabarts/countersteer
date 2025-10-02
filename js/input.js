@@ -8,6 +8,7 @@ class InputHandler {
         this.wheelieInput = 0;
         this.resetPressed = false;
         this.menuReturnPressed = false;
+        this.nextLegPressed = false;
         this.soundTogglePressed = false;
         this.checkpointRestartPressed = false;
         this.cameraSwitchPressed = false;
@@ -37,6 +38,11 @@ class InputHandler {
             // Check for menu return (only when menu is active)
             if (event.code === 'KeyM' && this.menuActive) {
                 this.menuReturnPressed = true;
+            }
+
+            // Check for next leg (only when menu is active)
+            if (event.code === 'KeyN' && this.menuActive) {
+                this.nextLegPressed = true;
             }
 
             // Check for sound toggle (only when menu is not active)
@@ -83,6 +89,10 @@ class InputHandler {
             if (event.code === 'KeyM') {
                 this.menuReturnPressed = false;
                 this.soundTogglePressed = false;
+            }
+
+            if (event.code === 'KeyN') {
+                this.nextLegPressed = false;
             }
 
             if (event.code === 'KeyC') {
@@ -176,6 +186,14 @@ class InputHandler {
     checkMenuReturn() {
         if (this.menuReturnPressed) {
             this.menuReturnPressed = false;
+            return true;
+        }
+        return false;
+    }
+
+    checkNextLeg() {
+        if (this.nextLegPressed) {
+            this.nextLegPressed = false;
             return true;
         }
         return false;
