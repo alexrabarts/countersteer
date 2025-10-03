@@ -908,7 +908,7 @@ class Game {
             
             // Camera banking BEFORE lookAt - subtle lean feedback
             const bankFactor = this.cameraMode === 1 ? 0.15 : 0.25; // High view more subtle
-            const bankAmount = this.vehicle.leanAngle * bankFactor; // Positive lean = right lean
+            const bankAmount = this.vehicle.leanAngle * bankFactor; // Bank with the lean
             const targetBank = THREE.MathUtils.clamp(bankAmount, -0.3, 0.3); // Max ~17° bank
             this.currentCameraBanking = THREE.MathUtils.lerp(this.currentCameraBanking, targetBank, 0.15);
 
@@ -1203,34 +1203,8 @@ class Game {
             this.input.setMenuActive(true);
         }
 
-        // Submit to leaderboard if active
-        if (this.leaderboardService && this.leaderboardService.isActive()) {
-            // Prompt for player name
-            setTimeout(() => {
-                const playerName = prompt('Enter your name for the leaderboard (4 letters):', '');
-                if (playerName && playerName.length === 4) {
-                    this.leaderboardService.submitRun(playerName).then(result => {
-                        if (result.success) {
-                            console.log(`Leaderboard submitted! Rank: ${result.rank}`);
-                            alert(`Leaderboard rank: ${result.rank}${result.flagged ? ' (flagged for review)' : ''}`);
-                            // TODO: Show leaderboard UI with player's position
-                        } else {
-                            console.error('Failed to submit leaderboard:', result.error);
-                            alert('Failed to submit to leaderboard: ' + result.error);
-                        }
-                    }).catch(error => {
-                        console.error('Leaderboard submission error:', error);
-                        alert('Error submitting to leaderboard: ' + error.message);
-                    });
-                } else {
-                    // Cancel session if name not provided
-                    this.leaderboardService.cancelSession();
-                    if (playerName !== null && playerName.length !== 4) {
-                        alert('Name must be exactly 4 characters');
-                    }
-                }
-            }, 500); // Delay to let finish screen show first
-        }
+        // Store whether leaderboard is active for later
+        const shouldShowLeaderboard = this.leaderboardService && this.leaderboardService.isActive();
 
         // Add event listeners to buttons
         document.getElementById('restartLegBtn').addEventListener('click', () => {
@@ -1239,6 +1213,12 @@ class Game {
             if (this.input) {
                 this.input.setMenuActive(false);
             }
+
+            // Cancel leaderboard session if active (restarting without submitting)
+            if (shouldShowLeaderboard) {
+                this.leaderboardService.cancelSession();
+            }
+
             // Trigger reset via input system
             if (this.input) {
                 // Simulate reset action
@@ -1271,6 +1251,12 @@ class Game {
             if (this.input) {
                 this.input.setMenuActive(false);
             }
+
+            // Cancel leaderboard session if active (returning to menu without submitting)
+            if (shouldShowLeaderboard) {
+                this.leaderboardService.cancelSession();
+            }
+
             this.returnToMenu();
         });
 
@@ -1283,7 +1269,19 @@ class Game {
                     if (this.input) {
                         this.input.setMenuActive(false);
                     }
-                    this.startNextLeg();
+
+                    // Hide finish banner first
+                    finishBanner.remove();
+
+                    // Show leaderboard entry if active, otherwise go straight to next leg
+                    if (shouldShowLeaderboard) {
+                        this.showLeaderboardEntryUI(() => {
+                            // Callback after leaderboard submission or cancel
+                            this.startNextLeg();
+                        });
+                    } else {
+                        this.startNextLeg();
+                    }
                 });
             }
         }
@@ -1297,7 +1295,19 @@ class Game {
                     if (this.input) {
                         this.input.setMenuActive(false);
                     }
-                    this.startFirstLeg();
+
+                    // Hide finish banner first
+                    finishBanner.remove();
+
+                    // Show leaderboard entry if active, otherwise go straight to first leg
+                    if (shouldShowLeaderboard) {
+                        this.showLeaderboardEntryUI(() => {
+                            // Callback after leaderboard submission or cancel
+                            this.startFirstLeg();
+                        });
+                    } else {
+                        this.startFirstLeg();
+                    }
                 });
             }
         }
@@ -1415,6 +1425,153 @@ class Game {
         });
 
         console.log('Crash notification displayed');
+    }
+
+    showLeaderboardEntryUI(onComplete) {
+        const overlay = document.getElementById('leaderboardEntryOverlay');
+        const nameInput = document.getElementById('leaderboardNameInput');
+        const submitBtn = document.getElementById('leaderboardSubmitBtn');
+        const cancelBtn = document.getElementById('leaderboardCancelBtn');
+        const entryForm = document.getElementById('leaderboardEntryForm');
+        const resultDiv = document.getElementById('leaderboardResult');
+        const errorDiv = document.getElementById('leaderboardError');
+        const closeBtn = document.getElementById('leaderboardCloseBtn');
+        const errorCloseBtn = document.getElementById('leaderboardErrorCloseBtn');
+
+        // Reset to entry form
+        entryForm.style.display = 'block';
+        resultDiv.style.display = 'none';
+        errorDiv.style.display = 'none';
+        nameInput.value = '';
+        submitBtn.disabled = true;
+
+        // Show overlay
+        overlay.classList.add('active');
+
+        // Focus input
+        setTimeout(() => nameInput.focus(), 100);
+
+        // Enable/disable submit button based on input
+        const inputHandler = () => {
+            submitBtn.disabled = nameInput.value.length !== 4;
+        };
+        nameInput.addEventListener('input', inputHandler);
+
+        // Handle submit
+        const submitHandler = () => {
+            const playerName = nameInput.value.toUpperCase();
+            if (playerName.length === 4) {
+                // Disable buttons during submission
+                submitBtn.disabled = true;
+                cancelBtn.disabled = true;
+                nameInput.disabled = true;
+
+                this.leaderboardService.submitRun(playerName).then(result => {
+                    if (result.success) {
+                        console.log(`Leaderboard submitted! Rank: ${result.rank}`);
+
+                        // Show result screen
+                        entryForm.style.display = 'none';
+                        resultDiv.style.display = 'block';
+
+                        document.getElementById('leaderboardRankDisplay').innerHTML =
+                            `<div class="leaderboard-result-rank">#${result.rank}</div>`;
+
+                        if (result.flagged) {
+                            document.getElementById('leaderboardFlaggedDisplay').innerHTML =
+                                `<div class="leaderboard-result-flagged">⚠ Flagged for review</div>`;
+                        } else {
+                            document.getElementById('leaderboardFlaggedDisplay').innerHTML = '';
+                        }
+                    } else {
+                        console.error('Failed to submit leaderboard:', result.error);
+                        this.showLeaderboardError('Failed to submit: ' + result.error);
+                    }
+                }).catch(error => {
+                    console.error('Leaderboard submission error:', error);
+                    this.showLeaderboardError('Error: ' + error.message);
+                });
+            }
+        };
+
+        // Handle enter key
+        const keyHandler = (e) => {
+            if (e.key === 'Enter' && nameInput.value.length === 4) {
+                submitHandler();
+            }
+        };
+        nameInput.addEventListener('keypress', keyHandler);
+
+        submitBtn.addEventListener('click', submitHandler);
+
+        // Handle cancel
+        const cancelHandler = () => {
+            this.leaderboardService.cancelSession();
+            overlay.classList.remove('active');
+            nameInput.disabled = false;
+            submitBtn.disabled = false;
+            cancelBtn.disabled = false;
+
+            // Clean up event listeners
+            nameInput.removeEventListener('input', inputHandler);
+            nameInput.removeEventListener('keypress', keyHandler);
+            submitBtn.removeEventListener('click', submitHandler);
+            cancelBtn.removeEventListener('click', cancelHandler);
+
+            // Call completion callback
+            if (onComplete) onComplete();
+        };
+        cancelBtn.addEventListener('click', cancelHandler);
+
+        // Handle close after successful submission
+        const closeHandler = () => {
+            overlay.classList.remove('active');
+            nameInput.disabled = false;
+            submitBtn.disabled = false;
+            cancelBtn.disabled = false;
+
+            // Clean up event listeners
+            nameInput.removeEventListener('input', inputHandler);
+            nameInput.removeEventListener('keypress', keyHandler);
+            submitBtn.removeEventListener('click', submitHandler);
+            cancelBtn.removeEventListener('click', cancelHandler);
+            closeBtn.removeEventListener('click', closeHandler);
+
+            // Call completion callback
+            if (onComplete) onComplete();
+        };
+        closeBtn.addEventListener('click', closeHandler);
+
+        // Handle error close
+        const errorCloseHandler = () => {
+            overlay.classList.remove('active');
+            nameInput.disabled = false;
+            submitBtn.disabled = false;
+            cancelBtn.disabled = false;
+
+            // Clean up event listeners
+            nameInput.removeEventListener('input', inputHandler);
+            nameInput.removeEventListener('keypress', keyHandler);
+            submitBtn.removeEventListener('click', submitHandler);
+            cancelBtn.removeEventListener('click', cancelHandler);
+            errorCloseBtn.removeEventListener('click', errorCloseHandler);
+
+            // Call completion callback
+            if (onComplete) onComplete();
+        };
+        errorCloseBtn.addEventListener('click', errorCloseHandler);
+    }
+
+    showLeaderboardError(message) {
+        const entryForm = document.getElementById('leaderboardEntryForm');
+        const resultDiv = document.getElementById('leaderboardResult');
+        const errorDiv = document.getElementById('leaderboardError');
+        const errorMessage = document.getElementById('leaderboardErrorMessage');
+
+        entryForm.style.display = 'none';
+        resultDiv.style.display = 'none';
+        errorDiv.style.display = 'block';
+        errorMessage.textContent = message;
     }
 
     updateRacePosition() {

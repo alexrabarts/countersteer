@@ -1,97 +1,97 @@
 class TourSystem {
     constructor() {
         this.legs = [
-            // Leg 1: Easy warm-up
+            // Leg 1: Easy warm-up (35 segments = 700m)
             {
                 id: 'mountain-dawn',
                 name: 'Mountain Dawn',
                 description: 'Gentle winding roads through misty mountain passes',
                 startSegment: 0,
-                endSegment: 59,
+                endSegment: 34,
                 timeOfDay: 'dawn',
                 landscapeVariation: 'mountain',
                 weather: 'clear',
                 weatherIntensity: 0
             },
-            // Leg 2: Build confidence
+            // Leg 2: Build confidence (40 segments = 800m)
             {
                 id: 'valley-run',
                 name: 'Valley Run',
                 description: 'Fast flowing sections through sunlit valleys',
-                startSegment: 60,
-                endSegment: 119,
+                startSegment: 35,
+                endSegment: 74,
                 timeOfDay: 'golden',
                 landscapeVariation: 'valley',
                 weather: 'clear',
                 weatherIntensity: 0
             },
-            // Leg 3: Technical descents
+            // Leg 3: Technical descents (42 segments = 840m)
             {
                 id: 'coastal-descent',
                 name: 'Coastal Descent',
                 description: 'Sweeping descents with ocean views',
-                startSegment: 120,
-                endSegment: 179,
+                startSegment: 75,
+                endSegment: 116,
                 timeOfDay: 'twilight',
                 landscapeVariation: 'coastal',
                 weather: 'clear',
                 weatherIntensity: 0
             },
-            // Leg 4: First weather challenge - visibility
+            // Leg 4: First weather challenge - visibility (44 segments = 880m)
             {
                 id: 'foggy-gorge',
                 name: 'Foggy Gorge',
                 description: 'Navigate through dense morning fog and mist',
-                startSegment: 180,
-                endSegment: 239,
+                startSegment: 117,
+                endSegment: 160,
                 timeOfDay: 'golden', // Morning light, but foggy
                 landscapeVariation: 'valley',
                 weather: 'fog',
                 weatherIntensity: 0.8
             },
-            // Leg 5: Technical hairpins
+            // Leg 5: Technical hairpins (46 segments = 920m)
             {
                 id: 'high-pass',
                 name: 'High Pass',
                 description: 'Technical hairpins and dramatic elevation changes',
-                startSegment: 240,
-                endSegment: 299,
+                startSegment: 161,
+                endSegment: 206,
                 timeOfDay: 'sunset',
                 landscapeVariation: 'alpine',
                 weather: 'clear',
                 weatherIntensity: 0
             },
-            // Leg 6: Weather + grip challenge
+            // Leg 6: Weather + grip challenge (48 segments = 960m)
             {
                 id: 'storm-valley',
                 name: 'Storm Valley',
                 description: 'Battle heavy rain and wet roads in a valley storm',
-                startSegment: 300,
-                endSegment: 359,
+                startSegment: 207,
+                endSegment: 254,
                 timeOfDay: 'twilight', // Dark stormy afternoon
                 landscapeVariation: 'valley',
                 weather: 'rain',
                 weatherIntensity: 0.9
             },
-            // Leg 7: Darkness challenge
+            // Leg 7: Darkness challenge (49 segments = 980m)
             {
                 id: 'night-ride',
                 name: 'Night Ride',
                 description: 'Mixed technical challenges under the stars',
-                startSegment: 360,
-                endSegment: 419,
+                startSegment: 255,
+                endSegment: 303,
                 timeOfDay: 'night',
                 landscapeVariation: 'mixed',
                 weather: 'clear',
                 weatherIntensity: 0
             },
-            // Leg 8: Ultimate finale - ice and snow
+            // Leg 8: Ultimate finale - ice and snow (48 segments = 960m)
             {
                 id: 'winter-pass',
                 name: 'Winter Pass',
                 description: 'Conquer icy roads and snowfall in the mountain pass',
-                startSegment: 420,
-                endSegment: 479,
+                startSegment: 304,
+                endSegment: 351,
                 timeOfDay: 'twilight', // Overcast winter day
                 landscapeVariation: 'alpine',
                 weather: 'snow',

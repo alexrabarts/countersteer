@@ -368,6 +368,144 @@
             transform: scale(1.05);
         }
 
+        /* Leaderboard Entry Overlay */
+        .leaderboard-entry-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .leaderboard-entry-overlay.active {
+            display: flex;
+        }
+
+        .leaderboard-entry-panel {
+            max-width: 500px;
+            width: 90%;
+            padding: 40px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 3px solid #4a9eff;
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(74, 158, 255, 0.5);
+            text-align: center;
+        }
+
+        .leaderboard-entry-title {
+            font-size: 36px;
+            color: #4a9eff;
+            margin: 0 0 20px 0;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(74, 158, 255, 0.8);
+        }
+
+        .leaderboard-entry-subtitle {
+            font-size: 16px;
+            color: #88ccff;
+            margin: 0 0 30px 0;
+        }
+
+        .leaderboard-name-input {
+            width: 200px;
+            padding: 15px;
+            font-size: 32px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #4a9eff;
+            border-radius: 10px;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            margin: 0 auto 30px;
+            display: block;
+        }
+
+        .leaderboard-name-input:focus {
+            outline: none;
+            border-color: #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+
+        .leaderboard-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .leaderboard-submit-btn,
+        .leaderboard-cancel-btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 6px;
+            border: none;
+        }
+
+        .leaderboard-submit-btn {
+            background: linear-gradient(135deg, #4a9eff 0%, #2266cc 100%);
+            color: white;
+        }
+
+        .leaderboard-submit-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+            transform: scale(1.05);
+        }
+
+        .leaderboard-submit-btn:disabled {
+            background: linear-gradient(135deg, #555 0%, #333 100%);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .leaderboard-cancel-btn {
+            background: linear-gradient(135deg, #666 0%, #444 100%);
+            color: white;
+        }
+
+        .leaderboard-cancel-btn:hover {
+            background: linear-gradient(135deg, #ff4444 0%, #cc2222 100%);
+            transform: scale(1.05);
+        }
+
+        .leaderboard-result-message {
+            font-size: 24px;
+            color: #00ff00;
+            margin: 20px 0;
+            text-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+        }
+
+        .leaderboard-result-rank {
+            font-size: 48px;
+            color: #FFD700;
+            font-weight: bold;
+            margin: 10px 0;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        }
+
+        .leaderboard-result-flagged {
+            font-size: 14px;
+            color: #ff9900;
+            margin: 10px 0;
+        }
+
+        .leaderboard-error-message {
+            font-size: 18px;
+            color: #ff4444;
+            margin: 20px 0;
+        }
+
     </style>
 </head>
 <body>
@@ -402,6 +540,48 @@
             <div class="speedo-face">
                 <div id="speed" class="speedo-value">0</div>
                 <div class="speedo-unit">MPH</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Entry Overlay -->
+    <div id="leaderboardEntryOverlay" class="leaderboard-entry-overlay">
+        <div class="leaderboard-entry-panel">
+            <h1 class="leaderboard-entry-title">LEADERBOARD</h1>
+
+            <!-- Name entry screen -->
+            <div id="leaderboardEntryForm">
+                <p class="leaderboard-entry-subtitle">Enter your name (4 letters)</p>
+                <input
+                    type="text"
+                    id="leaderboardNameInput"
+                    class="leaderboard-name-input"
+                    maxlength="4"
+                    autocomplete="off"
+                    placeholder="____"
+                />
+                <div class="leaderboard-buttons">
+                    <button id="leaderboardSubmitBtn" class="leaderboard-submit-btn" disabled>Submit</button>
+                    <button id="leaderboardCancelBtn" class="leaderboard-cancel-btn">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Result screen -->
+            <div id="leaderboardResult" style="display: none;">
+                <p class="leaderboard-result-message">Submitted!</p>
+                <div id="leaderboardRankDisplay"></div>
+                <div id="leaderboardFlaggedDisplay"></div>
+                <div class="leaderboard-buttons" style="margin-top: 30px;">
+                    <button id="leaderboardCloseBtn" class="leaderboard-submit-btn">Close</button>
+                </div>
+            </div>
+
+            <!-- Error screen -->
+            <div id="leaderboardError" style="display: none;">
+                <p class="leaderboard-error-message" id="leaderboardErrorMessage"></p>
+                <div class="leaderboard-buttons" style="margin-top: 30px;">
+                    <button id="leaderboardErrorCloseBtn" class="leaderboard-cancel-btn">Close</button>
+                </div>
             </div>
         </div>
     </div>
