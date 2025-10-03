@@ -1151,8 +1151,8 @@ class Environment {
           } // Close the if statement from line 700
         } // Close the for loop from line 699
 
-        // Add EVEN MORE boulders at the base - maximum density
-        if (i % 2 === 0 || Math.random() > 0.2) {
+        // Add EVEN MORE boulders at the base - DISABLED to prevent floating
+        if (false && (i % 2 === 0 || Math.random() > 0.2)) {
           // Every 2 segments or 80% chance
           // Create 2-5 boulders per position
           const numBoulders = 2 + Math.floor(Math.random() * 4);
@@ -1503,7 +1503,9 @@ class Environment {
         }
       }
 
-      // Add moss and small vegetation patches
+      // Add moss and small vegetation patches - DISABLED to prevent floating
+      // These were positioned using cliff height which caused floating objects
+      if (false) {
       for (let i = 0; i < this.roadPath.length; i += 12) {
         const point = this.roadPath[i];
 
@@ -1588,6 +1590,7 @@ class Environment {
           }
         }
       }
+      } // Close if (false) for vegetation patches
 
       // Add snow patches and rocky outcrops on upper mountain (if going up)
       if (height > 20) {
@@ -1629,7 +1632,9 @@ class Environment {
           }
         }
 
-        // Sparse alpine vegetation
+        // Sparse alpine vegetation - DISABLED to prevent floating
+        // These were positioned using cliff height which caused floating
+        if (false) {
         const alpineBushGeometry = new THREE.SphereGeometry(0.6, 4, 3);
         const alpineBushMaterial = new THREE.MeshStandardMaterial({
           color: 0x1a3a1a,
@@ -1661,6 +1666,7 @@ class Environment {
             bush.receiveShadow = true;
             group.add(bush);
           }
+        }
         }
       }
 
