@@ -908,7 +908,8 @@ class Game {
             
             // Camera banking BEFORE lookAt - subtle lean feedback
             const bankFactor = this.cameraMode === 1 ? 0.15 : 0.25; // High view more subtle
-            const bankAmount = this.vehicle.leanAngle * bankFactor; // Bank with the lean
+            // Negate to bank WITH bike (positive lean = right, needs negative Z rotation)
+            const bankAmount = -this.vehicle.leanAngle * bankFactor;
             const targetBank = THREE.MathUtils.clamp(bankAmount, -0.3, 0.3); // Max ~17° bank
             this.currentCameraBanking = THREE.MathUtils.lerp(this.currentCameraBanking, targetBank, 0.15);
 
@@ -929,7 +930,7 @@ class Game {
                 this.currentLookTarget.y += tiltInfluence;
             }
 
-            // Create custom up vector rotated by banking amount (negative for camera banking opposite to lean)
+            // Create custom up vector rotated by banking amount
             this.tempMatrix.makeRotationZ(this.currentCameraBanking);
             this.tempUpVector.set(0, 1, 0).applyMatrix4(this.tempMatrix);
 
