@@ -18,14 +18,16 @@ class Environment {
       `Initializing environment for segments ${startSegment}-${endSegment}, leg ${legIndex}, road width ${this.roadWidth}`,
     );
 
-    this.createRoad(); // Generates full roadPath, but only creates geometry for segment range
-    this.createGrass();
-    this.createLayeredMountains(); // Add layered mountain scenery
-    this.createRoadMarkings();
-    this.addEnvironmentalDetails();
-    this.createRoadworks(); // Add construction zones
-    this.addHairpinWarnings(); // Add hairpin bend warnings
+    // Generate full road path (lightweight, always in memory for physics)
+    this.createRoad();
+
+    // Create static scene elements (not chunk-managed)
+    this.createStaticLake(); // Lake at bottom (always visible)
+    this.createLayeredMountains(); // Background mountains (skybox-like)
     this.createCheckpoints(); // Add scoring checkpoints
+
+    // Note: Chunk-managed geometry (cliffs, boulders, markings) will be
+    // created dynamically by ChunkManager as player progresses
 
     // Validate terrain-road clearance (development-time check)
     const terrainErrors = this.validateAllTerrainClearance();
@@ -3330,7 +3332,7 @@ class Environment {
     this.scene.add(group);
   }
 
-  createGrass() {
+  createStaticLake() {
     // Create a lake at the bottom instead of grass
     const lakeMaterial = new THREE.MeshStandardMaterial({
       color: 0x2266aa, // Deep blue lake color
@@ -3345,6 +3347,10 @@ class Environment {
     lake.position.set(0, -200, 0); // Below cliff level
     lake.receiveShadow = true;
     this.scene.add(lake);
+  }
+
+  createGrass() {
+    // Terrain strips handled by chunk system now - this method kept for compatibility
 
     // Create continuous terrain strips along the road (only in active segment range)
     // Extend by 20 segments to match road geometry and decorative elements
@@ -5237,5 +5243,337 @@ class Environment {
     }
 
     return false; // No collision
+  }
+
+  // ============================================================================
+  // CHUNK-BASED GEOMETRY GENERATION METHODS
+  // These methods create geometry for specific segment ranges (chunks)
+  // ============================================================================
+
+  /**
+   * Create cliff walls for a specific chunk
+   * @param {number} startSeg - Start segment index
+   * @param {number} endSeg - End segment index
+   * @returns {THREE.Group} Group containing cliff wall geometry
+   */
+  createCliffWallsForChunk(startSeg, endSeg) {
+    // This code is extracted from addRockFormations() - the cliff wall creation section
+    const group = new THREE.Group();
+
+    // Create faceted cliff walls on both sides
+    ['left', 'right'].forEach((side) => {
+      const isLeft = side === 'left';
+      const sideMultiplier = isLeft ? -1 : 1;
+
+      // Material for cliff walls
+      const cliffMaterial = new THREE.MeshStandardMaterial({
+        color: 0x1a1a1a,
+        roughness: 0.95,
+        metalness: 0.0,
+        flatShading: true,
+        side: THREE.DoubleSide,
+      });
+
+      const geometry = new THREE.BufferGeometry();
+      const vertices = [];
+      const indices = [];
+      const colors = [];
+
+      const cliffDistance = isLeft ? (this.roadWidth / 2 + 1) : (this.roadWidth / 2 + 1.4);
+      const height = isLeft ? 50 : -120;
+      const horizontalSubdivisions = 4;
+      const verticalSegments = 35;
+
+      // Only create geometry for the active segment range (this chunk)
+      const startIdx = Math.max(0, startSeg);
+      const endIdx = Math.min(this.roadPath.length - 1, endSeg);
+
+      // Create dense vertex grid with multi-layer displacement
+      for (let i = startIdx; i <= endIdx; i++) {
+        const point = this.roadPath[i];
+        const nextPoint = i < this.roadPath.length - 1 ? this.roadPath[i + 1] : point;
+
+        for (let h = 0; h < horizontalSubdivisions; h++) {
+          const horizProgress = h / (horizontalSubdivisions - 1);
+          const roadY = point.y !== undefined ? point.y : 0;
+
+          for (let v = 0; v <= verticalSegments; v++) {
+            const verticalProgress = v / verticalSegments;
+
+            const baseDistance = cliffDistance + horizProgress * 8;
+            const depthOffset = height < 0 ? Math.pow(verticalProgress, 0.6) * 25 : Math.pow(verticalProgress, 1.2) * 20;
+            const distance = baseDistance + depthOffset * sideMultiplier;
+
+            const perpX = Math.cos(point.heading) * distance * sideMultiplier;
+            const perpZ = -Math.sin(point.heading) * distance * sideMultiplier;
+
+            const baseHeight = roadY + height * verticalProgress;
+
+            // Multi-layer displacement for natural rock face
+            const idx = (i - startIdx) * horizontalSubdivisions + h;
+            const heightFactor = Math.min(verticalProgress * 2, 1);
+            const largeFolds = Math.sin(idx * 0.3 + v * 0.15) * 2.5 * heightFactor;
+            const mediumFolds = Math.sin(idx * 0.7 + v * 0.25) * 1.2 * heightFactor;
+            const fineCracks = Math.cos(idx * 1.5 + v * 0.4) * 0.6 * heightFactor;
+            const microDetail = (Math.sin(idx * 3 + v * 1.2) * 0.3 + Math.cos(idx * 2.5 + v * 0.8) * 0.25) * heightFactor;
+            const displacement = largeFolds + mediumFolds + fineCracks + microDetail;
+
+            const y = baseHeight + displacement;
+            const x = point.x + perpX + displacement * 0.1 * sideMultiplier;
+            const z = point.z + perpZ;
+
+            vertices.push(x, y, z);
+
+            const colorVariation = 0.05 + Math.random() * 0.1;
+            colors.push(colorVariation, colorVariation, colorVariation);
+          }
+        }
+      }
+
+      // Create triangles
+      const vertsPerColumn = verticalSegments + 1;
+      const columnsPerSegment = horizontalSubdivisions;
+      const segmentCount = endIdx - startIdx + 1;
+      const totalColumns = segmentCount * columnsPerSegment;
+
+      for (let col = 0; col < totalColumns - 1; col++) {
+        for (let row = 0; row < verticalSegments; row++) {
+          const idx1 = col * vertsPerColumn + row;
+          const idx2 = (col + 1) * vertsPerColumn + row;
+          const idx3 = col * vertsPerColumn + (row + 1);
+          const idx4 = (col + 1) * vertsPerColumn + (row + 1);
+
+          if (Math.random() > 0.5) {
+            indices.push(idx1, idx2, idx3);
+            indices.push(idx2, idx4, idx3);
+          } else {
+            indices.push(idx1, idx2, idx4);
+            indices.push(idx1, idx4, idx3);
+          }
+        }
+      }
+
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+
+      const cliffMesh = new THREE.Mesh(geometry, cliffMaterial);
+      cliffMesh.castShadow = true;
+      cliffMesh.receiveShadow = true;
+      group.add(cliffMesh);
+    });
+
+    this.scene.add(group);
+    return group;
+  }
+
+  /**
+   * Create ground strip for a specific chunk
+   * @param {number} startSeg - Start segment index
+   * @param {number} endSeg - End segment index
+   * @returns {THREE.Mesh} Ground strip mesh
+   */
+  createGroundStripForChunk(startSeg, endSeg) {
+    // This creates the brown strip between road and cliffs
+    const vertices = [];
+    const indices = [];
+    const colors = [];
+
+    const shiftRight = -0.5;
+    const leftEdge = -(this.roadWidth / 2 + 1.6) + shiftRight;
+    const rightEdge = this.roadWidth / 2 + 2 + shiftRight;
+
+    const startIdx = Math.max(0, startSeg);
+    const endIdx = Math.min(this.roadPath.length - 1, endSeg);
+
+    for (let i = startIdx; i < endIdx; i++) {
+      const point = this.roadPath[i];
+      const nextPoint = this.roadPath[i + 1];
+
+      const perpX1 = Math.cos(point.heading) * leftEdge;
+      const perpZ1 = -Math.sin(point.heading) * leftEdge;
+      const perpX2 = Math.cos(point.heading) * rightEdge;
+      const perpZ2 = -Math.sin(point.heading) * rightEdge;
+
+      const nextPerpX1 = Math.cos(nextPoint.heading) * leftEdge;
+      const nextPerpZ1 = -Math.sin(nextPoint.heading) * leftEdge;
+      const nextPerpX2 = Math.cos(nextPoint.heading) * rightEdge;
+      const nextPerpZ2 = -Math.sin(nextPoint.heading) * rightEdge;
+
+      const baseIndex = (i - startIdx) * 4;
+      vertices.push(
+        point.x + perpX1, point.y - 0.1, point.z + perpZ1,
+        point.x + perpX2, point.y - 0.1, point.z + perpZ2,
+        nextPoint.x + nextPerpX1, nextPoint.y - 0.1, nextPoint.z + nextPerpZ1,
+        nextPoint.x + nextPerpX2, nextPoint.y - 0.1, nextPoint.z + nextPerpZ2
+      );
+
+      for (let j = 0; j < 4; j++) {
+        colors.push(0.25, 0.2, 0.18);
+      }
+
+      indices.push(
+        baseIndex, baseIndex + 1, baseIndex + 2,
+        baseIndex + 1, baseIndex + 3, baseIndex + 2
+      );
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+
+    const material = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.95,
+      metalness: 0.0,
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.receiveShadow = true;
+    this.scene.add(mesh);
+    return mesh;
+  }
+
+  /**
+   * Create boulders for a specific chunk
+   * @param {number} startSeg - Start segment index
+   * @param {number} endSeg - End segment index
+   * @returns {THREE.Group} Group containing boulder meshes
+   */
+  createBouldersForChunk(startSeg, endSeg) {
+    const group = new THREE.Group();
+
+    const rockMaterials = [
+      new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.92, metalness: 0.0 }),
+      new THREE.MeshStandardMaterial({ color: 0x1e1e1e, roughness: 0.92, metalness: 0.0 }),
+      new THREE.MeshStandardMaterial({ color: 0x242424, roughness: 0.92, metalness: 0.0 }),
+    ];
+
+    const startIdx = Math.max(0, startSeg);
+    const endIdx = Math.min(this.roadPath.length - 1, endSeg);
+
+    // Add boulders along the cliff base (every 12 segments)
+    for (let i = startIdx; i <= endIdx; i += 12) {
+      const point = this.roadPath[i];
+      const numRocks = 1 + Math.floor(Math.random() * 2);
+
+      for (let r = 0; r < numRocks; r++) {
+        if (Math.random() > 0.4) {
+          const rockSize = 0.8 + Math.random() * 2.5;
+          const rockGeometry = this.displaceVertices(
+            new THREE.IcosahedronGeometry(rockSize, 3),
+            rockSize * 0.3
+          );
+          const rock = new THREE.Mesh(
+            rockGeometry,
+            rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
+          );
+
+          const side = Math.random() > 0.5 ? 1 : -1;
+          const distance = 8.5 + Math.random() * 2;
+          const perpX = Math.cos(point.heading) * distance * side;
+          const perpZ = -Math.sin(point.heading) * distance * side;
+
+          rock.position.set(
+            point.x + perpX,
+            (point.y || 0) - rockSize * 0.5,
+            point.z + perpZ
+          );
+
+          rock.rotation.set(
+            Math.random() * Math.PI * 2,
+            Math.random() * Math.PI * 2,
+            Math.random() * Math.PI * 2
+          );
+
+          rock.scale.set(
+            1.0 + Math.random() * 0.5,
+            0.7 + Math.random() * 0.4,
+            1.0 + Math.random() * 0.5
+          );
+
+          rock.castShadow = true;
+          rock.receiveShadow = true;
+
+          // Store for collision detection
+          this.boulders.push({
+            mesh: rock,
+            position: rock.position,
+            radius: rockSize,
+            hit: false
+          });
+
+          group.add(rock);
+        }
+      }
+    }
+
+    this.scene.add(group);
+    return group;
+  }
+
+  /**
+   * Create terrain strips for a specific chunk
+   * @param {number} startSeg - Start segment index
+   * @param {number} endSeg - End segment index
+   * @returns {Array<THREE.Mesh>} Array of terrain strip meshes
+   */
+  createTerrainStripsForChunk(startSeg, endSeg) {
+    // Terrain strips are already segment-bounded in createGrass()
+    // For now, return empty array as grass is static
+    return [];
+  }
+
+  /**
+   * Create road markings for a specific chunk
+   * @param {number} startSeg - Start segment index
+   * @param {number} endSeg - End segment index
+   * @returns {THREE.Mesh} Road marking mesh
+   */
+  createRoadMarkingsForChunk(startSeg, endSeg) {
+    // Extract from createRoadMarkings() - dashed center line
+    const vertices = [];
+    const colors = [];
+
+    const startIdx = Math.max(0, startSeg);
+    const endIdx = Math.min(this.roadPath.length - 1, endSeg);
+
+    for (let i = startIdx; i <= endIdx; i++) {
+      const point = this.roadPath[i];
+      const dashOn = Math.floor(i / 2) % 3 !== 0;
+
+      if (dashOn) {
+        const width = 0.15;
+        const perpX = Math.cos(point.heading) * width;
+        const perpZ = -Math.sin(point.heading) * width;
+
+        const baseY = (point.y !== undefined ? point.y : 0) + 0.01;
+
+        vertices.push(
+          point.x - perpX, baseY, point.z - perpZ,
+          point.x + perpX, baseY, point.z + perpZ
+        );
+
+        colors.push(0.9, 0.9, 0.0, 0.9, 0.9, 0.0);
+      }
+    }
+
+    if (vertices.length === 0) return null;
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+    const material = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      linewidth: 2,
+    });
+
+    const mesh = new THREE.LineSegments(geometry, material);
+    this.scene.add(mesh);
+    return mesh;
   }
 }

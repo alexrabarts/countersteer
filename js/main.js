@@ -197,6 +197,18 @@ class Game {
             // Create environment with lazy generation for the selected leg
             const legIndex = this.tourSystem.getCurrentLegIndex();
             this.environment = new Environment(this.scene, leg.startSegment, leg.endSegment, legIndex);
+
+            // Initialize chunk manager for dynamic terrain streaming
+            if (!this.chunkManager) {
+                this.chunkManager = new ChunkManager(this.scene, this.environment);
+            } else {
+                // Reset chunk manager for new leg
+                this.chunkManager.cleanup();
+                this.chunkManager.environment = this.environment;
+            }
+
+            // Initialize chunks for this leg
+            this.chunkManager.initializeForLeg(leg.startSegment, leg.endSegment);
             console.log('Environment created successfully');
 
             // Apply landscape configuration for the leg
@@ -1827,6 +1839,11 @@ class Game {
         const wasCrashed = this.vehicle.crashed;
 
          this.vehicle.update(deltaTime, steeringInput, throttleInput, brakeInput, wheelieInput);
+
+        // Update chunk manager to stream terrain based on vehicle position
+        if (this.chunkManager && this.vehicle.currentRoadSegment !== undefined) {
+            this.chunkManager.update(this.vehicle.currentRoadSegment);
+        }
 
          // Play crash sound if we just crashed (but not if finished)
         if (!wasCrashed && this.vehicle.crashed && !this.finished) {
