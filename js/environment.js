@@ -5257,84 +5257,125 @@ class Environment {
    * @returns {THREE.Group} Group containing cliff wall geometry
    */
   createCliffWallsForChunk(startSeg, endSeg) {
-    // This code is extracted from addRockFormations() - the cliff wall creation section
+    // Re-use the original createRoadWalls cliff creation logic
     const group = new THREE.Group();
 
-    // Create faceted cliff walls on both sides
-    ['left', 'right'].forEach((side) => {
-      const isLeft = side === 'left';
-      const sideMultiplier = isLeft ? -1 : 1;
+    // Create left and right cliffs using the original faceted cliff logic
+    const createFacetedCliff = (side, height, isDropOff) => {
+      const cliffGroup = new THREE.Group();
 
-      // Material for cliff walls
+      // Create rock texture
+      const rockTexture = this.createRockTexture();
+
+      // Rock material matching original
       const cliffMaterial = new THREE.MeshStandardMaterial({
-        color: 0x1a1a1a,
-        roughness: 0.95,
+        map: rockTexture,
+        color: 0xffffff,
+        vertexColors: true,
+        roughness: 0.92,
         metalness: 0.0,
-        flatShading: true,
+        flatShading: false,
         side: THREE.DoubleSide,
+        envMapIntensity: 0.2,
       });
 
       const geometry = new THREE.BufferGeometry();
       const vertices = [];
       const indices = [];
       const colors = [];
+      const uvs = [];
 
-      const cliffDistance = isLeft ? (this.roadWidth / 2 + 1) : (this.roadWidth / 2 + 1.4);
-      const height = isLeft ? 50 : -120;
       const horizontalSubdivisions = 4;
       const verticalSegments = 35;
 
-      // Only create geometry for the active segment range (this chunk)
       const startIdx = Math.max(0, startSeg);
       const endIdx = Math.min(this.roadPath.length - 1, endSeg);
 
-      // Create dense vertex grid with multi-layer displacement
+      // Create vertices (matching original implementation)
       for (let i = startIdx; i <= endIdx; i++) {
         const point = this.roadPath[i];
         const nextPoint = i < this.roadPath.length - 1 ? this.roadPath[i + 1] : point;
+        const roadY = point.y || 0;
 
         for (let h = 0; h < horizontalSubdivisions; h++) {
-          const horizProgress = h / (horizontalSubdivisions - 1);
-          const roadY = point.y !== undefined ? point.y : 0;
+          const hProgress = h / horizontalSubdivisions;
+          const interpX = point.x + (nextPoint.x - point.x) * hProgress;
+          const interpZ = point.z + (nextPoint.z - point.z) * hProgress;
+          const interpY = roadY + ((nextPoint.y || 0) - roadY) * hProgress;
+          const interpHeading = point.heading + (nextPoint.heading - point.heading) * hProgress;
 
-          for (let v = 0; v <= verticalSegments; v++) {
-            const verticalProgress = v / verticalSegments;
+          for (let j = 0; j <= verticalSegments; j++) {
+            const verticalProgress = j / verticalSegments;
 
-            const baseDistance = cliffDistance + horizProgress * 8;
-            const depthOffset = height < 0 ? Math.pow(verticalProgress, 0.6) * 25 : Math.pow(verticalProgress, 1.2) * 20;
-            const distance = baseDistance + depthOffset * sideMultiplier;
+            // Variable height with sine waves
+            const lengthProgress = i / this.roadPath.length;
+            const cliffHeightMultiplier = 1.0 +
+              Math.sin(lengthProgress * Math.PI * 8) * 0.5 +
+              Math.sin(lengthProgress * Math.PI * 15) * 0.25 +
+              Math.sin(lengthProgress * Math.PI * 27) * 0.15;
+            const variableHeight = height * cliffHeightMultiplier;
+            const currentHeight = variableHeight * verticalProgress;
 
-            const perpX = Math.cos(point.heading) * distance * sideMultiplier;
-            const perpZ = -Math.sin(point.heading) * distance * sideMultiplier;
+            let baseDistance = 6.5;
 
-            const baseHeight = roadY + height * verticalProgress;
+            if (side > 0 && isDropOff) {
+              const slopeAmount = verticalProgress * verticalProgress * 50;
+              baseDistance -= slopeAmount;
+            } else if (side < 0 && !isDropOff) {
+              baseDistance = this.roadWidth / 2 + 1;
+              if (verticalProgress < 0.1) {
+                const lipExtension = (0.1 - verticalProgress) * 20;
+                baseDistance = this.roadWidth / 2 + 1 - lipExtension;
+              }
+              const slopeAmount = verticalProgress * verticalProgress * 25;
+              baseDistance += slopeAmount;
+            }
 
-            // Multi-layer displacement for natural rock face
             const idx = (i - startIdx) * horizontalSubdivisions + h;
             const heightFactor = Math.min(verticalProgress * 2, 1);
-            const largeFolds = Math.sin(idx * 0.3 + v * 0.15) * 2.5 * heightFactor;
-            const mediumFolds = Math.sin(idx * 0.7 + v * 0.25) * 1.2 * heightFactor;
-            const fineCracks = Math.cos(idx * 1.5 + v * 0.4) * 0.6 * heightFactor;
-            const microDetail = (Math.sin(idx * 3 + v * 1.2) * 0.3 + Math.cos(idx * 2.5 + v * 0.8) * 0.25) * heightFactor;
-            const displacement = largeFolds + mediumFolds + fineCracks + microDetail;
 
-            const y = baseHeight + displacement;
-            const x = point.x + perpX + displacement * 0.1 * sideMultiplier;
-            const z = point.z + perpZ;
+            const primary = (Math.sin(idx * 0.12 + j * 0.18) * Math.cos(j * 0.08) +
+              Math.sin(idx * 0.08 - j * 0.15) * 0.7) * 8.0 * heightFactor;
+            const secondary = (Math.sin(idx * 0.35 + j * 0.45) * Math.cos(idx * 0.25) +
+              Math.cos(idx * 0.5 - j * 0.3) * 0.8) * 4.0 * heightFactor;
+            const tertiary = (Math.sin(idx * 1.2 + j * 1.5) * 0.6 +
+              Math.cos(idx * 1.8 - j * 2.0) * 0.4) * 1.5 * heightFactor;
+            const micro = Math.sin(idx * 3.5 + j * 4.0) * 0.5 * heightFactor;
+
+            const totalDisplacement = primary + secondary + tertiary + micro;
+            const facetSize = 0.7 + Math.sin(idx * 0.3) * 0.3;
+            const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
+
+            const displacementScale = verticalProgress === 0 ? 0.15 : 0.7;
+            let finalDistance = baseDistance + facetedDisplacement * displacementScale;
+
+            if (side > 0 && isDropOff) {
+              const slopeAmount = verticalProgress * 150;
+              finalDistance += slopeAmount;
+            }
+
+            const perpX = Math.cos(interpHeading) * finalDistance * side;
+            const perpZ = -Math.sin(interpHeading) * finalDistance * side;
+
+            const x = interpX + perpX;
+            const y = interpY + currentHeight;
+            const z = interpZ + perpZ;
 
             vertices.push(x, y, z);
 
-            const colorVariation = 0.05 + Math.random() * 0.1;
-            colors.push(colorVariation, colorVariation, colorVariation);
+            const colorNoise = (Math.random() - 0.5) * 0.15;
+            const verticalShading = 1.0 - verticalProgress * 0.25;
+            colors.push(verticalShading + colorNoise, verticalShading + colorNoise, verticalShading + colorNoise);
+
+            uvs.push((i - startIdx) * 0.5, j * 0.5);
           }
         }
       }
 
       // Create triangles
       const vertsPerColumn = verticalSegments + 1;
-      const columnsPerSegment = horizontalSubdivisions;
       const segmentCount = endIdx - startIdx + 1;
-      const totalColumns = segmentCount * columnsPerSegment;
+      const totalColumns = segmentCount * horizontalSubdivisions;
 
       for (let col = 0; col < totalColumns - 1; col++) {
         for (let row = 0; row < verticalSegments; row++) {
@@ -5343,7 +5384,7 @@ class Environment {
           const idx3 = col * vertsPerColumn + (row + 1);
           const idx4 = (col + 1) * vertsPerColumn + (row + 1);
 
-          if (Math.random() > 0.5) {
+          if ((col + row) % 2 === 0) {
             indices.push(idx1, idx2, idx3);
             indices.push(idx2, idx4, idx3);
           } else {
@@ -5355,14 +5396,25 @@ class Environment {
 
       geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
       geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
       geometry.setIndex(indices);
       geometry.computeVertexNormals();
 
-      const cliffMesh = new THREE.Mesh(geometry, cliffMaterial);
-      cliffMesh.castShadow = true;
-      cliffMesh.receiveShadow = true;
-      group.add(cliffMesh);
-    });
+      const mesh = new THREE.Mesh(geometry, cliffMaterial);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      cliffGroup.add(mesh);
+
+      return cliffGroup;
+    };
+
+    // Create left cliff (mountain wall)
+    const leftCliff = createFacetedCliff(-1, 50, false);
+    group.add(leftCliff);
+
+    // Create right cliff (drop-off)
+    const rightCliff = createFacetedCliff(1, -120, true);
+    group.add(rightCliff);
 
     this.scene.add(group);
     return group;

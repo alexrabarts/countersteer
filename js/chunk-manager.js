@@ -30,10 +30,11 @@ class ChunkManager {
     /**
      * Update based on vehicle's current road segment
      * @param {number} vehicleSegment - Current segment index
+     * @param {boolean} forceUpdate - Force update even if position hasn't changed much
      */
-    update(vehicleSegment) {
-        // Avoid unnecessary updates
-        if (Math.abs(vehicleSegment - this.lastUpdateSegment) < 5) {
+    update(vehicleSegment, forceUpdate = false) {
+        // Avoid unnecessary updates (unless forced for initialization)
+        if (!forceUpdate && Math.abs(vehicleSegment - this.lastUpdateSegment) < 5) {
             return;
         }
         this.lastUpdateSegment = vehicleSegment;
@@ -206,10 +207,12 @@ class ChunkManager {
         // Load initial chunks for the leg
         const startChunk = Math.floor(legStartSegment / this.chunkSize);
         this.currentChunkIndex = startChunk;
-        this.lastUpdateSegment = legStartSegment;
+        this.lastUpdateSegment = -999; // Force initial load
 
-        // Load initial chunks
-        this.update(legStartSegment);
+        // Load initial chunks immediately (force update)
+        this.update(legStartSegment, true);
+
+        console.log(`ChunkManager initialized for leg starting at segment ${legStartSegment}`);
     }
 
     /**
