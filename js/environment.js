@@ -559,8 +559,12 @@ class Environment {
       metalness: 0.6,
     });
 
+    // Only create rail sections for the active segment range (lazy generation)
+    const startIdx = Math.max(0, this.startSegment);
+    const endIdx = Math.min(this.roadPath.length - 1, this.endSegment + 20);
+
     // Create continuous rail sections
-    for (let i = 0; i < this.roadPath.length - 1; i++) {
+    for (let i = startIdx; i < endIdx; i++) {
       const point = this.roadPath[i];
       const nextPoint = this.roadPath[i + 1];
 
@@ -772,8 +776,13 @@ class Environment {
       const horizontalSubdivisions = 4; // Increased from 2 for finer horizontal detail
       const verticalSegments = 35; // Increased from 20 for finer vertical detail
 
+      // Only create geometry for the active segment range (lazy generation)
+      // Extend by 20 segments to match road geometry and decorative elements
+      const startIdx = Math.max(0, this.startSegment);
+      const endIdx = Math.min(this.roadPath.length - 1, this.endSegment + 20);
+
       // Create dense vertex grid with multi-layer displacement
-      for (let i = 0; i < this.roadPath.length; i++) {
+      for (let i = startIdx; i <= endIdx; i++) {
         const point = this.roadPath[i];
         const nextPoint =
           i < this.roadPath.length - 1 ? this.roadPath[i + 1] : point;
@@ -840,7 +849,8 @@ class Environment {
             }
 
             // Multi-layer displacement for natural rock face
-            const idx = i * horizontalSubdivisions + h;
+            // Use 0-based index for vertex calculations
+            const idx = (i - startIdx) * horizontalSubdivisions + h;
 
             // Reduce displacement at base to prevent gaps
             const heightFactor = Math.min(verticalProgress * 2, 1); // Ramps up from 0 at base to 1
@@ -966,7 +976,8 @@ class Environment {
       // Create triangles for the faceted wall
       const vertsPerColumn = verticalSegments + 1;
       const columnsPerSegment = horizontalSubdivisions;
-      const totalColumns = this.roadPath.length * columnsPerSegment;
+      const segmentCount = endIdx - startIdx + 1;
+      const totalColumns = segmentCount * columnsPerSegment;
 
       for (let col = 0; col < totalColumns - 1; col++) {
         for (let row = 0; row < verticalSegments; row++) {
@@ -1088,8 +1099,8 @@ class Environment {
         return { valid: true };
       };
 
-      // Add MANY more boulders along the cliff base
-      for (let i = 0; i < this.roadPath.length; i += 3) {
+      // Add MANY more boulders along the cliff base (only in active segment range)
+      for (let i = startIdx; i <= endIdx; i += 3) {
         // Much denser spacing
         const point = this.roadPath[i];
 
@@ -1291,8 +1302,8 @@ class Environment {
         side: THREE.DoubleSide,
       });
 
-      // Create major vertical cracks
-      for (let i = 0; i < this.roadPath.length; i += 25) {
+      // Create major vertical cracks (only in active segment range)
+      for (let i = startIdx; i <= endIdx; i += 25) {
         if (Math.random() > 0.5) {
           const point = this.roadPath[i];
 
@@ -1396,8 +1407,8 @@ class Environment {
         side: THREE.DoubleSide,
       });
 
-      // Create water seepage patches
-      for (let i = 0; i < this.roadPath.length; i += 30) {
+      // Create water seepage patches (only in active segment range)
+      for (let i = startIdx; i <= endIdx; i += 30) {
         if (Math.random() > 0.5) {
           const point = this.roadPath[i];
 
@@ -1462,8 +1473,8 @@ class Environment {
         side: THREE.DoubleSide,
       });
 
-      // Create hanging vines from cliff ledges
-      for (let i = 0; i < this.roadPath.length; i += 20) {
+      // Create hanging vines from cliff ledges (only in active segment range)
+      for (let i = startIdx; i <= endIdx; i += 20) {
         if (Math.random() > 0.6) {
           const point = this.roadPath[i];
 
@@ -1624,7 +1635,7 @@ class Environment {
           metalness: 0.0,
         });
 
-        for (let i = 0; i < this.roadPath.length; i += 8) {
+        for (let i = startIdx; i <= endIdx; i += 8) {
           if (Math.random() > 0.4 && height > 30) {
             const point = this.roadPath[i];
             const snowGeometry = new THREE.PlaneGeometry(
@@ -1708,7 +1719,11 @@ class Environment {
       const leftEdge = -(this.roadWidth / 2 + 1.6) + shiftRight;
       const rightEdge = this.roadWidth / 2 + 2 + shiftRight;
 
-      for (let i = 0; i < this.roadPath.length - 1; i++) {
+      // Only create geometry for the active segment range (lazy generation)
+      const startIdx = Math.max(0, this.startSegment);
+      const endIdx = Math.min(this.roadPath.length - 1, this.endSegment + 20);
+
+      for (let i = startIdx; i < endIdx; i++) {
         const point = this.roadPath[i];
         const nextPoint = this.roadPath[i + 1];
 
@@ -1723,7 +1738,7 @@ class Environment {
         const nextPerpX2 = Math.cos(nextPoint.heading) * rightEdge;
         const nextPerpZ2 = -Math.sin(nextPoint.heading) * rightEdge;
 
-        const baseIndex = i * 4;
+        const baseIndex = (i - startIdx) * 4;
         vertices.push(
           point.x + perpX1,
           point.y - 0.1,
@@ -5130,8 +5145,12 @@ class Environment {
     const roadWidth = this.roadWidth; // Use instance road width (varies by leg difficulty)
     const totalClearance = roadWidth / 2 + minClearance;
 
-    // Check against all road segments
-    for (let i = 0; i < this.roadPath.length; i++) {
+    // Only check against active segment range (lazy generation)
+    const startIdx = Math.max(0, this.startSegment);
+    const endIdx = Math.min(this.roadPath.length - 1, this.endSegment + 20);
+
+    // Check against road segments in current leg
+    for (let i = startIdx; i <= endIdx; i++) {
       const roadPoint = this.roadPath[i];
 
       // Calculate distance from terrain center to road segment center
