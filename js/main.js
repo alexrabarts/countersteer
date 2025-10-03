@@ -148,7 +148,7 @@ class Game {
         // Speed streak bonus
         this.speedStreakTime = 0;
         this.lastSpeedCheck = 0;
-        this.highSpeedThreshold = 60; // Increased from 50 to make it harder
+        this.highSpeedThreshold = 50;
 
         // Near miss tracking
         this.lastNearMissTime = 0;
@@ -197,18 +197,6 @@ class Game {
             // Create environment with lazy generation for the selected leg
             const legIndex = this.tourSystem.getCurrentLegIndex();
             this.environment = new Environment(this.scene, leg.startSegment, leg.endSegment, legIndex);
-
-            // Initialize chunk manager for dynamic terrain streaming
-            if (!this.chunkManager) {
-                this.chunkManager = new ChunkManager(this.scene, this.environment);
-            } else {
-                // Reset chunk manager for new leg
-                this.chunkManager.cleanup();
-                this.chunkManager.environment = this.environment;
-            }
-
-            // Initialize chunks for this leg
-            this.chunkManager.initializeForLeg(leg.startSegment, leg.endSegment);
             console.log('Environment created successfully');
 
             // Apply landscape configuration for the leg
@@ -653,12 +641,11 @@ class Game {
         this.cameraIntroEndPos = new THREE.Vector3(0, 4, -10);
         
         // Camera mode system
-        this.cameraMode = 0; // 0 = standard, 1 = high/far, 2 = onboard, 3 = mega zoom
+        this.cameraMode = 0; // 0 = standard, 1 = high/far, 2 = onboard
         this.cameraModes = [
             { name: 'Standard', offset: new THREE.Vector3(0, 3, -6), lerpFactor: 0.10 },
             { name: 'High View', offset: new THREE.Vector3(0, 8, -12), lerpFactor: 0.08 },
-            { name: 'Onboard', offset: new THREE.Vector3(0, 1.2, 0.5), lerpFactor: 0.18 },
-            { name: 'Mega Zoom', offset: new THREE.Vector3(0, 80, -100), lerpFactor: 0.05 }
+            { name: 'Onboard', offset: new THREE.Vector3(0, 1.2, 0.5), lerpFactor: 0.18 }
         ];
         
         // Dynamic camera offset for mountain roads
@@ -754,28 +741,23 @@ class Game {
             this.cameraOffset.x = this.baseCameraOffset.x;
             this.cameraOffset.y = this.baseCameraOffset.y;
             this.cameraOffset.z = this.baseCameraOffset.z;
-
+            
             // Add small vibration for realism
             this.cameraOffset.x += Math.sin(performance.now() * 0.01) * 0.02;
             this.cameraOffset.y += Math.sin(performance.now() * 0.013) * 0.01;
-        } else if (this.cameraMode === 3) {
-            // Mega zoom camera - very high and far back, minimal dynamics
-            this.cameraOffset.x = this.baseCameraOffset.x;
-            this.cameraOffset.y = this.baseCameraOffset.y;
-            this.cameraOffset.z = this.baseCameraOffset.z;
         } else {
             // Standard and High View cameras
             // Dynamic camera offset based on lean angle for better mountain road feel
             const leanInfluence = this.vehicle.leanAngle * (this.cameraMode === 1 ? 3 : 2); // More influence in high view
-
+            
             // Combine lateral lag with lean influence
             this.cameraOffset.x = this.baseCameraOffset.x - leanInfluence + this.cameraLateralOffset;
-
+            
             // Adjust height based on speed for dramatic effect
             const speedRatio = this.vehicle.speed / this.vehicle.maxSpeed;
             this.cameraOffset.y = this.baseCameraOffset.y + speedRatio * 0.5; // Slight rise with speed
             this.cameraOffset.z = this.baseCameraOffset.z - speedRatio * (this.cameraMode === 1 ? 2 : 1); // Move back with speed
-
+            
             // Wheelie camera swing - move camera to the side for dramatic wheelie view
             if (this.vehicle.isWheelie && this.cameraMode !== 1) { // Less swing in high view
                 const wheelieSwing = 8; // How far to swing the camera laterally
@@ -816,8 +798,8 @@ class Game {
         
         this.camera.position.copy(this.currentCameraPos);
 
-        // Additional camera shake at high speeds (outside onboard and mega zoom modes)
-        if (this.cameraMode !== 2 && this.cameraMode !== 3) {
+        // Additional camera shake at high speeds (outside onboard mode)
+        if (this.cameraMode !== 2) {
             const speedFactor = this.vehicle.speed / this.vehicle.maxSpeed;
             const shakeIntensity = speedFactor * 0.05;
             this.camera.position.x += (Math.random() - 0.5) * shakeIntensity;
@@ -826,19 +808,8 @@ class Game {
 
         // Mode-specific FOV and look target
         const speedRatio = this.vehicle.speed / this.vehicle.maxSpeed;
-
-        if (this.cameraMode === 3) {
-            // Mega zoom camera - narrow FOV for telephoto effect
-            this.camera.fov = 45; // Narrow FOV for zoomed look
-            this.camera.updateProjectionMatrix();
-
-            // Look at vehicle from afar
-            this.currentLookTarget.lerp(this.vehicle.position, 0.08);
-
-            // No banking for mega zoom - keep horizon level
-            this.camera.up.set(0, 1, 0);
-            this.camera.lookAt(this.currentLookTarget);
-        } else if (this.cameraMode === 2) {
+        
+        if (this.cameraMode === 2) {
             // Onboard camera - wider FOV, look directly ahead
             this.camera.fov = 90 + speedRatio * 10; // 90 to 100 degrees for immersive onboard view
             this.camera.updateProjectionMatrix();
@@ -1840,11 +1811,6 @@ class Game {
 
          this.vehicle.update(deltaTime, steeringInput, throttleInput, brakeInput, wheelieInput);
 
-        // Update chunk manager to stream terrain based on vehicle position
-        if (this.chunkManager && this.vehicle.currentRoadSegment !== undefined) {
-            this.chunkManager.update(this.vehicle.currentRoadSegment);
-        }
-
          // Play crash sound if we just crashed (but not if finished)
         if (!wasCrashed && this.vehicle.crashed && !this.finished) {
             this.soundManager.playCrashSound();
@@ -1954,14 +1920,6 @@ class Game {
         // Check cone collisions
         if (!this.vehicle.crashed) {
             this.cones.checkCollision(this.vehicle.position);
-        }
-
-        // Check boulder collisions
-        if (!this.vehicle.crashed && this.environment) {
-            const boulderHit = this.environment.checkBoulderCollision(this.vehicle.position);
-            if (boulderHit) {
-                this.vehicle.crash();
-            }
         }
         
         this.updateCamera();

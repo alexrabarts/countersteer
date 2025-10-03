@@ -1,5 +1,5 @@
 class Environment {
-  constructor(scene, startSegment = 0, endSegment = 743, legIndex = 0) {
+  constructor(scene, startSegment = 0, endSegment = 371, legIndex = 0) {
     this.scene = scene;
     this.roadPath = []; // Store the path for other uses (full track for physics/AI)
     this.startSegment = startSegment; // Start of visual geometry range
@@ -18,16 +18,14 @@ class Environment {
       `Initializing environment for segments ${startSegment}-${endSegment}, leg ${legIndex}, road width ${this.roadWidth}`,
     );
 
-    // Generate full road path (lightweight, always in memory for physics)
-    this.createRoad();
-
-    // Create static scene elements (not chunk-managed)
-    this.createStaticLake(); // Lake at bottom (always visible)
-    this.createLayeredMountains(); // Background mountains (skybox-like)
+    this.createRoad(); // Generates full roadPath, but only creates geometry for segment range
+    this.createGrass();
+    this.createLayeredMountains(); // Add layered mountain scenery
+    this.createRoadMarkings();
+    this.addEnvironmentalDetails();
+    this.createRoadworks(); // Add construction zones
+    this.addHairpinWarnings(); // Add hairpin bend warnings
     this.createCheckpoints(); // Add scoring checkpoints
-
-    // Note: Chunk-managed geometry (cliffs, boulders, markings) will be
-    // created dynamically by ChunkManager as player progresses
 
     // Validate terrain-road clearance (development-time check)
     const terrainErrors = this.validateAllTerrainClearance();
@@ -108,96 +106,96 @@ class Environment {
 
     // Define the course as a series of straights and turns
     // Each element defines how many segments and the turn rate per segment
-    // Progressive layout: 744 segments (doubled) across 8 legs with increasing difficulty
+    // Progressive layout: 380 segments across 8 legs with increasing difficulty
     const courseLayout = [
-      // === LEG 1: MOUNTAIN DAWN (0-69) - Gentle winding, 70 segments = 1400m ===
-      { segments: 16, turnRate: 0 }, // Long start straight
-      { segments: 8, turnRate: 0.06 }, // Gentle right sweep
-      { segments: 10, turnRate: 0 }, // Flowing straight
-      { segments: 6, turnRate: -0.05 }, // Gentle left
-      { segments: 10, turnRate: 0 }, // Long straight section
-      { segments: 8, turnRate: 0.08 }, // Moderate right
-      { segments: 6, turnRate: 0 }, // Short straight
-      { segments: 6, turnRate: -0.07 }, // Moderate left
+      // === LEG 1: MOUNTAIN DAWN (0-34) - Gentle winding, 35 segments = 700m ===
+      { segments: 8, turnRate: 0 }, // Long start straight
+      { segments: 4, turnRate: 0.06 }, // Gentle right sweep
+      { segments: 5, turnRate: 0 }, // Flowing straight
+      { segments: 3, turnRate: -0.05 }, // Gentle left
+      { segments: 5, turnRate: 0 }, // Long straight section
+      { segments: 4, turnRate: 0.08 }, // Moderate right
+      { segments: 3, turnRate: 0 }, // Short straight
+      { segments: 3, turnRate: -0.07 }, // Moderate left
 
-      // === LEG 2: VALLEY RUN (70-149) - Fast flowing, 80 segments = 1600m ===
-      { segments: 14, turnRate: 0 }, // Fast straight
-      { segments: 10, turnRate: 0.09 }, // Sweeping right
-      { segments: 12, turnRate: 0 }, // Long fast section
-      { segments: 8, turnRate: -0.1 }, // Sweeping left
-      { segments: 14, turnRate: 0 }, // High-speed straight
-      { segments: 8, turnRate: 0.08 }, // Fast right
-      { segments: 8, turnRate: 0 }, // Straight
-      { segments: 6, turnRate: -0.09 }, // Fast left sweep
+      // === LEG 2: VALLEY RUN (35-74) - Fast flowing, 40 segments = 800m ===
+      { segments: 7, turnRate: 0 }, // Fast straight
+      { segments: 5, turnRate: 0.09 }, // Sweeping right
+      { segments: 6, turnRate: 0 }, // Long fast section
+      { segments: 4, turnRate: -0.1 }, // Sweeping left
+      { segments: 7, turnRate: 0 }, // High-speed straight
+      { segments: 4, turnRate: 0.08 }, // Fast right
+      { segments: 4, turnRate: 0 }, // Straight
+      { segments: 3, turnRate: -0.09 }, // Fast left sweep
 
-      // === LEG 3: COASTAL DESCENT (150-233) - Sweeping, 84 segments = 1680m ===
-      { segments: 10, turnRate: 0 }, // Descent approach
-      { segments: 12, turnRate: 0.1 }, // Sweeping right descent
-      { segments: 14, turnRate: 0 }, // Fast downhill
-      { segments: 10, turnRate: -0.11 }, // Sweeping left descent
-      { segments: 16, turnRate: 0 }, // Extended high-speed
-      { segments: 8, turnRate: 0.09 }, // Flowing right
-      { segments: 10, turnRate: 0 }, // Fast straight
-      { segments: 4, turnRate: -0.1 }, // Coastal sweep left
+      // === LEG 3: COASTAL DESCENT (75-116) - Sweeping, 42 segments = 840m ===
+      { segments: 5, turnRate: 0 }, // Descent approach
+      { segments: 6, turnRate: 0.1 }, // Sweeping right descent
+      { segments: 7, turnRate: 0 }, // Fast downhill
+      { segments: 5, turnRate: -0.11 }, // Sweeping left descent
+      { segments: 8, turnRate: 0 }, // Extended high-speed
+      { segments: 4, turnRate: 0.09 }, // Flowing right
+      { segments: 5, turnRate: 0 }, // Fast straight
+      { segments: 2, turnRate: -0.1 }, // Coastal sweep left
 
-      // === LEG 4: FOGGY GORGE (234-321) - Visibility challenge, 88 segments = 1760m ===
-      { segments: 16, turnRate: 0 }, // Fog approach
-      { segments: 10, turnRate: 0.11 }, // Misty right
-      { segments: 12, turnRate: 0 }, // Limited visibility straight
-      { segments: 8, turnRate: -0.12 }, // Foggy left
-      { segments: 14, turnRate: 0 }, // Long fog section
-      { segments: 10, turnRate: 0.1 }, // Technical right
-      { segments: 10, turnRate: 0 }, // Straight
-      { segments: 8, turnRate: -0.11 }, // Exit curve
+      // === LEG 4: FOGGY GORGE (117-160) - Visibility challenge, 44 segments = 880m ===
+      { segments: 8, turnRate: 0 }, // Fog approach
+      { segments: 5, turnRate: 0.11 }, // Misty right
+      { segments: 6, turnRate: 0 }, // Limited visibility straight
+      { segments: 4, turnRate: -0.12 }, // Foggy left
+      { segments: 7, turnRate: 0 }, // Long fog section
+      { segments: 5, turnRate: 0.1 }, // Technical right
+      { segments: 5, turnRate: 0 }, // Straight
+      { segments: 4, turnRate: -0.11 }, // Exit curve
 
-      // === LEG 5: HIGH PASS (322-413) - Technical hairpins, 92 segments = 1840m ===
-      { segments: 10, turnRate: 0 }, // Pass approach
-      { segments: 8, turnRate: 0.15 }, // Sharp right
-      { segments: 6, turnRate: 0 }, // Chicane straight
-      { segments: 8, turnRate: -0.15 }, // Sharp left
-      { segments: 16, turnRate: 0.28 }, // HAIRPIN RIGHT
-      { segments: 6, turnRate: 0 }, // Recovery
-      { segments: 10, turnRate: 0.12 }, // Tight right
-      { segments: 14, turnRate: -0.25 }, // HAIRPIN LEFT
-      { segments: 8, turnRate: 0 }, // Exit
-      { segments: 6, turnRate: 0.14 }, // Technical right
+      // === LEG 5: HIGH PASS (161-206) - Technical hairpins, 46 segments = 920m ===
+      { segments: 5, turnRate: 0 }, // Pass approach
+      { segments: 4, turnRate: 0.15 }, // Sharp right
+      { segments: 3, turnRate: 0 }, // Chicane straight
+      { segments: 4, turnRate: -0.15 }, // Sharp left
+      { segments: 8, turnRate: 0.28 }, // HAIRPIN RIGHT
+      { segments: 3, turnRate: 0 }, // Recovery
+      { segments: 5, turnRate: 0.12 }, // Tight right
+      { segments: 7, turnRate: -0.25 }, // HAIRPIN LEFT
+      { segments: 4, turnRate: 0 }, // Exit
+      { segments: 3, turnRate: 0.14 }, // Technical right
 
-      // === LEG 6: STORM VALLEY (414-509) - Rain + grip, 96 segments = 1920m ===
-      { segments: 14, turnRate: 0 }, // Storm approach
-      { segments: 10, turnRate: 0.09 }, // Wet right curve
-      { segments: 12, turnRate: 0 }, // Rain straight
-      { segments: 10, turnRate: -0.1 }, // Slippery left
-      { segments: 16, turnRate: 0 }, // Long wet section
-      { segments: 10, turnRate: 0.08 }, // Technical right
-      { segments: 12, turnRate: 0 }, // Straight
-      { segments: 8, turnRate: -0.09 }, // Left curve
-      { segments: 4, turnRate: 0 }, // Exit section
+      // === LEG 6: STORM VALLEY (207-254) - Rain + grip, 48 segments = 960m ===
+      { segments: 7, turnRate: 0 }, // Storm approach
+      { segments: 5, turnRate: 0.09 }, // Wet right curve
+      { segments: 6, turnRate: 0 }, // Rain straight
+      { segments: 5, turnRate: -0.1 }, // Slippery left
+      { segments: 8, turnRate: 0 }, // Long wet section
+      { segments: 5, turnRate: 0.08 }, // Technical right
+      { segments: 6, turnRate: 0 }, // Straight
+      { segments: 4, turnRate: -0.09 }, // Left curve
+      { segments: 2, turnRate: 0 }, // Exit section
 
-      // === LEG 7: NIGHT RIDE (510-607) - Darkness, 98 segments = 1960m ===
-      { segments: 16, turnRate: 0 }, // Night approach
-      { segments: 10, turnRate: 0.11 }, // Dark right curve
-      { segments: 12, turnRate: 0 }, // Under stars
-      { segments: 10, turnRate: -0.12 }, // Technical left
-      { segments: 14, turnRate: 0 }, // Long night straight
-      { segments: 10, turnRate: 0.1 }, // Flowing right
-      { segments: 10, turnRate: 0 }, // Link section
-      { segments: 8, turnRate: -0.11 }, // Left curve
-      { segments: 8, turnRate: 0 }, // Straight section
+      // === LEG 7: NIGHT RIDE (255-303) - Darkness, 49 segments = 980m ===
+      { segments: 8, turnRate: 0 }, // Night approach
+      { segments: 5, turnRate: 0.11 }, // Dark right curve
+      { segments: 6, turnRate: 0 }, // Under stars
+      { segments: 5, turnRate: -0.12 }, // Technical left
+      { segments: 7, turnRate: 0 }, // Long night straight
+      { segments: 5, turnRate: 0.1 }, // Flowing right
+      { segments: 5, turnRate: 0 }, // Link section
+      { segments: 4, turnRate: -0.11 }, // Left curve
+      { segments: 4, turnRate: 0 }, // Straight section
 
-      // === LEG 8: WINTER PASS (608-703) - Ice + snow, 96 segments = 1920m ===
-      { segments: 14, turnRate: 0 }, // Winter approach
-      { segments: 10, turnRate: 0.13 }, // Icy right
-      { segments: 10, turnRate: 0 }, // Snow straight
-      { segments: 8, turnRate: -0.14 }, // Slippery left
-      { segments: 12, turnRate: 0 }, // Long snow section
-      { segments: 10, turnRate: 0.12 }, // Technical right
-      { segments: 10, turnRate: 0 }, // Link
-      { segments: 8, turnRate: -0.13 }, // Final left
-      { segments: 14, turnRate: 0 }, // Grand finale straight to finish
+      // === LEG 8: WINTER PASS (304-351) - Ice + snow, 48 segments = 960m ===
+      { segments: 7, turnRate: 0 }, // Winter approach
+      { segments: 5, turnRate: 0.13 }, // Icy right
+      { segments: 5, turnRate: 0 }, // Snow straight
+      { segments: 4, turnRate: -0.14 }, // Slippery left
+      { segments: 6, turnRate: 0 }, // Long snow section
+      { segments: 5, turnRate: 0.12 }, // Technical right
+      { segments: 5, turnRate: 0 }, // Link
+      { segments: 4, turnRate: -0.13 }, // Final left
+      { segments: 7, turnRate: 0 }, // Grand finale straight to finish
 
       // Extra scenery beyond finish (for +20 runoff rendering)
-      { segments: 30, turnRate: 0 }, // Post-finish straight
-      { segments: 10, turnRate: 0.05 }, // Gentle curve
+      { segments: 15, turnRate: 0 }, // Post-finish straight
+      { segments: 5, turnRate: 0.05 }, // Gentle curve
     ];
 
     // First, build the road path
@@ -1101,17 +1099,17 @@ class Environment {
         return { valid: true };
       };
 
-      // Add boulders along the cliff base (only in active segment range)
-      for (let i = startIdx; i <= endIdx; i += 6) {
-        // Sparser spacing (every 6 segments instead of 3)
+      // Add MANY more boulders along the cliff base (only in active segment range)
+      for (let i = startIdx; i <= endIdx; i += 3) {
+        // Much denser spacing
         const point = this.roadPath[i];
 
-        // Add 1-2 rocks per segment (reduced from 2-3)
-        const numRocks = 1 + Math.floor(Math.random() * 2);
+        // Add 2-3 rocks per segment
+        const numRocks = 2 + Math.floor(Math.random() * 2);
 
         for (let r = 0; r < numRocks; r++) {
-          if (Math.random() > 0.4) {
-            // 60% chance (reduced from 80%)
+          if (Math.random() > 0.2) {
+            // 80% chance for variety
             const rockSize = 0.8 + Math.random() * 2.5;
             const rockGeometry = this.displaceVertices(
               new THREE.IcosahedronGeometry(rockSize, 3),
@@ -1183,15 +1181,6 @@ class Environment {
 
             rock.castShadow = true;
             rock.receiveShadow = true;
-
-            // Store boulder for collision detection
-            this.boulders.push({
-              mesh: rock,
-              position: rock.position,
-              radius: rockSize,
-              hit: false
-            });
-
             group.add(rock);
           } // Close the if statement from line 700
         } // Close the for loop from line 699
@@ -3332,7 +3321,7 @@ class Environment {
     this.scene.add(group);
   }
 
-  createStaticLake() {
+  createGrass() {
     // Create a lake at the bottom instead of grass
     const lakeMaterial = new THREE.MeshStandardMaterial({
       color: 0x2266aa, // Deep blue lake color
@@ -3347,10 +3336,6 @@ class Environment {
     lake.position.set(0, -200, 0); // Below cliff level
     lake.receiveShadow = true;
     this.scene.add(lake);
-  }
-
-  createGrass() {
-    // Terrain strips handled by chunk system now - this method kept for compatibility
 
     // Create continuous terrain strips along the road (only in active segment range)
     // Extend by 20 segments to match road geometry and decorative elements
@@ -4300,6 +4285,18 @@ class Environment {
       ctx.fillRect(x, y, size, size);
     }
 
+    // Add sparse grass patches on top
+    ctx.globalAlpha = 0.3;
+    for (let i = 0; i < 15; i++) {
+      const x = Math.random() * canvas.width;
+      const y = Math.random() * canvas.height;
+      const width = Math.random() * 20 + 5;
+      const height = Math.random() * 15 + 3;
+
+      ctx.fillStyle = "#228B22";
+      ctx.fillRect(x, y, width, height);
+    }
+
     // Add tire tracks or disturbance marks
     ctx.globalAlpha = 0.2;
     ctx.strokeStyle = "#2F1B14";
@@ -5218,414 +5215,5 @@ class Environment {
     }
 
     return errors;
-  }
-
-  // Check collision with boulders
-  checkBoulderCollision(vehiclePosition) {
-    const hitDistance = 2.5; // Boulder collision distance
-    const heightTolerance = 3; // Height tolerance for collision
-
-    for (let boulder of this.boulders) {
-      if (boulder.hit) continue; // Skip already hit boulders
-
-      const distance = Math.sqrt(
-        Math.pow(vehiclePosition.x - boulder.position.x, 2) +
-        Math.pow(vehiclePosition.z - boulder.position.z, 2)
-      );
-
-      const heightDiff = Math.abs(vehiclePosition.y - boulder.position.y);
-
-      if (distance < boulder.radius + hitDistance && heightDiff < heightTolerance) {
-        boulder.hit = true;
-        console.log('Boulder collision detected at:', boulder.position.x.toFixed(1), boulder.position.z.toFixed(1));
-        return true; // Collision detected
-      }
-    }
-
-    return false; // No collision
-  }
-
-  // ============================================================================
-  // CHUNK-BASED GEOMETRY GENERATION METHODS
-  // These methods create geometry for specific segment ranges (chunks)
-  // ============================================================================
-
-  /**
-   * Create cliff walls for a specific chunk
-   * @param {number} startSeg - Start segment index
-   * @param {number} endSeg - End segment index
-   * @returns {THREE.Group} Group containing cliff wall geometry
-   */
-  createCliffWallsForChunk(startSeg, endSeg) {
-    // Re-use the original createRoadWalls cliff creation logic
-    const group = new THREE.Group();
-
-    // Create left and right cliffs using the original faceted cliff logic
-    const createFacetedCliff = (side, height, isDropOff) => {
-      const cliffGroup = new THREE.Group();
-
-      // Create rock texture
-      const rockTexture = this.createRockTexture();
-
-      // Rock material matching original
-      const cliffMaterial = new THREE.MeshStandardMaterial({
-        map: rockTexture,
-        color: 0xffffff,
-        vertexColors: true,
-        roughness: 0.92,
-        metalness: 0.0,
-        flatShading: false,
-        side: THREE.DoubleSide,
-        envMapIntensity: 0.2,
-      });
-
-      const geometry = new THREE.BufferGeometry();
-      const vertices = [];
-      const indices = [];
-      const colors = [];
-      const uvs = [];
-
-      const horizontalSubdivisions = 4;
-      const verticalSegments = 35;
-
-      const startIdx = Math.max(0, startSeg);
-      const endIdx = Math.min(this.roadPath.length - 1, endSeg);
-
-      // Create vertices (matching original implementation)
-      for (let i = startIdx; i <= endIdx; i++) {
-        const point = this.roadPath[i];
-        const nextPoint = i < this.roadPath.length - 1 ? this.roadPath[i + 1] : point;
-        const roadY = point.y || 0;
-
-        for (let h = 0; h < horizontalSubdivisions; h++) {
-          const hProgress = h / horizontalSubdivisions;
-          const interpX = point.x + (nextPoint.x - point.x) * hProgress;
-          const interpZ = point.z + (nextPoint.z - point.z) * hProgress;
-          const interpY = roadY + ((nextPoint.y || 0) - roadY) * hProgress;
-          const interpHeading = point.heading + (nextPoint.heading - point.heading) * hProgress;
-
-          for (let j = 0; j <= verticalSegments; j++) {
-            const verticalProgress = j / verticalSegments;
-
-            // Variable height with sine waves
-            const lengthProgress = i / this.roadPath.length;
-            const cliffHeightMultiplier = 1.0 +
-              Math.sin(lengthProgress * Math.PI * 8) * 0.5 +
-              Math.sin(lengthProgress * Math.PI * 15) * 0.25 +
-              Math.sin(lengthProgress * Math.PI * 27) * 0.15;
-            const variableHeight = height * cliffHeightMultiplier;
-            const currentHeight = variableHeight * verticalProgress;
-
-            let baseDistance = 6.5;
-
-            if (side > 0 && isDropOff) {
-              const slopeAmount = verticalProgress * verticalProgress * 50;
-              baseDistance -= slopeAmount;
-            } else if (side < 0 && !isDropOff) {
-              baseDistance = this.roadWidth / 2 + 1;
-              if (verticalProgress < 0.1) {
-                const lipExtension = (0.1 - verticalProgress) * 20;
-                baseDistance = this.roadWidth / 2 + 1 - lipExtension;
-              }
-              const slopeAmount = verticalProgress * verticalProgress * 25;
-              baseDistance += slopeAmount;
-            }
-
-            const idx = (i - startIdx) * horizontalSubdivisions + h;
-            const heightFactor = Math.min(verticalProgress * 2, 1);
-
-            const primary = (Math.sin(idx * 0.12 + j * 0.18) * Math.cos(j * 0.08) +
-              Math.sin(idx * 0.08 - j * 0.15) * 0.7) * 8.0 * heightFactor;
-            const secondary = (Math.sin(idx * 0.35 + j * 0.45) * Math.cos(idx * 0.25) +
-              Math.cos(idx * 0.5 - j * 0.3) * 0.8) * 4.0 * heightFactor;
-            const tertiary = (Math.sin(idx * 1.2 + j * 1.5) * 0.6 +
-              Math.cos(idx * 1.8 - j * 2.0) * 0.4) * 1.5 * heightFactor;
-            const micro = Math.sin(idx * 3.5 + j * 4.0) * 0.5 * heightFactor;
-
-            const totalDisplacement = primary + secondary + tertiary + micro;
-            const facetSize = 0.7 + Math.sin(idx * 0.3) * 0.3;
-            const facetedDisplacement = Math.floor(totalDisplacement / facetSize) * facetSize;
-
-            const displacementScale = verticalProgress === 0 ? 0.15 : 0.7;
-            let finalDistance = baseDistance + facetedDisplacement * displacementScale;
-
-            if (side > 0 && isDropOff) {
-              const slopeAmount = verticalProgress * 150;
-              finalDistance += slopeAmount;
-            }
-
-            const perpX = Math.cos(interpHeading) * finalDistance * side;
-            const perpZ = -Math.sin(interpHeading) * finalDistance * side;
-
-            const x = interpX + perpX;
-            const y = interpY + currentHeight;
-            const z = interpZ + perpZ;
-
-            vertices.push(x, y, z);
-
-            const colorNoise = (Math.random() - 0.5) * 0.15;
-            const verticalShading = 1.0 - verticalProgress * 0.25;
-            colors.push(verticalShading + colorNoise, verticalShading + colorNoise, verticalShading + colorNoise);
-
-            uvs.push((i - startIdx) * 0.5, j * 0.5);
-          }
-        }
-      }
-
-      // Create triangles
-      const vertsPerColumn = verticalSegments + 1;
-      const segmentCount = endIdx - startIdx + 1;
-      const totalColumns = segmentCount * horizontalSubdivisions;
-
-      for (let col = 0; col < totalColumns - 1; col++) {
-        for (let row = 0; row < verticalSegments; row++) {
-          const idx1 = col * vertsPerColumn + row;
-          const idx2 = (col + 1) * vertsPerColumn + row;
-          const idx3 = col * vertsPerColumn + (row + 1);
-          const idx4 = (col + 1) * vertsPerColumn + (row + 1);
-
-          if ((col + row) % 2 === 0) {
-            indices.push(idx1, idx2, idx3);
-            indices.push(idx2, idx4, idx3);
-          } else {
-            indices.push(idx1, idx2, idx4);
-            indices.push(idx1, idx4, idx3);
-          }
-        }
-      }
-
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-      geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-      geometry.setIndex(indices);
-      geometry.computeVertexNormals();
-
-      const mesh = new THREE.Mesh(geometry, cliffMaterial);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      cliffGroup.add(mesh);
-
-      return cliffGroup;
-    };
-
-    // Create left cliff (mountain wall)
-    const leftCliff = createFacetedCliff(-1, 50, false);
-    group.add(leftCliff);
-
-    // Create right cliff (drop-off)
-    const rightCliff = createFacetedCliff(1, -120, true);
-    group.add(rightCliff);
-
-    this.scene.add(group);
-    return group;
-  }
-
-  /**
-   * Create ground strip for a specific chunk
-   * @param {number} startSeg - Start segment index
-   * @param {number} endSeg - End segment index
-   * @returns {THREE.Mesh} Ground strip mesh
-   */
-  createGroundStripForChunk(startSeg, endSeg) {
-    // This creates the brown strip between road and cliffs
-    const vertices = [];
-    const indices = [];
-    const colors = [];
-
-    const shiftRight = -0.5;
-    const leftEdge = -(this.roadWidth / 2 + 1.6) + shiftRight;
-    const rightEdge = this.roadWidth / 2 + 2 + shiftRight;
-
-    const startIdx = Math.max(0, startSeg);
-    const endIdx = Math.min(this.roadPath.length - 1, endSeg);
-
-    for (let i = startIdx; i < endIdx; i++) {
-      const point = this.roadPath[i];
-      const nextPoint = this.roadPath[i + 1];
-
-      const perpX1 = Math.cos(point.heading) * leftEdge;
-      const perpZ1 = -Math.sin(point.heading) * leftEdge;
-      const perpX2 = Math.cos(point.heading) * rightEdge;
-      const perpZ2 = -Math.sin(point.heading) * rightEdge;
-
-      const nextPerpX1 = Math.cos(nextPoint.heading) * leftEdge;
-      const nextPerpZ1 = -Math.sin(nextPoint.heading) * leftEdge;
-      const nextPerpX2 = Math.cos(nextPoint.heading) * rightEdge;
-      const nextPerpZ2 = -Math.sin(nextPoint.heading) * rightEdge;
-
-      const baseIndex = (i - startIdx) * 4;
-      vertices.push(
-        point.x + perpX1, point.y - 0.1, point.z + perpZ1,
-        point.x + perpX2, point.y - 0.1, point.z + perpZ2,
-        nextPoint.x + nextPerpX1, nextPoint.y - 0.1, nextPoint.z + nextPerpZ1,
-        nextPoint.x + nextPerpX2, nextPoint.y - 0.1, nextPoint.z + nextPerpZ2
-      );
-
-      for (let j = 0; j < 4; j++) {
-        colors.push(0.25, 0.2, 0.18);
-      }
-
-      indices.push(
-        baseIndex, baseIndex + 1, baseIndex + 2,
-        baseIndex + 1, baseIndex + 3, baseIndex + 2
-      );
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    geometry.setIndex(indices);
-    geometry.computeVertexNormals();
-
-    const material = new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      roughness: 0.95,
-      metalness: 0.0,
-    });
-
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.receiveShadow = true;
-    this.scene.add(mesh);
-    return mesh;
-  }
-
-  /**
-   * Create boulders for a specific chunk
-   * @param {number} startSeg - Start segment index
-   * @param {number} endSeg - End segment index
-   * @returns {THREE.Group} Group containing boulder meshes
-   */
-  createBouldersForChunk(startSeg, endSeg) {
-    const group = new THREE.Group();
-
-    const rockMaterials = [
-      new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.92, metalness: 0.0 }),
-      new THREE.MeshStandardMaterial({ color: 0x1e1e1e, roughness: 0.92, metalness: 0.0 }),
-      new THREE.MeshStandardMaterial({ color: 0x242424, roughness: 0.92, metalness: 0.0 }),
-    ];
-
-    const startIdx = Math.max(0, startSeg);
-    const endIdx = Math.min(this.roadPath.length - 1, endSeg);
-
-    // Add boulders along the cliff base (every 12 segments)
-    for (let i = startIdx; i <= endIdx; i += 12) {
-      const point = this.roadPath[i];
-      const numRocks = 1 + Math.floor(Math.random() * 2);
-
-      for (let r = 0; r < numRocks; r++) {
-        if (Math.random() > 0.4) {
-          const rockSize = 0.8 + Math.random() * 2.5;
-          const rockGeometry = this.displaceVertices(
-            new THREE.IcosahedronGeometry(rockSize, 3),
-            rockSize * 0.3
-          );
-          const rock = new THREE.Mesh(
-            rockGeometry,
-            rockMaterials[Math.floor(Math.random() * rockMaterials.length)]
-          );
-
-          const side = Math.random() > 0.5 ? 1 : -1;
-          const distance = 8.5 + Math.random() * 2;
-          const perpX = Math.cos(point.heading) * distance * side;
-          const perpZ = -Math.sin(point.heading) * distance * side;
-
-          rock.position.set(
-            point.x + perpX,
-            (point.y || 0) - rockSize * 0.5,
-            point.z + perpZ
-          );
-
-          rock.rotation.set(
-            Math.random() * Math.PI * 2,
-            Math.random() * Math.PI * 2,
-            Math.random() * Math.PI * 2
-          );
-
-          rock.scale.set(
-            1.0 + Math.random() * 0.5,
-            0.7 + Math.random() * 0.4,
-            1.0 + Math.random() * 0.5
-          );
-
-          rock.castShadow = true;
-          rock.receiveShadow = true;
-
-          // Store for collision detection
-          this.boulders.push({
-            mesh: rock,
-            position: rock.position,
-            radius: rockSize,
-            hit: false
-          });
-
-          group.add(rock);
-        }
-      }
-    }
-
-    this.scene.add(group);
-    return group;
-  }
-
-  /**
-   * Create terrain strips for a specific chunk
-   * @param {number} startSeg - Start segment index
-   * @param {number} endSeg - End segment index
-   * @returns {Array<THREE.Mesh>} Array of terrain strip meshes
-   */
-  createTerrainStripsForChunk(startSeg, endSeg) {
-    // Terrain strips are already segment-bounded in createGrass()
-    // For now, return empty array as grass is static
-    return [];
-  }
-
-  /**
-   * Create road markings for a specific chunk
-   * @param {number} startSeg - Start segment index
-   * @param {number} endSeg - End segment index
-   * @returns {THREE.Mesh} Road marking mesh
-   */
-  createRoadMarkingsForChunk(startSeg, endSeg) {
-    // Extract from createRoadMarkings() - dashed center line
-    const vertices = [];
-    const colors = [];
-
-    const startIdx = Math.max(0, startSeg);
-    const endIdx = Math.min(this.roadPath.length - 1, endSeg);
-
-    for (let i = startIdx; i <= endIdx; i++) {
-      const point = this.roadPath[i];
-      const dashOn = Math.floor(i / 2) % 3 !== 0;
-
-      if (dashOn) {
-        const width = 0.15;
-        const perpX = Math.cos(point.heading) * width;
-        const perpZ = -Math.sin(point.heading) * width;
-
-        const baseY = (point.y !== undefined ? point.y : 0) + 0.01;
-
-        vertices.push(
-          point.x - perpX, baseY, point.z - perpZ,
-          point.x + perpX, baseY, point.z + perpZ
-        );
-
-        colors.push(0.9, 0.9, 0.0, 0.9, 0.9, 0.0);
-      }
-    }
-
-    if (vertices.length === 0) return null;
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-
-    const material = new THREE.LineBasicMaterial({
-      vertexColors: true,
-      linewidth: 2,
-    });
-
-    const mesh = new THREE.LineSegments(geometry, material);
-    this.scene.add(mesh);
-    return mesh;
   }
 }
