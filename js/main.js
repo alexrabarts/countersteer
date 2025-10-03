@@ -828,9 +828,11 @@ class Game {
             const onboardBankAmount = this.vehicle.leanAngle * 0.9; // 90% banking, same direction
             const targetOnboardBank = THREE.MathUtils.clamp(onboardBankAmount, -0.7, 0.7); // Max ~40° bank
             this.currentCameraBanking = THREE.MathUtils.lerp(this.currentCameraBanking, targetOnboardBank, 0.2);
-            
-            // Create custom up vector rotated by banking amount
-            this.tempMatrix.makeRotationZ(this.currentCameraBanking);
+
+            // Create custom up vector rotated around camera's forward direction (view axis)
+            const forwardDir = new THREE.Vector3();
+            forwardDir.subVectors(this.currentLookTarget, this.currentCameraPos).normalize();
+            this.tempMatrix.makeRotationAxis(forwardDir, this.currentCameraBanking);
             this.tempUpVector.set(0, 1, 0).applyMatrix4(this.tempMatrix);
 
             // Apply banking through custom up vector, then lookAt
@@ -908,8 +910,8 @@ class Game {
             
             // Camera banking BEFORE lookAt - subtle lean feedback
             const bankFactor = this.cameraMode === 1 ? 0.15 : 0.25; // High view more subtle
-            // Negate to bank WITH bike (positive lean = right, needs negative Z rotation)
-            const bankAmount = -this.vehicle.leanAngle * bankFactor;
+            // Positive lean = right lean, bank camera right (positive rotation around forward axis)
+            const bankAmount = this.vehicle.leanAngle * bankFactor;
             const targetBank = THREE.MathUtils.clamp(bankAmount, -0.3, 0.3); // Max ~17° bank
             this.currentCameraBanking = THREE.MathUtils.lerp(this.currentCameraBanking, targetBank, 0.15);
 
@@ -930,8 +932,11 @@ class Game {
                 this.currentLookTarget.y += tiltInfluence;
             }
 
-            // Create custom up vector rotated by banking amount
-            this.tempMatrix.makeRotationZ(this.currentCameraBanking);
+            // Create custom up vector rotated around camera's forward direction (view axis)
+            // This ensures banking works correctly regardless of vehicle's world orientation
+            const forwardDir = new THREE.Vector3();
+            forwardDir.subVectors(this.currentLookTarget, this.currentCameraPos).normalize();
+            this.tempMatrix.makeRotationAxis(forwardDir, this.currentCameraBanking);
             this.tempUpVector.set(0, 1, 0).applyMatrix4(this.tempMatrix);
 
             // Apply banking through custom up vector, then lookAt
