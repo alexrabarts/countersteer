@@ -1,5 +1,5 @@
 class Environment {
-  constructor(scene, startSegment = 0, endSegment = 371, legIndex = 0) {
+  constructor(scene, startSegment = 0, endSegment = 743, legIndex = 0) {
     this.scene = scene;
     this.roadPath = []; // Store the path for other uses (full track for physics/AI)
     this.startSegment = startSegment; // Start of visual geometry range
@@ -106,96 +106,96 @@ class Environment {
 
     // Define the course as a series of straights and turns
     // Each element defines how many segments and the turn rate per segment
-    // Progressive layout: 380 segments across 8 legs with increasing difficulty
+    // Progressive layout: 744 segments (doubled) across 8 legs with increasing difficulty
     const courseLayout = [
-      // === LEG 1: MOUNTAIN DAWN (0-34) - Gentle winding, 35 segments = 700m ===
-      { segments: 8, turnRate: 0 }, // Long start straight
-      { segments: 4, turnRate: 0.06 }, // Gentle right sweep
-      { segments: 5, turnRate: 0 }, // Flowing straight
-      { segments: 3, turnRate: -0.05 }, // Gentle left
-      { segments: 5, turnRate: 0 }, // Long straight section
-      { segments: 4, turnRate: 0.08 }, // Moderate right
-      { segments: 3, turnRate: 0 }, // Short straight
-      { segments: 3, turnRate: -0.07 }, // Moderate left
+      // === LEG 1: MOUNTAIN DAWN (0-69) - Gentle winding, 70 segments = 1400m ===
+      { segments: 16, turnRate: 0 }, // Long start straight
+      { segments: 8, turnRate: 0.06 }, // Gentle right sweep
+      { segments: 10, turnRate: 0 }, // Flowing straight
+      { segments: 6, turnRate: -0.05 }, // Gentle left
+      { segments: 10, turnRate: 0 }, // Long straight section
+      { segments: 8, turnRate: 0.08 }, // Moderate right
+      { segments: 6, turnRate: 0 }, // Short straight
+      { segments: 6, turnRate: -0.07 }, // Moderate left
 
-      // === LEG 2: VALLEY RUN (35-74) - Fast flowing, 40 segments = 800m ===
-      { segments: 7, turnRate: 0 }, // Fast straight
-      { segments: 5, turnRate: 0.09 }, // Sweeping right
-      { segments: 6, turnRate: 0 }, // Long fast section
-      { segments: 4, turnRate: -0.1 }, // Sweeping left
-      { segments: 7, turnRate: 0 }, // High-speed straight
-      { segments: 4, turnRate: 0.08 }, // Fast right
-      { segments: 4, turnRate: 0 }, // Straight
-      { segments: 3, turnRate: -0.09 }, // Fast left sweep
+      // === LEG 2: VALLEY RUN (70-149) - Fast flowing, 80 segments = 1600m ===
+      { segments: 14, turnRate: 0 }, // Fast straight
+      { segments: 10, turnRate: 0.09 }, // Sweeping right
+      { segments: 12, turnRate: 0 }, // Long fast section
+      { segments: 8, turnRate: -0.1 }, // Sweeping left
+      { segments: 14, turnRate: 0 }, // High-speed straight
+      { segments: 8, turnRate: 0.08 }, // Fast right
+      { segments: 8, turnRate: 0 }, // Straight
+      { segments: 6, turnRate: -0.09 }, // Fast left sweep
 
-      // === LEG 3: COASTAL DESCENT (75-116) - Sweeping, 42 segments = 840m ===
-      { segments: 5, turnRate: 0 }, // Descent approach
-      { segments: 6, turnRate: 0.1 }, // Sweeping right descent
-      { segments: 7, turnRate: 0 }, // Fast downhill
-      { segments: 5, turnRate: -0.11 }, // Sweeping left descent
-      { segments: 8, turnRate: 0 }, // Extended high-speed
-      { segments: 4, turnRate: 0.09 }, // Flowing right
-      { segments: 5, turnRate: 0 }, // Fast straight
-      { segments: 2, turnRate: -0.1 }, // Coastal sweep left
+      // === LEG 3: COASTAL DESCENT (150-233) - Sweeping, 84 segments = 1680m ===
+      { segments: 10, turnRate: 0 }, // Descent approach
+      { segments: 12, turnRate: 0.1 }, // Sweeping right descent
+      { segments: 14, turnRate: 0 }, // Fast downhill
+      { segments: 10, turnRate: -0.11 }, // Sweeping left descent
+      { segments: 16, turnRate: 0 }, // Extended high-speed
+      { segments: 8, turnRate: 0.09 }, // Flowing right
+      { segments: 10, turnRate: 0 }, // Fast straight
+      { segments: 4, turnRate: -0.1 }, // Coastal sweep left
 
-      // === LEG 4: FOGGY GORGE (117-160) - Visibility challenge, 44 segments = 880m ===
-      { segments: 8, turnRate: 0 }, // Fog approach
-      { segments: 5, turnRate: 0.11 }, // Misty right
-      { segments: 6, turnRate: 0 }, // Limited visibility straight
-      { segments: 4, turnRate: -0.12 }, // Foggy left
-      { segments: 7, turnRate: 0 }, // Long fog section
-      { segments: 5, turnRate: 0.1 }, // Technical right
-      { segments: 5, turnRate: 0 }, // Straight
-      { segments: 4, turnRate: -0.11 }, // Exit curve
+      // === LEG 4: FOGGY GORGE (234-321) - Visibility challenge, 88 segments = 1760m ===
+      { segments: 16, turnRate: 0 }, // Fog approach
+      { segments: 10, turnRate: 0.11 }, // Misty right
+      { segments: 12, turnRate: 0 }, // Limited visibility straight
+      { segments: 8, turnRate: -0.12 }, // Foggy left
+      { segments: 14, turnRate: 0 }, // Long fog section
+      { segments: 10, turnRate: 0.1 }, // Technical right
+      { segments: 10, turnRate: 0 }, // Straight
+      { segments: 8, turnRate: -0.11 }, // Exit curve
 
-      // === LEG 5: HIGH PASS (161-206) - Technical hairpins, 46 segments = 920m ===
-      { segments: 5, turnRate: 0 }, // Pass approach
-      { segments: 4, turnRate: 0.15 }, // Sharp right
-      { segments: 3, turnRate: 0 }, // Chicane straight
-      { segments: 4, turnRate: -0.15 }, // Sharp left
-      { segments: 8, turnRate: 0.28 }, // HAIRPIN RIGHT
-      { segments: 3, turnRate: 0 }, // Recovery
-      { segments: 5, turnRate: 0.12 }, // Tight right
-      { segments: 7, turnRate: -0.25 }, // HAIRPIN LEFT
-      { segments: 4, turnRate: 0 }, // Exit
-      { segments: 3, turnRate: 0.14 }, // Technical right
+      // === LEG 5: HIGH PASS (322-413) - Technical hairpins, 92 segments = 1840m ===
+      { segments: 10, turnRate: 0 }, // Pass approach
+      { segments: 8, turnRate: 0.15 }, // Sharp right
+      { segments: 6, turnRate: 0 }, // Chicane straight
+      { segments: 8, turnRate: -0.15 }, // Sharp left
+      { segments: 16, turnRate: 0.28 }, // HAIRPIN RIGHT
+      { segments: 6, turnRate: 0 }, // Recovery
+      { segments: 10, turnRate: 0.12 }, // Tight right
+      { segments: 14, turnRate: -0.25 }, // HAIRPIN LEFT
+      { segments: 8, turnRate: 0 }, // Exit
+      { segments: 6, turnRate: 0.14 }, // Technical right
 
-      // === LEG 6: STORM VALLEY (207-254) - Rain + grip, 48 segments = 960m ===
-      { segments: 7, turnRate: 0 }, // Storm approach
-      { segments: 5, turnRate: 0.09 }, // Wet right curve
-      { segments: 6, turnRate: 0 }, // Rain straight
-      { segments: 5, turnRate: -0.1 }, // Slippery left
-      { segments: 8, turnRate: 0 }, // Long wet section
-      { segments: 5, turnRate: 0.08 }, // Technical right
-      { segments: 6, turnRate: 0 }, // Straight
-      { segments: 4, turnRate: -0.09 }, // Left curve
-      { segments: 2, turnRate: 0 }, // Exit section
+      // === LEG 6: STORM VALLEY (414-509) - Rain + grip, 96 segments = 1920m ===
+      { segments: 14, turnRate: 0 }, // Storm approach
+      { segments: 10, turnRate: 0.09 }, // Wet right curve
+      { segments: 12, turnRate: 0 }, // Rain straight
+      { segments: 10, turnRate: -0.1 }, // Slippery left
+      { segments: 16, turnRate: 0 }, // Long wet section
+      { segments: 10, turnRate: 0.08 }, // Technical right
+      { segments: 12, turnRate: 0 }, // Straight
+      { segments: 8, turnRate: -0.09 }, // Left curve
+      { segments: 4, turnRate: 0 }, // Exit section
 
-      // === LEG 7: NIGHT RIDE (255-303) - Darkness, 49 segments = 980m ===
-      { segments: 8, turnRate: 0 }, // Night approach
-      { segments: 5, turnRate: 0.11 }, // Dark right curve
-      { segments: 6, turnRate: 0 }, // Under stars
-      { segments: 5, turnRate: -0.12 }, // Technical left
-      { segments: 7, turnRate: 0 }, // Long night straight
-      { segments: 5, turnRate: 0.1 }, // Flowing right
-      { segments: 5, turnRate: 0 }, // Link section
-      { segments: 4, turnRate: -0.11 }, // Left curve
-      { segments: 4, turnRate: 0 }, // Straight section
+      // === LEG 7: NIGHT RIDE (510-607) - Darkness, 98 segments = 1960m ===
+      { segments: 16, turnRate: 0 }, // Night approach
+      { segments: 10, turnRate: 0.11 }, // Dark right curve
+      { segments: 12, turnRate: 0 }, // Under stars
+      { segments: 10, turnRate: -0.12 }, // Technical left
+      { segments: 14, turnRate: 0 }, // Long night straight
+      { segments: 10, turnRate: 0.1 }, // Flowing right
+      { segments: 10, turnRate: 0 }, // Link section
+      { segments: 8, turnRate: -0.11 }, // Left curve
+      { segments: 8, turnRate: 0 }, // Straight section
 
-      // === LEG 8: WINTER PASS (304-351) - Ice + snow, 48 segments = 960m ===
-      { segments: 7, turnRate: 0 }, // Winter approach
-      { segments: 5, turnRate: 0.13 }, // Icy right
-      { segments: 5, turnRate: 0 }, // Snow straight
-      { segments: 4, turnRate: -0.14 }, // Slippery left
-      { segments: 6, turnRate: 0 }, // Long snow section
-      { segments: 5, turnRate: 0.12 }, // Technical right
-      { segments: 5, turnRate: 0 }, // Link
-      { segments: 4, turnRate: -0.13 }, // Final left
-      { segments: 7, turnRate: 0 }, // Grand finale straight to finish
+      // === LEG 8: WINTER PASS (608-703) - Ice + snow, 96 segments = 1920m ===
+      { segments: 14, turnRate: 0 }, // Winter approach
+      { segments: 10, turnRate: 0.13 }, // Icy right
+      { segments: 10, turnRate: 0 }, // Snow straight
+      { segments: 8, turnRate: -0.14 }, // Slippery left
+      { segments: 12, turnRate: 0 }, // Long snow section
+      { segments: 10, turnRate: 0.12 }, // Technical right
+      { segments: 10, turnRate: 0 }, // Link
+      { segments: 8, turnRate: -0.13 }, // Final left
+      { segments: 14, turnRate: 0 }, // Grand finale straight to finish
 
       // Extra scenery beyond finish (for +20 runoff rendering)
-      { segments: 15, turnRate: 0 }, // Post-finish straight
-      { segments: 5, turnRate: 0.05 }, // Gentle curve
+      { segments: 30, turnRate: 0 }, // Post-finish straight
+      { segments: 10, turnRate: 0.05 }, // Gentle curve
     ];
 
     // First, build the road path
