@@ -47,7 +47,7 @@ class TourSystem {
                 timeOfDay: 'golden', // Morning light, but foggy
                 landscapeVariation: 'valley',
                 weather: 'fog',
-                weatherIntensity: 1.0
+                weatherIntensity: 1.5
             },
             // Leg 5: Technical hairpins (46 segments = 920m)
             {

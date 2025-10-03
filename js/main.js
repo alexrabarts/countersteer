@@ -73,19 +73,19 @@ class Game {
             },
             night: {
                 name: 'Night',
-                skyColor: 0x050a10,
-                fogColor: 0x0a1520,
-                ambientColor: 0x080810,
-                ambientIntensity: 0.08,
-                hemisphereTop: 0x0f1a2a,
-                hemisphereBottom: 0x050510,
-                hemisphereIntensity: 0.12,
-                sunColor: 0x334466,  // Moon
-                sunIntensity: 0.18,
-                fillColor: 0x1a2535,
-                fillIntensity: 0.06,
-                rimColor: 0x2a3545,
-                rimIntensity: 0.08
+                skyColor: 0x020408,
+                fogColor: 0x050a12,
+                ambientColor: 0x030306,
+                ambientIntensity: 0.03,
+                hemisphereTop: 0x080f18,
+                hemisphereBottom: 0x020204,
+                hemisphereIntensity: 0.05,
+                sunColor: 0x223344,  // Moon
+                sunIntensity: 0.08,
+                fillColor: 0x0f1520,
+                fillIntensity: 0.02,
+                rimColor: 0x1a2028,
+                rimIntensity: 0.03
             },
             dawn: {
                 name: 'Dawn',
