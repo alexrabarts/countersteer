@@ -148,7 +148,7 @@ class Game {
         // Speed streak bonus
         this.speedStreakTime = 0;
         this.lastSpeedCheck = 0;
-        this.highSpeedThreshold = 50;
+        this.highSpeedThreshold = 60; // Increased from 50 to make it harder
 
         // Near miss tracking
         this.lastNearMissTime = 0;
@@ -1920,6 +1920,14 @@ class Game {
         // Check cone collisions
         if (!this.vehicle.crashed) {
             this.cones.checkCollision(this.vehicle.position);
+        }
+
+        // Check boulder collisions
+        if (!this.vehicle.crashed && this.environment) {
+            const boulderHit = this.environment.checkBoulderCollision(this.vehicle.position);
+            if (boulderHit) {
+                this.vehicle.crash();
+            }
         }
         
         this.updateCamera();

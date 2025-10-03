@@ -1099,17 +1099,17 @@ class Environment {
         return { valid: true };
       };
 
-      // Add MANY more boulders along the cliff base (only in active segment range)
-      for (let i = startIdx; i <= endIdx; i += 3) {
-        // Much denser spacing
+      // Add boulders along the cliff base (only in active segment range)
+      for (let i = startIdx; i <= endIdx; i += 6) {
+        // Sparser spacing (every 6 segments instead of 3)
         const point = this.roadPath[i];
 
-        // Add 2-3 rocks per segment
-        const numRocks = 2 + Math.floor(Math.random() * 2);
+        // Add 1-2 rocks per segment (reduced from 2-3)
+        const numRocks = 1 + Math.floor(Math.random() * 2);
 
         for (let r = 0; r < numRocks; r++) {
-          if (Math.random() > 0.2) {
-            // 80% chance for variety
+          if (Math.random() > 0.4) {
+            // 60% chance (reduced from 80%)
             const rockSize = 0.8 + Math.random() * 2.5;
             const rockGeometry = this.displaceVertices(
               new THREE.IcosahedronGeometry(rockSize, 3),
@@ -1181,6 +1181,15 @@ class Environment {
 
             rock.castShadow = true;
             rock.receiveShadow = true;
+
+            // Store boulder for collision detection
+            this.boulders.push({
+              mesh: rock,
+              position: rock.position,
+              radius: rockSize,
+              hit: false
+            });
+
             group.add(rock);
           } // Close the if statement from line 700
         } // Close the for loop from line 699
@@ -4285,18 +4294,6 @@ class Environment {
       ctx.fillRect(x, y, size, size);
     }
 
-    // Add sparse grass patches on top
-    ctx.globalAlpha = 0.3;
-    for (let i = 0; i < 15; i++) {
-      const x = Math.random() * canvas.width;
-      const y = Math.random() * canvas.height;
-      const width = Math.random() * 20 + 5;
-      const height = Math.random() * 15 + 3;
-
-      ctx.fillStyle = "#228B22";
-      ctx.fillRect(x, y, width, height);
-    }
-
     // Add tire tracks or disturbance marks
     ctx.globalAlpha = 0.2;
     ctx.strokeStyle = "#2F1B14";
@@ -5215,5 +5212,30 @@ class Environment {
     }
 
     return errors;
+  }
+
+  // Check collision with boulders
+  checkBoulderCollision(vehiclePosition) {
+    const hitDistance = 2.5; // Boulder collision distance
+    const heightTolerance = 3; // Height tolerance for collision
+
+    for (let boulder of this.boulders) {
+      if (boulder.hit) continue; // Skip already hit boulders
+
+      const distance = Math.sqrt(
+        Math.pow(vehiclePosition.x - boulder.position.x, 2) +
+        Math.pow(vehiclePosition.z - boulder.position.z, 2)
+      );
+
+      const heightDiff = Math.abs(vehiclePosition.y - boulder.position.y);
+
+      if (distance < boulder.radius + hitDistance && heightDiff < heightTolerance) {
+        boulder.hit = true;
+        console.log('Boulder collision detected at:', boulder.position.x.toFixed(1), boulder.position.z.toFixed(1));
+        return true; // Collision detected
+      }
+    }
+
+    return false; // No collision
   }
 }
